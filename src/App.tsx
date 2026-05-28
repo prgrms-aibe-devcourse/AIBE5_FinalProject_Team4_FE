@@ -1198,7 +1198,7 @@ export default function App() {
                 className={`flex flex-col items-center justify-center flex-1 py-1 transition ${currentTab === "home" ? "text-[#1E3A8A]" : "text-slate-400 hover:text-slate-600"}`}
               >
                 <Home className="w-5 h-5" />
-                <span className="text-[9px] font-extrabold mt-1">Home(추천)</span>
+                <span className="text-[9px] font-extrabold mt-1">추천</span>
               </button>
 
               <button 
@@ -1207,7 +1207,7 @@ export default function App() {
                 className={`flex flex-col items-center justify-center flex-1 py-1 transition ${currentTab === "closet" ? "text-[#1E3A8A]" : "text-slate-400 hover:text-slate-600"}`}
               >
                 <Layers className="w-5 h-5" />
-                <span className="text-[9px] font-extrabold mt-1">My Closet(옷장)</span>
+                <span className="text-[9px] font-extrabold mt-1">옷장</span>
               </button>
 
               <button 
@@ -1216,7 +1216,7 @@ export default function App() {
                 className={`flex flex-col items-center justify-center flex-1 py-1 transition ${currentTab === "feed" ? "text-[#1E3A8A]" : "text-slate-400 hover:text-slate-600"}`}
               >
                 <Activity className="w-5 h-5" />
-                <span className="text-[9px] font-extrabold mt-1">Style Feed(피드)</span>
+                <span className="text-[9px] font-extrabold mt-1">피드</span>
               </button>
             </nav>
 
