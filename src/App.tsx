@@ -1,14 +1,3 @@
-<<<<<<< Updated upstream
-function App() {
-  return (
-    <div>
-      <h1>옷장난감</h1>
-    </div>
-  )
-}
-
-export default App
-=======
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -16,28 +5,17 @@ export default App
 
 import React, { useState, useEffect } from "react";
 import { 
-  Sparkles, 
   Plus, 
-  Search, 
-  Heart, 
   Home, 
-  Check, 
-  Upload, 
   Camera, 
   X, 
-  MessageSquare, 
   ChevronRight, 
-  Sliders, 
   Activity, 
   FileText, 
-  CloudRain, 
   Info, 
-  HelpCircle,
-  TrendingUp,
-  Award,
   Layers,
   Sparkle
-} from "lucide-react";
+} from "./components/icons";
 import { UserProfile, Garment, Recommendation } from "./types";
 import HomeTab from "./components/HomeTab";
 import ProfileEditTab from "./components/ProfileEditTab";
@@ -1566,4 +1544,3 @@ export default function App() {
       </div>
     );
   }
->>>>>>> Stashed changes

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { User, Settings, CheckCircle2, RefreshCw } from "lucide-react";
+import { Settings, CheckCircle2 } from "./icons";
 import { UserProfile } from "../types";
 
 interface ProfileEditTabProps {

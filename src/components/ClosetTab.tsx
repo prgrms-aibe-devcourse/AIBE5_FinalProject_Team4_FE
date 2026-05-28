@@ -7,12 +7,9 @@ import {
   Flame, 
   Award, 
   HeartHandshake,
-  Check,
   ChevronRight,
-  TrendingUp,
-  Sliders,
   Sparkle
-} from "lucide-react";
+} from "./icons";
 import { Garment } from "../types";
 
 interface ClosetTabProps {

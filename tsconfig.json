@@ -1,11 +1,4 @@
 {
-<<<<<<< Updated upstream
-  "files": [],
-  "references": [
-    { "path": "./tsconfig.app.json" },
-    { "path": "./tsconfig.node.json" }
-  ]
-=======
   "compilerOptions": {
     "target": "ES2022",
     "experimentalDecorators": true,
@@ -17,6 +10,7 @@
       "DOM.Iterable"
     ],
     "skipLibCheck": true,
+    "types": ["vite/client"],
     "moduleResolution": "bundler",
     "isolatedModules": true,
     "moduleDetection": "force",
@@ -24,11 +18,10 @@
     "jsx": "react-jsx",
     "paths": {
       "@/*": [
-        "./*"
+        "./src/*"
       ]
     },
     "allowImportingTsExtensions": true,
     "noEmit": true
   }
->>>>>>> Stashed changes
 }

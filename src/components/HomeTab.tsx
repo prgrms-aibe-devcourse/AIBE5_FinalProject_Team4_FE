@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AlertCircle, Shirt } from "lucide-react";
+import { AlertCircle, Shirt } from "./icons";
 import { Garment } from "../types";
 
 interface HomeTabProps {
