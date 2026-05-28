@@ -4,6 +4,10 @@ on:
   pull_request:
     types: [opened, synchronize]
 
+concurrency:
+  group: gemini-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
   review:
     name: Gemini Code Review
@@ -23,44 +27,41 @@ jobs:
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
         run: |
-          # 1. PR 제목이 chore: 또는 docs: 로 시작하면 스킵
           if echo "$PR_TITLE" | grep -qE '^(chore|docs):'; then
             echo "skip=true" >> $GITHUB_OUTPUT
             echo "reason=chore/docs PR — 리뷰 스킵" >> $GITHUB_OUTPUT
             exit 0
           fi
 
-          # 변경된 ts/tsx 파일 목록
           git diff --name-only ${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }} \
             -- 'src/**/*.ts' 'src/**/*.tsx' > changed_files.txt
 
-          CHANGED_COUNT=$(wc -l < changed_files.txt)
-          TOTAL_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }} | wc -l)
-          CHANGED_LINES=$(git diff --shortstat ${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }} \
-            -- 'src/**/*.ts' 'src/**/*.tsx' | grep -oE '[0-9]+ insertion' | grep -oE '[0-9]+' || echo 0)
-          DELETED_LINES=$(git diff --shortstat ${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }} \
-            -- 'src/**/*.ts' 'src/**/*.tsx' | grep -oE '[0-9]+ deletion' | grep -oE '[0-9]+' || echo 0)
-          TOTAL_LINES=$((CHANGED_LINES + DELETED_LINES))
+          CHANGED_COUNT=$(wc -l < changed_files.txt | tr -d ' ')
+          TOTAL_FILES=$(git diff --name-only \
+            ${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }} \
+            | wc -l | tr -d ' ')
 
-          echo "변경된 ts/tsx 파일: $CHANGED_COUNT 개"
-          echo "전체 변경 파일: $TOTAL_FILES 개"
-          echo "변경 라인 합계: $TOTAL_LINES 줄"
+          STAT=$(git diff --shortstat \
+            ${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }} \
+            -- 'src/**/*.ts' 'src/**/*.tsx')
+          INS=$(echo "$STAT" | grep -oE '[0-9]+ insertion' | grep -oE '[0-9]+' || echo 0)
+          DEL=$(echo "$STAT" | grep -oE '[0-9]+ deletion' | grep -oE '[0-9]+' || echo 0)
+          TOTAL_LINES=$((INS + DEL))
 
-          # 2. 변경된 ts/tsx 파일이 1개 이하면 스킵
+          echo "ts/tsx: ${CHANGED_COUNT}개 | 전체: ${TOTAL_FILES}개 | 라인: ${TOTAL_LINES}줄"
+
           if [ "$CHANGED_COUNT" -le 1 ]; then
             echo "skip=true" >> $GITHUB_OUTPUT
             echo "reason=변경된 ts/tsx 파일이 ${CHANGED_COUNT}개 — 리뷰 스킵" >> $GITHUB_OUTPUT
             exit 0
           fi
 
-          # 3. 변경 라인 합계가 50줄 이하면 스킵
           if [ "$TOTAL_LINES" -le 50 ]; then
             echo "skip=true" >> $GITHUB_OUTPUT
             echo "reason=변경 라인 합계 ${TOTAL_LINES}줄 — 리뷰 스킵" >> $GITHUB_OUTPUT
             exit 0
           fi
 
-          # 4. 변경 파일이 10개 초과면 스킵
           if [ "$TOTAL_FILES" -gt 10 ]; then
             echo "skip=true" >> $GITHUB_OUTPUT
             echo "reason=변경 파일 ${TOTAL_FILES}개 초과 — 리뷰 스킵" >> $GITHUB_OUTPUT
@@ -76,7 +77,7 @@ jobs:
         run: |
           gh pr comment ${{ github.event.pull_request.number }} \
             --body "## 🤖 Gemini 코드 리뷰
-            ⏭️ **리뷰 스킵**: ${{ steps.skip-check.outputs.reason }}"
+          ⏭️ **리뷰 스킵**: ${{ steps.skip-check.outputs.reason }}"
 
       - name: Get PR diff
         if: steps.skip-check.outputs.skip == 'false'
@@ -92,111 +93,4 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-        run: |
-          python3 << 'PYTHON'
-          import os, json, urllib.request, urllib.error, sys, time
-
-          with open('pr_diff.txt', 'r') as f:
-              diff = f.read().strip()
-
-          if not diff:
-              print("변경된 파일이 없습니다. 리뷰를 건너뜁니다.")
-              sys.exit(0)
-
-          MAX_SIZE = 28000
-          truncated = False
-          if len(diff) > MAX_SIZE:
-              diff = diff[:MAX_SIZE]
-              truncated = True
-
-          api_key = os.environ['GEMINI_API_KEY']
-          url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
-
-          prompt = f"""당신은 숙련된 시니어 프론트엔드 개발자입니다. 아래 PR diff를 코드 리뷰해주세요.
-
-프로젝트 기술 스택: React 18, TypeScript 6, Vite 8, Tailwind CSS 4, React Router v7, Axios
-
-리뷰 기준:
-🔴 높음 (반드시 수정)
-- API 키, 토큰 등 민감 정보 하드코딩
-- XSS 취약점 (dangerouslySetInnerHTML 무분별한 사용 등)
-- useEffect 의존성 배열 누락으로 인한 무한 렌더링 위험
-- any 타입 무분별한 사용
-
-🟡 중간 (수정 권장)
-- useState 과도한 분산 (useReducer 또는 상태 통합 고려)
-- props drilling 3단계 이상
-- 컴포넌트 단일 책임 원칙 위반 (200줄 초과 등)
-- 불필요한 리렌더링 (useMemo, useCallback, React.memo 미사용)
-- 비동기 처리 누락 (로딩, 에러 상태 없음)
-
-🟢 낮음 (참고)
-- 네이밍 컨벤션 (컴포넌트 PascalCase, 함수 camelCase)
-- 절대경로(@/) 미사용
-- 주석 없는 복잡한 로직
-
-팀원들이 주니어 개발자이므로 왜 문제인지, 어떻게 고쳐야 하는지 친절하게 설명해주세요.
-한국어 마크다운으로 작성하고, 칭찬할 부분도 함께 언급해주세요.
-마지막에 APPROVE / NEEDS_CHANGES / CRITICAL 중 하나로 종합 판정을 내려주세요.
-
-PR Diff:
-```
-{diff}
-```
-{"\\n> ⚠️ diff가 너무 커서 일부만 리뷰했습니다." if truncated else ""}
-"""
-
-          payload = {
-              "contents": [{"parts": [{"text": prompt}]}],
-              "generationConfig": {"temperature": 0.3, "maxOutputTokens": 3000}
-          }
-
-          # 재시도 로직 (최대 3회, 지수 백오프)
-          MAX_RETRIES = 3
-          review_text = None
-
-          for attempt in range(MAX_RETRIES):
-              try:
-                  req = urllib.request.Request(
-                      url,
-                      data=json.dumps(payload).encode(),
-                      headers={'Content-Type': 'application/json'}
-                  )
-                  with urllib.request.urlopen(req) as resp:
-                      result = json.loads(resp.read())
-                  review_text = result['candidates'][0]['content']['parts'][0]['text']
-                  print(f"✅ Gemini API 호출 성공 (시도 {attempt + 1}회)")
-                  break
-
-              except urllib.error.HTTPError as e:
-                  if e.code == 429:
-                      wait = 15 * (2 ** attempt)  # 15s, 30s, 60s
-                      print(f"⚠️ 429 Too Many Requests — {wait}초 후 재시도 ({attempt + 1}/{MAX_RETRIES})")
-                      time.sleep(wait)
-                  else:
-                      print(f"❌ HTTP 오류: {e.code} {e.reason}")
-                      sys.exit(1)
-
-          if review_text is None:
-              print("❌ 최대 재시도 횟수 초과. 리뷰를 건너뜁니다.")
-              sys.exit(1)
-
-          gh_token = os.environ['GH_TOKEN']
-          repo = os.environ['GITHUB_REPOSITORY']
-          pr_number = os.environ['PR_NUMBER']
-
-          comment_body = f"## 🤖 Gemini 코드 리뷰\n\n{review_text}\n\n---\n*이 리뷰는 Gemini AI가 자동으로 작성했습니다. 참고용으로만 활용하세요.*"
-
-          comment_url = f"https://api.github.com/repos/{repo}/issues/{pr_number}/comments"
-          req = urllib.request.Request(
-              comment_url,
-              data=json.dumps({"body": comment_body}).encode(),
-              headers={
-                  'Authorization': f'Bearer {gh_token}',
-                  'Content-Type': 'application/json',
-                  'Accept': 'application/vnd.github.v3+json'
-              }
-          )
-          with urllib.request.urlopen(req) as resp:
-              print(f"✅ 코드 리뷰 코멘트 등록 완료 (HTTP {resp.status})")
-          PYTHON
+        run: python3 .github/scripts/gemini_review.py
