@@ -1,0 +1,125 @@
+name: Gemini Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  review:
+    name: Gemini Code Review
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get PR diff
+        run: |
+          git diff ${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }} \
+            -- '*.ts' '*.tsx' '*.css' '*.json' '*.yaml' '*.yml' \
+            > pr_diff.txt
+          echo "diff 크기: $(wc -c < pr_diff.txt) bytes"
+
+      - name: Run Gemini Code Review
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          python3 << 'PYTHON'
+          import os, json, urllib.request, sys
+
+          # diff 읽기
+          with open('pr_diff.txt', 'r') as f:
+              diff = f.read().strip()
+
+          if not diff:
+              print("변경된 파일이 없습니다. 리뷰를 건너뜁니다.")
+              sys.exit(0)
+
+          # diff 크기 제한 (Gemini 토큰 한도 대응)
+          MAX_SIZE = 28000
+          truncated = False
+          if len(diff) > MAX_SIZE:
+              diff = diff[:MAX_SIZE]
+              truncated = True
+
+          # Gemini API 호출
+          api_key = os.environ['GEMINI_API_KEY']
+          url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
+
+          prompt = f"""당신은 숙련된 시니어 프론트엔드 개발자입니다. 아래 PR diff를 코드 리뷰해주세요.
+
+          프로젝트 기술 스택: React 18, TypeScript 6, Vite 8, Tailwind CSS 4, React Router v7, Axios
+
+          리뷰 기준:
+          - 코드 품질 및 가독성
+          - TypeScript 타입 안전성 (any 사용 여부, 타입 누락 등)
+          - React 베스트 프랙티스 (훅 규칙, 불필요한 리렌더링 등)
+          - 컴포넌트 책임 분리 (단일 책임 원칙)
+          - 성능 이슈 (무거운 연산, 메모이제이션 필요 여부 등)
+          - 보안 문제 (민감 정보 노출, XSS 등)
+          - 팀 컨벤션 준수 여부
+
+          팀원들이 주니어 개발자이므로 왜 문제인지, 어떻게 고쳐야 하는지 친절하게 설명해주세요.
+          한국어로 작성하고, 마크다운 형식으로 구조화해주세요.
+          칭찬할 부분이 있으면 함께 언급해주세요.
+
+          PR Diff:
+          ```
+          {diff}
+          ```
+          {"\\n> ⚠️ diff가 너무 커서 일부만 리뷰했습니다." if truncated else ""}
+          """
+
+          payload = {
+              "contents": [{"parts": [{"text": prompt}]}],
+              "generationConfig": {
+                  "temperature": 0.3,
+                  "maxOutputTokens": 3000
+              }
+          }
+
+          req = urllib.request.Request(
+              url,
+              data=json.dumps(payload).encode(),
+              headers={'Content-Type': 'application/json'}
+          )
+
+          try:
+              with urllib.request.urlopen(req) as resp:
+                  result = json.loads(resp.read())
+              review_text = result['candidates'][0]['content']['parts'][0]['text']
+          except Exception as e:
+              print(f"Gemini API 호출 실패: {e}")
+              sys.exit(1)
+
+          # PR 코멘트 작성
+          gh_token = os.environ['GH_TOKEN']
+          repo = os.environ['GITHUB_REPOSITORY']
+          pr_number = os.environ['PR_NUMBER']
+
+          comment_body = f"## 🤖 Gemini 코드 리뷰\n\n{review_text}\n\n---\n*이 리뷰는 Gemini AI가 자동으로 작성했습니다. 참고용으로만 활용하세요.*"
+
+          comment_url = f"https://api.github.com/repos/{repo}/issues/{pr_number}/comments"
+          comment_payload = {"body": comment_body}
+
+          req = urllib.request.Request(
+              comment_url,
+              data=json.dumps(comment_payload).encode(),
+              headers={
+                  'Authorization': f'Bearer {gh_token}',
+                  'Content-Type': 'application/json',
+                  'Accept': 'application/vnd.github.v3+json'
+              }
+          )
+
+          with urllib.request.urlopen(req) as resp:
+              print(f"✅ 코드 리뷰 코멘트 등록 완료 (HTTP {resp.status})")
+          PYTHON
