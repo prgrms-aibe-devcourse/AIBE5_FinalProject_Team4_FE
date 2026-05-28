@@ -657,13 +657,10 @@ export default function App() {
   // Simulate file drops & camera simulation
   const triggerImageUpload = async (mockType: "receipt" | "garment_tee") => {
     setIsAnalyzing(true);
-    let sampleImg = "";
-    
-    if (mockType === "receipt") {
-      sampleImg = "https://images.unsplash.com/photo-1554415707-6e8cfc93fe23?auto=format&fit=crop&q=80&w=600";
-    } else {
-      sampleImg = "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&q=80&w=600";
-    }
+    const sampleImg =
+      mockType === "receipt"
+        ? "https://images.unsplash.com/photo-1554415707-6e8cfc93fe23?auto=format&fit=crop&q=80&w=600"
+        : "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&q=80&w=600";
 
     setSelectedLocalImg(sampleImg);
 
