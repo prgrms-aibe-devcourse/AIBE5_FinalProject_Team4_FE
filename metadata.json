@@ -1,0 +1,10 @@
+{
+  "name": "옷장난감",
+  "description": "고정밀 인체 해부학적 3D 메쉬 피팅 기술이 가미된 모던 디지털 옷장 & AI MD '감각이' 패션 큐레이션 솔루션",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
