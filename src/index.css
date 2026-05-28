@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 @import "tailwindcss";
 
 :root {
@@ -18,4 +19,213 @@ body {
 
 #root {
   width: 100%;
+=======
+@import url('https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Nunito:wght@400;600;700;800;900&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Nunito', 'Gowun Dodum', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+@layer base {
+  :root {
+    --tone-bg: #f4f4f5;
+    --tone-panel: #ffffff;
+    --tone-line: #e5e7eb;
+    --tone-text: #17171b;
+    --tone-muted: #73737a;
+    --tone-primary: #111827;
+    --tone-primary-dark: #111115;
+    --tone-primary-soft: #f3e8ff;
+  }
+
+  * {
+    letter-spacing: 0;
+  }
+
+  html,
+  body,
+  #root {
+    min-height: 100%;
+  }
+
+  body {
+    margin: 0;
+    background: var(--tone-bg);
+    color: var(--tone-text);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+}
+
+@layer components {
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+
+  .brand-symbol-image {
+    width: 2.35rem;
+    height: 2.35rem;
+    display: block;
+    object-fit: contain;
+    transition: transform 180ms ease;
+  }
+
+  .group\/logo:hover .brand-symbol-image {
+    transform: translateY(-1px) rotate(-2deg);
+  }
+
+  .brand-wordmark {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.02rem;
+    color: #111827;
+    font-family: "Nunito", "Gowun Dodum", "Apple SD Gothic Neo", "Noto Sans KR", var(--font-sans);
+    font-size: 1.12rem;
+    font-weight: 900;
+    line-height: 0.95;
+    white-space: nowrap;
+    transform: translateY(0.03rem);
+    letter-spacing: -0.04rem;
+    text-shadow:
+      0.03rem 0.03rem 0 #ffffff,
+      0 0.12rem 0.45rem rgb(17 24 39 / 9%);
+  }
+
+  .brand-wordmark span {
+    display: inline-block;
+    transition: transform 180ms ease;
+  }
+
+  .brand-wordmark span:nth-child(1) {
+    transform: translateY(0.03rem);
+  }
+
+  .brand-wordmark span:nth-child(2) {
+    transform: translateY(-0.02rem);
+  }
+
+  .brand-wordmark span:nth-child(3) {
+    margin-left: 0.04rem;
+    transform: translateY(0.02rem);
+  }
+
+  .brand-wordmark span:nth-child(4) {
+    transform: translateY(-0.03rem);
+  }
+
+  .group\/logo:hover .brand-wordmark span:nth-child(1),
+  .group\/logo:hover .brand-wordmark span:nth-child(3) {
+    transform: translateY(-0.03rem);
+  }
+
+  .group\/logo:hover .brand-wordmark span:nth-child(2),
+  .group\/logo:hover .brand-wordmark span:nth-child(4) {
+    transform: translateY(0.02rem);
+  }
+
+  #root-container {
+    background: var(--tone-bg) !important;
+  }
+
+  #view-login,
+  #view-onboarding,
+  #root-container > div:not([id]),
+  [class*="bg-white"][class*="rounded-2xl"],
+  [class*="bg-white"][class*="rounded-3xl"],
+  [class*="bg-white"][class*="rounded-[28px]"],
+  [class*="bg-white"][class*="rounded-[32px]"] {
+    border-color: var(--tone-line) !important;
+    box-shadow: 0 24px 70px rgb(20 20 24 / 8%) !important;
+  }
+
+  [class*="text-[#BBF7D0]"] {
+    color: #ffffff !important;
+  }
+
+  [class*="text-[#1E3A8A]"],
+  [class*="text-[#0284C7]"] {
+    color: var(--tone-primary) !important;
+  }
+
+  [class*="bg-[#1E3A8A]"],
+  [class*="bg-[#0284C7]"] {
+    background-color: var(--tone-primary) !important;
+  }
+
+  [class*="border-[#1E3A8A]"],
+  [class*="border-[#0284C7]"] {
+    border-color: var(--tone-primary) !important;
+  }
+
+  [class*="focus:border-[#1E3A8A]"]:focus,
+  [class*="focus:border-[#0284C7]"]:focus {
+    border-color: var(--tone-primary) !important;
+  }
+
+  [class*="focus:ring-[#0284C7]"]:focus {
+    --tw-ring-color: var(--tone-primary) !important;
+  }
+
+  [class*="bg-[#BBF7D0]"] {
+    background-color: var(--tone-primary-soft) !important;
+  }
+
+  [class*="border-[#BBF7D0]"] {
+    border-color: #ddd6fe !important;
+  }
+
+  [class*="hover:bg-[#a9f0c2]"]:hover,
+  [class*="hover:bg-[#aef1c6]"]:hover,
+  [class*="hover:bg-[#0369a1]"]:hover {
+    background-color: #374151 !important;
+  }
+
+  .bg-gradient-to-br[class*="from-[#FFF3DA]"] {
+    background:
+      radial-gradient(circle at 72% 18%, rgb(167 139 250 / 12%), transparent 30%),
+      linear-gradient(135deg, #ffffff 0%, #fafafa 58%, #f3e8ff 100%) !important;
+    border-color: var(--tone-line) !important;
+  }
+
+  [class*="bg-slate-50"],
+  [class*="bg-slate-100"] {
+    background-color: #f5f5f5 !important;
+  }
+
+  [class*="text-slate-400"],
+  [class*="text-slate-500"] {
+    color: var(--tone-muted) !important;
+  }
+
+  [class*="rounded-xl"] {
+    border-radius: 16px;
+  }
+
+  [class*="rounded-2xl"] {
+    border-radius: 22px;
+  }
+
+  input,
+  select,
+  textarea {
+    background-color: #f7f7f8 !important;
+  }
+
+  img {
+    background: #f3f3f4;
+  }
+>>>>>>> Stashed changes
 }
