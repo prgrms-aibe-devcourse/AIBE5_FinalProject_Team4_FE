@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 interface ImgSkeletonProps {
     src: string;
     alt?: string;
@@ -13,3 +15,5 @@ function ImageSkeleton({src, alt}: ImgSkeletonProps) {
         </>
     );
 }
+
+export default ImageSkeleton;

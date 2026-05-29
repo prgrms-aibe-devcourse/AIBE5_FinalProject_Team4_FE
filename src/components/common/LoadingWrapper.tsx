@@ -9,3 +9,4 @@ function LoadingWrapper() {
     else if (error) return <div>{error}</div>;
     return <div>{data}</div>;
 }
+export default LoadingWrapper;

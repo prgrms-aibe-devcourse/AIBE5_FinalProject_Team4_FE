@@ -19,3 +19,4 @@ function AiAnalyzing({ photoId }: AiAnalyzingProps) {
     if (!isCompleted) return <div>"AI가 분석중입니다..."</div>
     return <div>"분석완료!"</div>
 }
+export default AiAnalyzing;
