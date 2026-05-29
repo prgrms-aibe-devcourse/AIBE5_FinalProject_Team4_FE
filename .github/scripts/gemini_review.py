@@ -23,8 +23,8 @@ if len(diff) > MAX_SIZE:
 api_key = os.environ["GEMINI_API_KEY"]
 
 MODELS = [
-    "gemini-1.5-flash",
-    "gemini-1.5-flash-8b",
+    "gemini-2.0-flash",
+    "gemini-2.5-flash-preview-05-20",
 ]
 
 truncated_notice = "\n> ⚠️ diff가 너무 커서 일부만 리뷰했습니다." if truncated else ""
