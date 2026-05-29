@@ -1,5 +1,5 @@
-import Spinner from "../common/Spinner";
-import useApi from "../../hooks/useApi";
+import Spinner from "@/components/common/Spinner";
+import useApi from "@/hooks/useApi";
 import React, { useState, useMemo } from "react";
 import { 
   Heart, 
