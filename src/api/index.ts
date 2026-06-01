@@ -22,9 +22,10 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status >= 500)
-      return window.location.href = "/error/server";
+      window.location.href = "/error/server";
+
     else if (!error.response)
-      return window.location.href = "/error/network";
+      window.location.href = "/error/network";
 
     return Promise.reject(error)
   }
