@@ -23,8 +23,8 @@ if len(diff) > MAX_SIZE:
 api_key = os.environ["GEMINI_API_KEY"]
 
 MODELS = [
-    "gemini-1.5-flash",
-    "gemini-1.5-flash-8b",
+    "gemini-2.0-flash",
+    "gemini-2.5-flash",
 ]
 
 truncated_notice = "\n> ⚠️ diff가 너무 커서 일부만 리뷰했습니다." if truncated else ""
@@ -93,6 +93,11 @@ for model in MODELS:
 
         except urllib.error.HTTPError as e:
             if e.code == 429:
+                body = e.read().decode("utf-8", errors="ignore")
+                # 일일 한도 소진 시 재시도 의미 없음
+                if "quota" in body.lower() or "daily" in body.lower() or attempt == 2:
+                    print(f"⚠️ 429 — 일일 API 한도 소진. 다음 모델로 넘어갑니다.")
+                    break
                 wait = 20 * (2 ** attempt)  # 20s, 40s, 80s
                 print(f"⚠️ 429 — {wait}초 대기 후 재시도 ({attempt + 1}/3)")
                 time.sleep(wait)

@@ -1,3 +1,7 @@
+/* Todo: data를 실제로 쓸 준비가 되면 다시 추가
+import Spinner from "@/components/common/Spinner";
+import useApi from "@/hooks/useApi";
+ */
 import React, { useState, useMemo } from "react";
 import { 
   Heart, 
@@ -29,6 +33,7 @@ export default function ClosetTab({
   toggleFavorite,
   moveToOwnedCloset
 }: ClosetTabProps) {
+  // const {data, error, loading} = useApi('/api/v1/wardrobes/users/1'); Todo: data를 실제로 쓸 준비가 되면 다시 추가
   const [closetTab, setClosetTab] = useState<"owned" | "wishlist">("owned");
   const [closetFilter, setClosetFilter] = useState<string>("All");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -68,6 +73,11 @@ export default function ClosetTab({
     moveToOwnedCloset(id);
     triggerToast(`🛍️ 축하합니다! "${name}" 의상이 최상단 보유 옷장 목록으로 이동했습니다!`);
   };
+
+  /* Todo: data를 실제로 쓸 준비가 되면 다시 추가
+  if(loading) return <Spinner />;
+  if(error) return <div>{error}</div>;
+   */
 
   return (
     <div className="space-y-6 animate-fade-in font-sans">
