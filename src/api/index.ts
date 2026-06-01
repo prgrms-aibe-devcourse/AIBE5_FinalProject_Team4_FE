@@ -21,7 +21,11 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // 401 처리 등 공통 로직 추가 가능
+    if (error.response && error.response.status >= 500)
+      return window.location.href = "/error/server";
+    else if (!error.response)
+      return window.location.href = "/error/network";
+
     return Promise.reject(error)
   }
 )
