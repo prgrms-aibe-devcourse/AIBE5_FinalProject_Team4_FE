@@ -3,6 +3,7 @@ export interface UserProfile {
   gender: "Male" | "Female" | "None";
   styles: string[]; // Casual, Minimal, Street, Amekaji, Gorpcore
   onboarded: boolean;
+  birthday?: string; // 사용자 연령에 따른 추천에 활용
 }
 
 export interface Recommendation {
