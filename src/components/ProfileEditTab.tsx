@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Settings, CheckCircle2 } from "./icons";
-import { UserProfile } from "../types";
+import { UserProfile } from "@/types/index";
 
 interface ProfileEditTabProps {
   profile: UserProfile;
@@ -211,7 +211,7 @@ export default function ProfileEditTab({
           onClick={() => {
             if (confirm("모든 데이터가 영구 초기화됩니다. 계속 진행하시겠습니까?")) {
               setIsLoggedIn(false);
-              setProfile({ nickname: "", gender: "None", styles: [], onboarded: false });
+              setProfile({ nickname: "", gender: "None", styles: [], onboarded: false, birthday: "" });
             }
           }}
           className="text-red-500 font-bold hover:underline select-none cursor-pointer text-left shrink-0"

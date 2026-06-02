@@ -16,7 +16,7 @@ import {
   Layers,
   Sparkle
 } from "./components/icons";
-import { UserProfile, Garment, Recommendation } from "./types";
+import { UserProfile, Garment, Recommendation } from "@/types/index";
 import HomeTab from "./components/HomeTab";
 import ProfileEditTab from "./components/ProfileEditTab";
 import ClosetTab from "./components/ClosetTab";
@@ -379,6 +379,7 @@ export default function App() {
     gender: "None",
     styles: [],
     onboarded: false,
+    birthday: "",
   });
 
   // Navigation state: 'home' | 'closet' | 'feed' | 'profile'
@@ -1153,7 +1154,7 @@ export default function App() {
                       onClick={() => {
                         if (confirm("초기 온보딩으로 되돌아가시겠습니까?")) {
                           setIsLoggedIn(false);
-                          setProfile({ nickname: "", gender: "None", styles: [], onboarded: false });
+                          setProfile({ nickname: "", gender: "None", styles: [], onboarded: false, birthday: "" });
                         }
                       }}
                       className="text-[11px] font-bold text-red-500 hover:underline block"
