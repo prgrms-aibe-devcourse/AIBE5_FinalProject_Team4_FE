@@ -11,6 +11,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import NotFoundPage from "@/pages/error/NotFoundPage";
 import ServerErrorPage from "@/pages/error/ServerErrorPage";
 import NetworkErrorPage from "@/pages/error/NetworkErrorPage";
+import OnboardingPage from "@/pages/OnboardingPage"
 
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
@@ -19,6 +20,7 @@ createRoot(document.getElementById("root")!).render(
               <Route path="/" element={<App />} />
               <Route path="/error/server" element={<ServerErrorPage />} />
               <Route path="/error/network" element={<NetworkErrorPage />} />
+              <Route path="/onboarding" element={<OnboardingPage />} />
               <Route path="*" element={<NotFoundPage />} />
           </Routes>
       </BrowserRouter>
