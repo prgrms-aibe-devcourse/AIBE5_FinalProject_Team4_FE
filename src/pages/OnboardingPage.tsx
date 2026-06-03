@@ -1,7 +1,11 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-export default function OnboardingPage() {
+interface OnboardingPageProps {
+    onComplete: (nickname: string, birthday: string, gender: "Male" | "Female" | "None", styles: string[]) => void;
+}
+
+export default function OnboardingPage({ onComplete }: OnboardingPageProps) {
     const [step, setStep] = useState(1);
     const [nickname, setNickname] = useState("");
     const [birthday, setBirthday] = useState("");
@@ -117,8 +121,14 @@ export default function OnboardingPage() {
             {/*스탭 3*/}
             {step === 3 && <div>
                 <p>첫 번째 옷을 등록해볼까요?</p>
-                <button onClick={() => navigate("/")}>옷 등록하기</button>
-                <button onClick={() => navigate("/")}>지금은 건너뛰기</button>
+                <button onClick={() => {
+                    onComplete(nickname, birthday, gender, styles);
+                    navigate("/");
+                }}>옷 등록하기</button>
+                <button onClick={() => {
+                    onComplete(nickname, birthday, gender, styles);
+                    navigate("/");
+                }}>지금은 건너뛰기</button>
             </div>}
         </div>
     );

@@ -21,6 +21,7 @@ import HomeTab from "./components/HomeTab";
 import ProfileEditTab from "./components/ProfileEditTab";
 import ClosetTab from "./components/ClosetTab";
 import LoginPage from "@/pages/LoginPage";
+import OnboardingPage from "@/pages/OnboardingPage";
 
 // 기존 상수 data ( TRIGGER_PRODUCTS 는 사용을 하지않아 우선 주석처리함 )
 // import { TRIGGER_PRODUCTS } from "@/data/triggerProducts";
@@ -459,101 +460,9 @@ export default function App() {
       {/* 2. ONBOARDING PROFILE FLOWS */}
       {/* ========================================================= */}
       {isLoggedIn && !profile.onboarded && (
-        <div className="flex-1 flex items-center justify-center py-12 animate-fade-in font-sans">
-          <div id="view-onboarding" className="w-full max-w-lg bg-white border border-slate-200/60 rounded-[28px] shadow-2xl p-8 relative flex flex-col justify-between min-h-[580px]">
-            <div className="space-y-5">
-              <div className="flex justify-between items-center text-xs">
-                <span className="font-bold text-[#0284C7] bg-[#BBF7D0] px-3 py-1 rounded-full text-[10px]">스타일 프로필 생성</span>
-                <span className="text-slate-400 font-mono font-bold">STEP 1 of 1</span>
-              </div>
-              <div className="space-y-1 text-left font-sans">
-                <h2 className="text-xl font-extrabold text-[#0284C7]">닉네임, 성별, 스타일을 선택하세요</h2>
-                <p className="text-xs text-slate-400">선택한 성향 및 선호 스타일에 어울리는 가상 옷장과 피드가 개설됩니다.</p>
-              </div>
-
-              <div className="space-y-4 pt-2 text-left font-sans">
-                {/* 1. Nickname */}
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-slate-500 uppercase">닉네임 설정</label>
-                  <input
-                    id="input-nickname"
-                    type="text"
-                    placeholder="예: 트렌디패턴러"
-                    value={profile.nickname}
-                    onChange={(e) => setProfile({ ...profile, nickname: e.target.value })}
-                    className="w-full h-11.5 px-4 rounded-xl border border-slate-200 focus:border-[#1E3A8A] bg-white text-xs outline-hidden transition"
-                  />
-                </div>
-
-                {/* 2. Gender Preference */}
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-slate-500 uppercase">성별 경향성</label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      id="btn-gender-male"
-                      onClick={() => setProfile({ ...profile, gender: "Male" })}
-                      className={`h-11 rounded-xl font-semibold text-xs border transition flex items-center justify-center space-x-2 cursor-pointer ${
-                        profile.gender === "Male"
-                          ? "bg-[#1E3A8A] text-white border-transparent"
-                          : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
-                      }`}
-                    >
-                      <span>남성 (Male)</span>
-                    </button>
-                    <button
-                      id="btn-gender-female"
-                      onClick={() => setProfile({ ...profile, gender: "Female" })}
-                      className={`h-11 rounded-xl font-semibold text-xs border transition flex items-center justify-center space-x-2 cursor-pointer ${
-                        profile.gender === "Female"
-                          ? "bg-[#1E3A8A] text-white border-transparent"
-                          : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
-                      }`}
-                    >
-                      <span>여성 (Female)</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* 3. Style Preferences */}
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-600 block">스타일 선호도 (중복 선택)</label>
-                  <div className="flex flex-wrap gap-2">
-                    {["Casual", "Minimal", "Street", "Amekaji", "Gorpcore"].map((styleOpt) => {
-                      const isSelected = profile.styles.includes(styleOpt);
-                      return (
-                        <button
-                          key={styleOpt}
-                          onClick={() => handleGenreToggle(styleOpt)}
-                          className={`px-3.5 py-2 rounded-full text-xs font-semibold border transition-all duration-200 cursor-pointer ${
-                            isSelected
-                              ? "bg-[#BBF7D0] text-[#1E3A8A] border-[#BBF7D0] shadow-xs scale-102"
-                              : "bg-white text-slate-600 border-slate-200 hover:border-slate-300"
-                          }`}
-                        >
-                          {styleOpt === "Casual" && "캐주얼 (Casual)"}
-                          {styleOpt === "Minimal" && "미니멀 (Minimal)"}
-                          {styleOpt === "Street" && "스트리트 (Street)"}
-                          {styleOpt === "Amekaji" && "아메카지 (Amekaji)"}
-                          {styleOpt === "Gorpcore" && "고프코어 (Gorpcore)"}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Bottom sticky fixed styling button */}
-            <button
-              id="btn-complete-onboarding"
-              onClick={handleCompleteOnboarding}
-              className="w-full h-12 rounded-xl bg-[#BBF7D0] hover:bg-[#a9f0c2] text-[#1E3A8A] font-bold text-sm tracking-wide transition shadow-sm active:scale-98 flex items-center justify-center space-x-1.5 mt-6 cursor-pointer"
-            >
-              <span>입장해서 코디 놀이터 시작</span>
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
+          <OnboardingPage onComplete={(nickname, birthday, gender, styles) => {
+            setProfile({ nickname, birthday, gender, styles, onboarded: true });
+          }} />
       )}
 
         {/* ========================================================= */}
