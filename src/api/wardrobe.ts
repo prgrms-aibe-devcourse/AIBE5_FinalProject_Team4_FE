@@ -57,13 +57,13 @@ export async function fetchWardrobeGarments(
     ? `/api/v1/users/${userId}/clothes/favorites`
     : `/api/v1/users/${userId}/clothes`
 
+  const wishlistPath = options?.favoritesOnly
+    ? `${wishlistClothesPath(userId)}/favorites`
+    : wishlistClothesPath(userId)
+
   const [ownedResult, wishlistResult] = await Promise.allSettled([
     unwrap(api.get<BeApiResponse<ClothesResponse[]>>(ownedPath)),
-    options?.favoritesOnly
-      ? Promise.resolve([] as ClothesResponse[])
-      : unwrap(
-          api.get<BeApiResponse<ClothesResponse[]>>(wishlistClothesPath(userId)),
-        ),
+    unwrap(api.get<BeApiResponse<ClothesResponse[]>>(wishlistPath)),
   ])
 
   const partialErrors: WardrobeGarmentsResult['partialErrors'] = {}
@@ -127,7 +127,7 @@ export async function updateClothes(
 }
 
 export async function deleteClothes(clothesId: number): Promise<void> {
-  await unwrap(api.delete<BeApiResponse<null>>(`/api/v1/clothes/${clothesId}`))
+  await api.delete(`/api/v1/clothes/${clothesId}`)
 }
 
 export async function updateClothesFavorite(
@@ -155,7 +155,7 @@ export async function convertWishlistToOwned(
 ): Promise<Garment> {
   const updated = await unwrap(
     api.patch<BeApiResponse<ClothesResponse>>(
-      `/api/v1/clothes/${clothesId}/convert-to-owned`,
+      `/api/clothes/${clothesId}/convert-to-owned`,
       payload,
     ),
   )

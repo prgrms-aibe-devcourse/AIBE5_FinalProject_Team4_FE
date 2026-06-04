@@ -1,7 +1,7 @@
 ---
 doc_type: fe_implementation_gaps
 source_of_truth: AIBE5_FinalProject_Team4_FE
-last_updated: 2026-06-03
+last_updated: 2026-06-04
 ---
 
 # FE 구현 정합성 현황
@@ -45,11 +45,11 @@ last_updated: 2026-06-03
 | `AUTH-001` | `/`, 로그인 화면 | `App.tsx`, `LoginPage.tsx` 예정 | [frontend-api-usage.md](../api/frontend-api-usage.md), [routing.md](routing.md) | 현재는 버튼 클릭 시 local state 로그인 처리 |
 | `USER-001` | `/onboarding` | `OnboardingPage.tsx`, `App.tsx` 내부 온보딩 | [feature-index.md](../requirements/feature-index.md), [routing.md](routing.md) | local state 기반 입력 |
 | `STYLE-001` | 온보딩, 마이페이지 | `OnboardingPage.tsx`, `ProfileEditTab.tsx` | [catalog.md](../domain/catalog.md), [domain-types.md](domain-types.md) | 일부 하드코딩 스타일 사용 |
-| `WARD-001` | `closet` tab | `ClosetTab.tsx` | [frontend-api-usage.md](../api/frontend-api-usage.md), [wardrobe.md](../features/wardrobe.md) | local clothes state 기반 |
+| `WARD-001` | `closet` tab | `ClosetTab.tsx` | [frontend-api-usage.md](../api/frontend-api-usage.md), [wardrobe.md](../features/wardrobe.md) | BE API 연동 완료. `fetchWardrobeMeta()` + `fetchWardrobeGarments()` 사용 |
 | `WARD-002` | `closet` tab 요약 | `ClosetTab.tsx` | [feature-index.md](../requirements/feature-index.md), [wardrobe.md](../features/wardrobe.md) | 현재는 local count 계산. BE 통계 API는 보유 옷 기반이며, 옷장 전체 요약은 미보유 API와 조합 또는 BE 계약 확정 필요 |
-| `CLOTH-002` | `closet` tab 보유 목록 | `ClosetTab.tsx` | [frontend-api-usage.md](../api/frontend-api-usage.md), [wardrobe.md](../features/wardrobe.md) | local `isWishlist=false` 기준 |
-| `CLOTH-006` | `closet` tab 미보유 목록 | `ClosetTab.tsx` | [frontend-api-usage.md](../api/frontend-api-usage.md), [wardrobe.md](../features/wardrobe.md) | local `isWishlist=true` 기준 |
-| `CLOTH-007` | 옷 상세/옷장 전환 | `ClosetTab.tsx` | [frontend-api-usage.md](../api/frontend-api-usage.md), [wardrobe.md](../features/wardrobe.md) | local state에서 `isWishlist=false`로 변경 |
+| `CLOTH-002` | `closet` tab 보유 목록 | `ClosetTab.tsx` | [frontend-api-usage.md](../api/frontend-api-usage.md), [wardrobe.md](../features/wardrobe.md) | BE API 연동 완료. `GET /api/v1/users/{userId}/clothes` 사용 |
+| `CLOTH-006` | `closet` tab 미보유 목록 | `ClosetTab.tsx` | [frontend-api-usage.md](../api/frontend-api-usage.md), [wardrobe.md](../features/wardrobe.md) | BE API 연동 완료. `GET /api/users/{userId}/wishlist-clothes` 사용 |
+| `CLOTH-007` | 옷 상세/옷장 전환 | `ClosetTab.tsx` | [frontend-api-usage.md](../api/frontend-api-usage.md), [wardrobe.md](../features/wardrobe.md) | BE API 연동 완료. `PATCH /api/clothes/{clothesId}/convert-to-owned` 사용 |
 | `REG-001` | 옷 등록 modal | `App.tsx`, `AiAnalyzing.tsx` | [garment-registration.md](../features/garment-registration.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | `/api/analyze-garment` mock 성격 경로 사용 |
 | `REG-002` | 구매내역 등록 modal | `App.tsx` | [garment-registration.md](../features/garment-registration.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | `/api/analyze-garment` mock 성격 경로 사용 |
 | `RECO-001` | `home` tab | `HomeTab.tsx` | [home-recommendation.md](../features/home-recommendation.md), [recommendation-policy.md](../features/recommendation-policy.md) | static recommendation 중심 |
