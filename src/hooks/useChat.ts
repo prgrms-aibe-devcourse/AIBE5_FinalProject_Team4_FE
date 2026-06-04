@@ -1,7 +1,6 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 export function useChat() {
-    // 상태
     const [gamyagiChatOpen, setGamyagiChatOpen] = useState<boolean>(false);
     const [chatMessages, setChatMessages] = useState<Array<{ sender: "user" | "gamyagi"; text: string }>>([
         {
@@ -12,8 +11,12 @@ export function useChat() {
     const [pendingMsg, setPendingMsg] = useState<string>("");
     const [chatSending, setChatSending] = useState<boolean>(false);
 
-    // 함수
-    // Chat with Gamyagi API handler
+    // 최신 chatMessages를 항상 참조하기 위한 ref
+    const chatMessagesRef = useRef(chatMessages);
+    useEffect(() => {
+        chatMessagesRef.current = chatMessages;
+    }, [chatMessages]);
+
     const handleSendChatToMD = async () => {
         if (!pendingMsg.trim() || chatSending) return;
         const currentMsg = pendingMsg;
@@ -27,7 +30,8 @@ export function useChat() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     message: currentMsg,
-                    history: chatMessages.map((m) => ({
+                    // 클로저 캡처 대신 ref로 최신 배열 참조
+                    history: chatMessagesRef.current.map((m) => ({
                         role: m.sender === "user" ? "user" : "model",
                         text: m.text,
                     }))
