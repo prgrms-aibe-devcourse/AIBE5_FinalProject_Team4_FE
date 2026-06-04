@@ -93,8 +93,9 @@ export default function App() {
       {/* 2. ONBOARDING PROFILE FLOWS */}
       {/* ========================================================= */}
       {isLoggedIn && !profile.onboarded && (
-          <OnboardingPage onComplete={(nickname, birthday, gender, styles) => {
+          <OnboardingPage onComplete={(nickname, birthday, gender, styles, openModal) => {
             setProfile({ nickname, birthday, gender, styles, onboarded: true });
+            if (openModal) openUploadModal();
           }} />
       )}
 
