@@ -24,27 +24,45 @@ import {
   captureOAuthTokenFromUrl,
   getUserIdFromAccessToken,
 } from "@/utils/authUser";
+import { ensureDevToken, DEFAULT_DEV_USER_ID } from "@/utils/ensureDevToken";
+import { redirectToOAuthLogin } from "@/utils/authLogin";
 
-/** FE 전용 mock — Vite가 BE(8080)로 프록시하면 Spring이 401+빈 본문을 반환할 수 있음 */
-async function postRecommendApi(
-  body: Record<string, unknown>,
-): Promise<{ gamyagiComment?: string; recommendations?: Recommendation[] } | null> {
-  const response = await fetch("/api/recommend", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  const text = await response.text();
-  if (!response.ok || !text.trim()) return null;
-  try {
-    return JSON.parse(text) as {
-      gamyagiComment?: string;
-      recommendations?: Recommendation[];
-    };
-  } catch {
-    return null;
-  }
-}
+const MOCK_AI_CURATION: { comment: string; items: Recommendation[] } = {
+  comment:
+    "삐리빅! 네트워크가 고요하지만 제가 준비한 기상대 픽 감각 레이블을 제안합니다! 따뜻한 울 자켓과 와이드 실루엣으로 유니크한 감성을 극대화하세요.",
+  items: [
+    {
+      id: "rec1",
+      name: "테크니컬 레이어드 방수 쉘 재킷",
+      category: "Outer",
+      color: "Matt Black",
+      matchRate: 98,
+      imageName: "outer_jacket",
+      styleTag: "Gorpcore",
+      price: "128,000",
+    },
+    {
+      id: "rec2",
+      name: "아나토믹 드레이프 루즈 와이드 데님",
+      category: "Bottom",
+      color: "인디고 블루",
+      matchRate: 95,
+      imageName: "bottom_jeans",
+      styleTag: "Casual",
+      price: "69,000",
+    },
+    {
+      id: "rec3",
+      name: "고정밀 크루넥 입체 코튼 티셔츠",
+      category: "Top",
+      color: "화이트",
+      matchRate: 88,
+      imageName: "top_tee",
+      styleTag: "Minimal",
+      price: "39,000",
+    },
+  ],
+};
 
 // Static recommended product collections mapping beautifully for each recommendation button triggers
 const TRIGGER_PRODUCTS: Record<string, any[]> = {
@@ -396,15 +414,15 @@ const INITIAL_GARMENTS: Garment[] = [
 
 export default function App() {
   // Login State
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
-  const [authUserId, setAuthUserId] = useState<number | null>(() => {
-    if (captureOAuthTokenFromUrl()) {
-      return getUserIdFromAccessToken();
-    }
-    return getUserIdFromAccessToken();
-  });
-  /** 온보딩 후 API 호출 전 dev mock-token 등 인증 준비 완료 */
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(
+    () => getUserIdFromAccessToken() != null,
+  );
+  const [authUserId, setAuthUserId] = useState<number | null>(
+    getUserIdFromAccessToken,
+  );
+  /** 온보딩 후 dev mock-token 등 인증 동기화 완료 */
   const [authReady, setAuthReady] = useState(false);
+  const [authTokenError, setAuthTokenError] = useState<string | null>(null);
   
   // User Profile Setup State
   const [profile, setProfile] = useState<UserProfile>({
@@ -497,20 +515,46 @@ export default function App() {
     }
   }, [profile.onboarded, profile.nickname, profile.gender, profile.styles]);
 
+  // OAuth 콜백(?token=): URL에서 토큰 추출 후 상태 반영
+  useEffect(() => {
+    if (captureOAuthTokenFromUrl()) {
+      const uid = getUserIdFromAccessToken();
+      setAuthUserId(uid);
+      setIsLoggedIn(uid != null);
+    }
+  }, []);
+
   useEffect(() => {
     if (!isLoggedIn) {
       setAuthUserId(null);
       setAuthReady(false);
+      setAuthTokenError(null);
       return;
     }
 
     let cancelled = false;
+    setAuthReady(false);
+    setAuthTokenError(null);
 
     (async () => {
+      let tokenError: string | null = null;
+      if (import.meta.env.DEV && !getUserIdFromAccessToken()) {
+        // 토큰이 없을 때만 발급 (handleSocialLogin에서 이미 발급된 경우 skip)
+        try {
+          await ensureDevToken(DEFAULT_DEV_USER_ID, { forceRefresh: false });
+        } catch (err) {
+          tokenError =
+            err instanceof Error
+              ? err.message
+              : "개발용 토큰 발급에 실패했습니다.";
+          console.warn("[dev] mock-token 발급 실패:", err);
+        }
+      }
+
       if (cancelled) return;
-      const uid = getUserIdFromAccessToken();
-      setAuthUserId(uid);
-      setAuthReady(!profile.onboarded || uid != null);
+      setAuthUserId(getUserIdFromAccessToken());
+      setAuthTokenError(tokenError);
+      setAuthReady(true);
     })();
 
     return () => {
@@ -525,62 +569,14 @@ export default function App() {
     }
   }, [isLoggedIn, profile.onboarded]);
 
-  const fetchAiRecommendations = async () => {
-    setAiCuration((prev) => ({ ...prev, loading: true }));
-    try {
-      const data = await postRecommendApi({
-        nickname: profile.nickname,
-        gender: profile.gender,
-        styles: profile.styles,
-        weatherCondition: "Seoul: 🌧️ Chilly & Rain today. Keep stylish wraps!",
-      });
-      if (data) {
-        setAiCuration({
-          comment: data.gamyagiComment || "비오는 우울한 날일수록 테크니컬한 레이어드가 필수죠!",
-          items: data.recommendations || [],
-          loading: false
-        });
-      }
-    } catch (err) {
-      console.error("Failed to load Dynamic recommend curation:", err);
-      // fallback
-      setAiCuration({
-        comment: "삐리빅! 네트워크가 고요하지만 제가 준비한 기상대 픽 감각 레이블을 제안합니다! 따뜻한 울 자켓과 와이드 실루엣으로 유니크한 감성을 극대화하세요.",
-        items: [
-          {
-            id: "rec1",
-            name: "테크니컬 레이어드 방수 쉘 재킷",
-            category: "Outer",
-            color: "Matt Black",
-            matchRate: 98,
-            imageName: "outer_jacket",
-            styleTag: "Gorpcore",
-            price: "128,000"
-          },
-          {
-            id: "rec2",
-            name: "아나토믹 드레이프 루즈 와이드 데님",
-            category: "Bottom",
-            color: "인디고 블루",
-            matchRate: 95,
-            imageName: "bottom_jeans",
-            styleTag: "Casual",
-            price: "69,000"
-          },
-          {
-            id: "rec3",
-            name: "고정밀 크루넥 입체 코튼 티셔츠",
-            category: "Top",
-            color: "화이트",
-            matchRate: 88,
-            imageName: "top_tee",
-            styleTag: "Minimal",
-            price: "39,000"
-          }
-        ],
-        loading: false
-      });
-    }
+  const fetchAiRecommendations = () => {
+    setAiCuration({
+      comment:
+        MOCK_AI_CURATION.comment ||
+        "비오는 우울한 날일수록 테크니컬한 레이어드가 필수죠!",
+      items: MOCK_AI_CURATION.items,
+      loading: false,
+    });
   };
 
   // Full-featured style customization saver for the profile edit menu
@@ -607,32 +603,30 @@ export default function App() {
       setStyleUpdateSuccess(false);
     }, 4500);
 
-    // Re-fetch AI recommend curations aligned with the updated stylistic profile
-    setAiCuration((prev) => ({ ...prev, loading: true }));
-    try {
-      const data = await postRecommendApi({
-        nickname: updatedNickname,
-        gender: updatedGender,
-        styles: updatedStyles,
-        weatherCondition: `Calibrated with preference: ${updatedStyles.join(", ")}, Fit: ${updatedFit}, Colors: ${updatedColor}`,
-      });
-      if (data) {
-        setAiCuration({
-          comment: data.gamyagiComment || `새롭게 스타일 설정을 변경하신 것을 환영합니다! 당신에게 딱 어울리는 의류를 추천해 드려요!`,
-          items: data.recommendations || [],
-          loading: false
-        });
-      }
-    } catch (err) {
-      console.error("AI Curation re-fetch failed:", err);
-      setAiCuration((prev) => ({ ...prev, loading: false }));
-    }
+    setAiCuration({
+      comment:
+        "새롭게 스타일 설정을 변경하신 것을 환영합니다! 당신에게 딱 어울리는 의류를 추천해 드려요!",
+      items: MOCK_AI_CURATION.items,
+      loading: false,
+    });
   };
 
-  // Social Login handler
-  const handleSocialLogin = (platform: "kakao" | "google" | "naver") => {
-    // Elegant transition to Nickname profile setup screen
-    setIsLoggedIn(true);
+  const handleSocialLogin = async (platform: "kakao" | "google" | "naver") => {
+    if (import.meta.env.DEV) {
+      try {
+        await ensureDevToken(DEFAULT_DEV_USER_ID, { forceRefresh: true });
+        // authUserId / authReady 는 isLoggedIn 변경 후 useEffect 한 곳에서 일괄 설정
+        setIsLoggedIn(true);
+      } catch (err) {
+        const msg =
+          err instanceof Error
+            ? err.message
+            : "개발용 토큰 발급에 실패했습니다.";
+        alert(`${msg}\n\nBE(local:8080) 실행 여부를 확인해 주세요.`);
+      }
+      return;
+    }
+    redirectToOAuthLogin(platform);
   };
 
   // Profile Setup validation helper
@@ -1080,7 +1074,20 @@ export default function App() {
                   로그인 토큰을 준비하는 중…
                 </div>
               )}
-              {currentTab === "closet" && authReady && authUserId != null && (
+              {currentTab === "closet" &&
+                authReady &&
+                authTokenError != null && (
+                  <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-center text-sm text-amber-900">
+                    {authTokenError}
+                    <p className="mt-2 text-xs text-amber-800">
+                      BE를 local 프로필로 8080에서 실행한 뒤 새로고침해 주세요.
+                    </p>
+                  </div>
+                )}
+              {currentTab === "closet" &&
+                authReady &&
+                authTokenError == null &&
+                authUserId != null && (
                 <ClosetTab
                   clothes={clothes}
                   setClothes={setClothes}
@@ -1089,7 +1096,10 @@ export default function App() {
                   userId={authUserId}
                 />
               )}
-              {currentTab === "closet" && authReady && authUserId == null && (
+              {currentTab === "closet" &&
+                authReady &&
+                authTokenError == null &&
+                authUserId == null && (
                 <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-center text-sm text-amber-900">
                   로그인 정보를 확인할 수 없습니다. 다시 로그인해 주세요.
                 </div>
