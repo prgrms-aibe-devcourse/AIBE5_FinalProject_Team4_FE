@@ -39,8 +39,11 @@ export default function ClosetTab({
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const selectedRef = useRef(selectedGarment);
-  selectedRef.current = selectedGarment;
+  const selectedRef = useRef<Garment | null>(null);
+
+  useEffect(() => {
+    selectedRef.current = selectedGarment;
+  }, [selectedGarment]);
 
   const loadWardrobe = useCallback(async () => {
     setLoading(true);
