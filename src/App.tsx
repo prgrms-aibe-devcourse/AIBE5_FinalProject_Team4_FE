@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { 
   Plus, 
   Home, 
@@ -14,14 +14,13 @@ import {
   FileText, 
   Info, 
   Layers,
-  Sparkle
 } from "./components/icons";
-import { UserProfile, Garment, Recommendation } from "@/types/index";
+import { UserProfile, Garment } from "@/types/index";
 import HomeTab from "./components/HomeTab";
-import ProfileEditTab from "./components/ProfileEditTab";
 import ClosetTab from "./components/ClosetTab";
 import LoginPage from "@/pages/LoginPage";
 import OnboardingPage from "@/pages/OnboardingPage";
+import { useAiRecommendation } from "@/hooks/useAiRecommendation";
 
 // 기존 상수 data ( TRIGGER_PRODUCTS 는 사용을 하지않아 우선 주석처리함 )
 // import { TRIGGER_PRODUCTS } from "@/data/triggerProducts";
@@ -40,6 +39,8 @@ export default function App() {
     birthday: "",
   });
 
+  const { aiCuration } = useAiRecommendation(isLoggedIn, profile);
+
   // Navigation state: 'home' | 'closet' | 'feed' | 'profile'
   const [currentTab, setCurrentTab] = useState<"home" | "closet" | "feed" | "profile">("home");
   const [insightGlow, setInsightGlow] = useState<boolean>(false);
@@ -47,25 +48,9 @@ export default function App() {
   
   // Clothes dynamic management
   const [clothes, setClothes] = useState<Garment[]>(INITIAL_GARMENTS);
-  
-  // Closet active filters
-  const [closetTab, setClosetTab] = useState<"owned" | "wishlist">("owned");
-  const [closetFilter, setClosetFilter] = useState<string>("All");
 
   // Selection for active garment inspection
   const [selectedGarment, setSelectedGarment] = useState<Garment | null>(INITIAL_GARMENTS[0]);
-
-  // AI Curation items loaded from Gemini backend on Home Screen
-  const [aiCuration, setAiCuration] = useState<{
-    comment: string;
-    items: Recommendation[];
-    loading: boolean;
-  }>({
-    comment: "감각이가 맞춤 도우미 정보를 구성 중입니다...",
-    items: [],
-    loading: false
-  });
-
   // Chat panel with dynamic Gamyagi bot state
   const [gamyagiChatOpen, setGamyagiChatOpen] = useState<boolean>(false);
   const [chatMessages, setChatMessages] = useState<Array<{ sender: "user" | "gamyagi"; text: string }>>([
@@ -97,181 +82,6 @@ export default function App() {
 
   // Upload placeholder trigger state
   const [selectedLocalImg, setSelectedLocalImg] = useState<string | null>(null);
-
-  // Active Simulated values
-  const [activeComfortScore, setActiveComfortScore] = useState<number>(95);
-  const [activeTensionDensity, setActiveTensionDensity] = useState<string>("정교한 평행 흐름");
-
-  // Web application dynamic curation triggers and style preferences editing
-  const [activeCurationTrigger, setActiveCurationTrigger] = useState<string>("Casual");
-  const [isTriggerLoading, setIsTriggerLoading] = useState<boolean>(false);
-  
-  // Local Style Editing states for Profile customization screen
-  const [styleUpdateSuccess, setStyleUpdateSuccess] = useState<boolean>(false);
-  const [editedNickname, setEditedNickname] = useState<string>("");
-  const [editedGender, setEditedGender] = useState<"Male" | "Female" | "None">("None");
-  const [editedStyles, setEditedStyles] = useState<string[]>([]);
-  const [editedFitPreference, setEditedFitPreference] = useState<string>("루즈 와이드핏");
-  const [editedColorPalette, setEditedColorPalette] = useState<string>("차분한 웜톤");
-
-  // Keep edited profile states in sync upon onboarding completions
-  useEffect(() => {
-    if (profile.onboarded) {
-      setEditedNickname(profile.nickname);
-      setEditedGender(profile.gender);
-      setEditedStyles(profile.styles);
-    }
-  }, [profile.onboarded, profile.nickname, profile.gender, profile.styles]);
-
-  // Load Initial recommendations from AI server on setup done
-  useEffect(() => {
-    if (isLoggedIn && profile.onboarded) {
-      fetchAiRecommendations();
-    }
-  }, [isLoggedIn, profile.onboarded]);
-
-  const fetchAiRecommendations = async () => {
-    setAiCuration((prev) => ({ ...prev, loading: true }));
-    try {
-      const response = await fetch("/api/recommend", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          nickname: profile.nickname,
-          gender: profile.gender,
-          styles: profile.styles,
-          weatherCondition: "Seoul: 🌧️ Chilly & Rain today. Keep stylish wraps!"
-        })
-      });
-      const data = await response.json();
-      if (data) {
-        setAiCuration({
-          comment: data.gamyagiComment || "비오는 우울한 날일수록 테크니컬한 레이어드가 필수죠!",
-          items: data.recommendations || [],
-          loading: false
-        });
-      }
-    } catch (err) {
-      console.error("Failed to load Dynamic recommend curation:", err);
-      // fallback
-      setAiCuration({
-        comment: "삐리빅! 네트워크가 고요하지만 제가 준비한 기상대 픽 감각 레이블을 제안합니다! 따뜻한 울 자켓과 와이드 실루엣으로 유니크한 감성을 극대화하세요.",
-        items: [
-          {
-            id: "rec1",
-            name: "테크니컬 레이어드 방수 쉘 재킷",
-            category: "Outer",
-            color: "Matt Black",
-            matchRate: 98,
-            imageName: "outer_jacket",
-            styleTag: "Gorpcore",
-            price: "128,000"
-          },
-          {
-            id: "rec2",
-            name: "아나토믹 드레이프 루즈 와이드 데님",
-            category: "Bottom",
-            color: "인디고 블루",
-            matchRate: 95,
-            imageName: "bottom_jeans",
-            styleTag: "Casual",
-            price: "69,000"
-          },
-          {
-            id: "rec3",
-            name: "고정밀 크루넥 입체 코튼 티셔츠",
-            category: "Top",
-            color: "화이트",
-            matchRate: 88,
-            imageName: "top_tee",
-            styleTag: "Minimal",
-            price: "39,000"
-          }
-        ],
-        loading: false
-      });
-    }
-  };
-
-  // Full-featured style customization saver for the profile edit menu
-  const handleSaveStylePreferences = async (
-    updatedNickname: string,
-    updatedGender: "Male" | "Female" | "None",
-    updatedStyles: string[],
-    updatedFit: string,
-    updatedColor: string
-  ) => {
-    // Save to global profile state
-    setProfile((prev) => ({
-      ...prev,
-      nickname: updatedNickname,
-      gender: updatedGender,
-      styles: updatedStyles,
-    }));
-    setEditedFitPreference(updatedFit);
-    setEditedColorPalette(updatedColor);
-    
-    // Trigger successful calibration toast
-    setStyleUpdateSuccess(true);
-    setTimeout(() => {
-      setStyleUpdateSuccess(false);
-    }, 4500);
-
-    // Re-fetch AI recommend curations aligned with the updated stylistic profile
-    setAiCuration((prev) => ({ ...prev, loading: true }));
-    try {
-      const response = await fetch("/api/recommend", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          nickname: updatedNickname,
-          gender: updatedGender,
-          styles: updatedStyles,
-          weatherCondition: `Calibrated with preference: ${updatedStyles.join(", ")}, Fit: ${updatedFit}, Colors: ${updatedColor}`
-        })
-      });
-      const data = await response.json();
-      if (data) {
-        setAiCuration({
-          comment: data.gamyagiComment || `새롭게 스타일 설정을 변경하신 것을 환영합니다! 당신에게 딱 어울리는 의류를 추천해 드려요!`,
-          items: data.recommendations || [],
-          loading: false
-        });
-      }
-    } catch (err) {
-      console.error("AI Curation re-fetch failed:", err);
-      setAiCuration((prev) => ({ ...prev, loading: false }));
-    }
-  };
-
-  // Profile Setup validation helper
-  const handleCompleteOnboarding = () => {
-    if (!profile.nickname.trim()) {
-      alert("닉네임을 입력해 주세요.");
-      return;
-    }
-    if (profile.gender === "None") {
-      alert("성별을 선택해 주세요.");
-      return;
-    }
-    if (profile.styles.length === 0) {
-      alert("스타일 선호도를 하나 이상 선호해 주세요.");
-      return;
-    }
-
-    setProfile((prev) => ({ ...prev, onboarded: true }));
-  };
-
-  // Toggle Styles favorite chips
-  const handleGenreToggle = (styleName: string) => {
-    setProfile((prev) => {
-      const isSelected = prev.styles.includes(styleName);
-      const newStyles = isSelected 
-        ? prev.styles.filter((s) => s !== styleName)
-        : [...prev.styles, styleName];
-      return { ...prev, styles: newStyles };
-    });
-  };
 
   // Chat with Gamyagi API handler
   const handleSendChatToMD = async () => {
@@ -379,13 +189,6 @@ export default function App() {
     setClothes((prev) => [newGarment, ...prev]);
   };
 
-  const filteredClothes = clothes.filter((item) => {
-    const matchesTab = closetTab === "owned" ? !item.isWishlist : !!item.isWishlist;
-    if (!matchesTab) return false;
-
-    if (closetFilter === "All") return true;
-    return item.category === closetFilter;
-  });
 
   const toggleFavorite = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
