@@ -14,7 +14,7 @@ import {
   ChevronRight,
   Sparkle
 } from "./icons";
-import { Garment } from "../types";
+import { Garment } from "@/types/index";
 
 interface ClosetTabProps {
   clothes: Garment[];

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AlertCircle, Shirt } from "./icons";
-import { Garment } from "../types";
+import { Garment } from "@/types/index";
 
 interface HomeTabProps {
   clothes: Garment[];

@@ -51,6 +51,11 @@ export function useCloset() {
                     isReceipt: mockType === "receipt"
                 })
             });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error: ${response.status}`);
+            }
+
             const data = await response.json();
             setAnalyzedDraft({
                 id: "draft_" + Date.now(),
@@ -122,7 +127,7 @@ export function useCloset() {
         if (!analyzedDraft) return;
 
         const newGarment: Garment = {
-            id: analyzedDraft.id || "g_" + Date.now(),
+            id: analyzedDraft.id,
             name: analyzedDraft.name,
             category: analyzedDraft.category,
             color: analyzedDraft.color,
