@@ -7,8 +7,10 @@ export default function NetworkErrorPage() {
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 px-6">
       <p className="text-6xl mb-4">📡</p>
       <h1 className="text-2xl font-bold text-gray-800 mb-2">인터넷 연결을 확인해 주세요</h1>
-      <p className="text-gray-500 text-sm mb-8 text-center">
-        서버에 연결할 수 없어요. 네트워크 상태를 확인한 뒤 다시 시도해 주세요.
+      <p className="text-gray-500 text-sm mb-8 text-center max-w-md">
+        서버에 연결할 수 없어요. 인터넷 연결과 함께{" "}
+        <strong>백엔드(Spring Boot, localhost:8080)</strong>가 실행 중인지도
+        확인해 주세요.
       </p>
       <div className="flex gap-3">
         <button

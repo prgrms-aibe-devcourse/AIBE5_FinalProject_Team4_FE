@@ -1,6 +1,10 @@
 import api from '@/api'
 import type { BeApiResponse, ClothesResponse } from '@/types/be'
-import { mapClothesListToGarments, mapClothesToGarment } from '@/utils/clothesMapper'
+import {
+  mapClothesListToGarments,
+  mapClothesToGarment,
+  buildClothesUpdatePayload,
+} from '@/utils/clothesMapper'
 import type { Garment } from '@/types'
 
 async function unwrap<T>(promise: Promise<{ data: BeApiResponse<T> }>): Promise<T> {
@@ -11,21 +15,121 @@ async function unwrap<T>(promise: Promise<{ data: BeApiResponse<T> }>): Promise<
   return body.data
 }
 
-export async function fetchWardrobeGarments(userId: number): Promise<Garment[]> {
-  const [owned, wishlist] = await Promise.all([
-    unwrap(
-      api.get<BeApiResponse<ClothesResponse[]>>(
-        `/api/v1/users/${userId}/clothes`,
+function toErrorMessage(reason: unknown): string {
+  if (reason instanceof Error) return reason.message
+  return '요청에 실패했습니다.'
+}
+
+/** BE WishlistClothesController — `/api/v1` prefix 없음 */
+const wishlistClothesPath = (userId: number) =>
+  `/api/users/${userId}/wishlist-clothes`
+
+export interface WardrobeMeta {
+  wardrobeId: number
+  userId: number
+}
+
+export interface WardrobeGarmentsResult {
+  garments: Garment[]
+  partialErrors?: {
+    owned?: string
+    wishlist?: string
+  }
+}
+
+export async function fetchWardrobeMeta(userId: number): Promise<WardrobeMeta | null> {
+  try {
+    return await unwrap(
+      api.get<BeApiResponse<WardrobeMeta>>(
+        `/api/v1/wardrobes/users/${userId}`,
       ),
-    ),
-    unwrap(
-      api.get<BeApiResponse<ClothesResponse[]>>(
-        `/api/v1/users/${userId}/wishlist-clothes`,
-      ),
-    ),
+    )
+  } catch {
+    return null
+  }
+}
+
+export async function fetchWardrobeGarments(
+  userId: number,
+  options?: { favoritesOnly?: boolean },
+): Promise<WardrobeGarmentsResult> {
+  const ownedPath = options?.favoritesOnly
+    ? `/api/v1/users/${userId}/clothes/favorites`
+    : `/api/v1/users/${userId}/clothes`
+
+  const [ownedResult, wishlistResult] = await Promise.allSettled([
+    unwrap(api.get<BeApiResponse<ClothesResponse[]>>(ownedPath)),
+    options?.favoritesOnly
+      ? Promise.resolve([] as ClothesResponse[])
+      : unwrap(
+          api.get<BeApiResponse<ClothesResponse[]>>(
+            wishlistClothesPath(userId),
+          ),
+        ),
   ])
 
-  return mapClothesListToGarments([...owned, ...wishlist])
+  const partialErrors: WardrobeGarmentsResult['partialErrors'] = {}
+
+  const owned =
+    ownedResult.status === 'fulfilled' ? ownedResult.value : []
+  if (ownedResult.status === 'rejected') {
+    partialErrors.owned = toErrorMessage(ownedResult.reason)
+  }
+
+  const wishlist =
+    wishlistResult.status === 'fulfilled' ? wishlistResult.value : []
+  if (!options?.favoritesOnly && wishlistResult.status === 'rejected') {
+    partialErrors.wishlist = toErrorMessage(wishlistResult.reason)
+  }
+
+  const hasPartialFailure = Boolean(
+    partialErrors.owned || partialErrors.wishlist,
+  )
+
+  if (hasPartialFailure && owned.length === 0 && wishlist.length === 0) {
+    const messages = [partialErrors.owned, partialErrors.wishlist]
+      .filter(Boolean)
+      .join(' / ')
+    throw new Error(messages || '옷장 데이터를 불러오지 못했습니다.')
+  }
+
+  return {
+    garments: mapClothesListToGarments([...owned, ...wishlist]),
+    partialErrors: hasPartialFailure ? partialErrors : undefined,
+  }
+}
+
+export async function fetchClothesDetail(clothesId: number): Promise<Garment> {
+  const data = await unwrap(
+    api.get<BeApiResponse<ClothesResponse>>(
+      `/api/v1/clothes/${clothesId}`,
+    ),
+  )
+  return mapClothesToGarment(data)
+}
+
+export async function updateClothes(
+  clothesId: number,
+  garment: Garment,
+  edits: {
+    name?: string
+    brandName?: string
+    size?: string
+    season?: string
+  },
+): Promise<Garment> {
+  const payload = buildClothesUpdatePayload(garment, edits)
+  const updated = await unwrap(
+    api.patch<BeApiResponse<ClothesResponse>>(
+      `/api/v1/clothes/${clothesId}`,
+      payload,
+    ),
+  )
+  return mapClothesToGarment(updated)
+}
+
+export async function deleteClothes(clothesId: number): Promise<void> {
+  await api.delete(`/api/v1/clothes/${clothesId}`)
 }
 
 export async function updateClothesFavorite(

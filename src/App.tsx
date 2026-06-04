@@ -20,6 +20,7 @@ import { UserProfile, Garment, Recommendation } from "./types";
 import HomeTab from "./components/HomeTab";
 import ProfileEditTab from "./components/ProfileEditTab";
 import ClosetTab from "./components/ClosetTab";
+import { ensureDevToken, DEFAULT_DEV_USER_ID } from "@/utils/ensureDevToken";
 
 // Static recommended product collections mapping beautifully for each recommendation button triggers
 const TRIGGER_PRODUCTS: Record<string, any[]> = {
@@ -463,6 +464,15 @@ export default function App() {
       setEditedStyles(profile.styles);
     }
   }, [profile.onboarded, profile.nickname, profile.gender, profile.styles]);
+
+  // 로컬 개발: 메인 화면 진입 시 mock JWT 발급 (옷장 탭 전에도 Network에서 확인 가능)
+  useEffect(() => {
+    if (!import.meta.env.DEV || !isLoggedIn || !profile.onboarded) return
+
+    ensureDevToken(DEFAULT_DEV_USER_ID, { forceRefresh: true }).catch((err) => {
+      console.warn('[dev] mock-token 발급 실패:', err)
+    })
+  }, [isLoggedIn, profile.onboarded])
 
   // Load Initial recommendations from AI server on setup done
   useEffect(() => {

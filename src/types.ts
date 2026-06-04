@@ -40,6 +40,20 @@ export interface Garment {
   /** BE 연동용 */
   productCode?: string;
   size?: string;
+  season?: string;
   userImageUrl?: string;
+  /** 수정 API 요청에 필요한 BE code 필드 */
+  be?: GarmentBeMeta;
+}
+
+export interface GarmentBeMeta {
+  categoryCode: string;
+  itemTypeCode: string;
+  primaryColorCode: string;
+  secondaryColorCodes: string[];
+  styleCodes: string[];
+  brandName: string;
+  imageUrl: string;
+  isVerified: boolean;
 }
 

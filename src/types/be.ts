@@ -19,6 +19,12 @@ export interface ColorDisplay {
   hex: string
 }
 
+export interface SecondaryColorResponse {
+  code: string
+  colorDisplay: ColorDisplay | null
+  sortOrder: number
+}
+
 export type OwnershipStatus = 'OWNED' | 'WISHLIST'
 
 export interface ClothesResponse {
@@ -34,7 +40,7 @@ export interface ClothesResponse {
   itemType: string
   primaryColor: string | null
   primaryColorDisplay: ColorDisplay | null
-  secondaryColors: unknown[]
+  secondaryColors: SecondaryColorResponse[]
   styles: ClothesStyleTag[]
   ownershipStatus: OwnershipStatus
   infoSource: string
