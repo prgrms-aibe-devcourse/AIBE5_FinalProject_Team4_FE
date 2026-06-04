@@ -42,6 +42,7 @@ export function useAiRecommendation(isLoggedIn: boolean, profile: UserProfile) {
                     setAiCuration({
                         comment: data.gamyagiComment || "비오는 우울한 날일수록 테크니컬한 레이어드가 필수죠!",
                         items: data.recommendations || [],
+                        loading: false
                     });
                 }
             } catch (err) {
@@ -82,6 +83,7 @@ export function useAiRecommendation(isLoggedIn: boolean, profile: UserProfile) {
                                 price: "39,000"
                             }
                         ],
+                        loading: false,
                     });
                 }
             }
