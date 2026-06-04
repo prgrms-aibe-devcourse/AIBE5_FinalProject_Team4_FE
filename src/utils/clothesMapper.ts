@@ -78,7 +78,7 @@ export function buildClothesUpdatePayload(
     name: edits.name ?? garment.name,
     brandName: edits.brandName ?? be.brandName,
     productCode: garment.productCode ?? 'UNKNOWN',
-    imageUrl: be.imageUrl,
+    imageUrl: garment.userImageUrl ?? be.imageUrl,
     category: be.categoryCode,
     itemType: be.itemTypeCode,
     primaryColor: be.primaryColorCode,

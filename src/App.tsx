@@ -20,7 +20,31 @@ import { UserProfile, Garment, Recommendation } from "./types";
 import HomeTab from "./components/HomeTab";
 import ProfileEditTab from "./components/ProfileEditTab";
 import ClosetTab from "./components/ClosetTab";
-import { ensureDevToken, DEFAULT_DEV_USER_ID } from "@/utils/ensureDevToken";
+import {
+  captureOAuthTokenFromUrl,
+  getUserIdFromAccessToken,
+} from "@/utils/authUser";
+
+/** FE 전용 mock — Vite가 BE(8080)로 프록시하면 Spring이 401+빈 본문을 반환할 수 있음 */
+async function postRecommendApi(
+  body: Record<string, unknown>,
+): Promise<{ gamyagiComment?: string; recommendations?: Recommendation[] } | null> {
+  const response = await fetch("/api/recommend", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const text = await response.text();
+  if (!response.ok || !text.trim()) return null;
+  try {
+    return JSON.parse(text) as {
+      gamyagiComment?: string;
+      recommendations?: Recommendation[];
+    };
+  } catch {
+    return null;
+  }
+}
 
 // Static recommended product collections mapping beautifully for each recommendation button triggers
 const TRIGGER_PRODUCTS: Record<string, any[]> = {
@@ -373,6 +397,14 @@ const INITIAL_GARMENTS: Garment[] = [
 export default function App() {
   // Login State
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  const [authUserId, setAuthUserId] = useState<number | null>(() => {
+    if (captureOAuthTokenFromUrl()) {
+      return getUserIdFromAccessToken();
+    }
+    return getUserIdFromAccessToken();
+  });
+  /** 온보딩 후 API 호출 전 dev mock-token 등 인증 준비 완료 */
+  const [authReady, setAuthReady] = useState(false);
   
   // User Profile Setup State
   const [profile, setProfile] = useState<UserProfile>({
@@ -465,14 +497,26 @@ export default function App() {
     }
   }, [profile.onboarded, profile.nickname, profile.gender, profile.styles]);
 
-  // 로컬 개발: 메인 화면 진입 시 mock JWT 발급 (옷장 탭 전에도 Network에서 확인 가능)
   useEffect(() => {
-    if (!import.meta.env.DEV || !isLoggedIn || !profile.onboarded) return
+    if (!isLoggedIn) {
+      setAuthUserId(null);
+      setAuthReady(false);
+      return;
+    }
 
-    ensureDevToken(DEFAULT_DEV_USER_ID, { forceRefresh: true }).catch((err) => {
-      console.warn('[dev] mock-token 발급 실패:', err)
-    })
-  }, [isLoggedIn, profile.onboarded])
+    let cancelled = false;
+
+    (async () => {
+      if (cancelled) return;
+      const uid = getUserIdFromAccessToken();
+      setAuthUserId(uid);
+      setAuthReady(!profile.onboarded || uid != null);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoggedIn, profile.onboarded]);
 
   // Load Initial recommendations from AI server on setup done
   useEffect(() => {
@@ -484,17 +528,12 @@ export default function App() {
   const fetchAiRecommendations = async () => {
     setAiCuration((prev) => ({ ...prev, loading: true }));
     try {
-      const response = await fetch("/api/recommend", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          nickname: profile.nickname,
-          gender: profile.gender,
-          styles: profile.styles,
-          weatherCondition: "Seoul: 🌧️ Chilly & Rain today. Keep stylish wraps!"
-        })
+      const data = await postRecommendApi({
+        nickname: profile.nickname,
+        gender: profile.gender,
+        styles: profile.styles,
+        weatherCondition: "Seoul: 🌧️ Chilly & Rain today. Keep stylish wraps!",
       });
-      const data = await response.json();
       if (data) {
         setAiCuration({
           comment: data.gamyagiComment || "비오는 우울한 날일수록 테크니컬한 레이어드가 필수죠!",
@@ -571,17 +610,12 @@ export default function App() {
     // Re-fetch AI recommend curations aligned with the updated stylistic profile
     setAiCuration((prev) => ({ ...prev, loading: true }));
     try {
-      const response = await fetch("/api/recommend", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          nickname: updatedNickname,
-          gender: updatedGender,
-          styles: updatedStyles,
-          weatherCondition: `Calibrated with preference: ${updatedStyles.join(", ")}, Fit: ${updatedFit}, Colors: ${updatedColor}`
-        })
+      const data = await postRecommendApi({
+        nickname: updatedNickname,
+        gender: updatedGender,
+        styles: updatedStyles,
+        weatherCondition: `Calibrated with preference: ${updatedStyles.join(", ")}, Fit: ${updatedFit}, Colors: ${updatedColor}`,
       });
-      const data = await response.json();
       if (data) {
         setAiCuration({
           comment: data.gamyagiComment || `새롭게 스타일 설정을 변경하신 것을 환영합니다! 당신에게 딱 어울리는 의류를 추천해 드려요!`,
@@ -1041,13 +1075,24 @@ export default function App() {
               {/* ========================================================= */}
               {/* TAB 2: MY CLOSET (Smart Closet view & Anatomical Fit Guide) */}
               {/* ========================================================= */}
-              {currentTab === "closet" && (
+              {currentTab === "closet" && profile.onboarded && !authReady && (
+                <div className="flex justify-center py-16 text-sm text-slate-500">
+                  로그인 토큰을 준비하는 중…
+                </div>
+              )}
+              {currentTab === "closet" && authReady && authUserId != null && (
                 <ClosetTab
                   clothes={clothes}
                   setClothes={setClothes}
                   selectedGarment={selectedGarment}
                   setSelectedGarment={setSelectedGarment}
+                  userId={authUserId}
                 />
+              )}
+              {currentTab === "closet" && authReady && authUserId == null && (
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-center text-sm text-amber-900">
+                  로그인 정보를 확인할 수 없습니다. 다시 로그인해 주세요.
+                </div>
               )}
 
               {/* ========================================================= */}

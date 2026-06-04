@@ -6,11 +6,7 @@ import {
   updateClothesFavorite,
   convertWishlistToOwned,
 } from "@/api/wardrobe";
-import {
-  ensureDevToken,
-  clearDevToken,
-  DEFAULT_DEV_USER_ID,
-} from "@/utils/ensureDevToken";
+import { clearDevToken } from "@/utils/ensureDevToken";
 import axios from "axios";
 import ClosetGarmentDetail from "@/components/ClosetGarmentDetail";
 import { 
@@ -29,7 +25,8 @@ interface ClosetTabProps {
   setClothes: React.Dispatch<React.SetStateAction<Garment[]>>;
   selectedGarment: Garment | null;
   setSelectedGarment: (g: Garment | null) => void;
-  userId?: number;
+  /** JWT sub와 일치하는 인증 사용자 ID (App에서 전달) */
+  userId: number;
 }
 
 export default function ClosetTab({
@@ -37,7 +34,7 @@ export default function ClosetTab({
   setClothes,
   selectedGarment,
   setSelectedGarment,
-  userId = DEFAULT_DEV_USER_ID,
+  userId,
 }: ClosetTabProps) {
   const [closetTab, setClosetTab] = useState<"owned" | "wishlist">("owned");
   const [closetFilter, setClosetFilter] = useState<string>("All");
@@ -61,8 +58,6 @@ export default function ClosetTab({
     setLoading(true);
     setError(null);
     try {
-      await ensureDevToken(userId, { forceRefresh: true });
-
       const meta = await fetchWardrobeMeta(userId);
       setWardrobeId(meta?.wardrobeId ?? null);
 

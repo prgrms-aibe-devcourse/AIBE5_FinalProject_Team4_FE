@@ -192,7 +192,8 @@ export default function ClosetGarmentDetail({
     return () => {
       cancelled = true
     }
-  }, [garment?.id])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [garment?.id, onToast])
 
   const openEditModal = () => {
     if (!detail?.be) {
@@ -246,7 +247,8 @@ export default function ClosetGarmentDetail({
       setDetail(null)
       setEditModalOpen(false)
       onToast('삭제되었습니다.')
-    } catch {
+    } catch (err) {
+      console.error('[ClosetGarmentDetail] deleteClothes failed:', err)
       onToast('삭제에 실패했습니다.')
     }
   }

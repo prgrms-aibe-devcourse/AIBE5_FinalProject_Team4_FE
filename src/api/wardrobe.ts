@@ -62,9 +62,7 @@ export async function fetchWardrobeGarments(
     options?.favoritesOnly
       ? Promise.resolve([] as ClothesResponse[])
       : unwrap(
-          api.get<BeApiResponse<ClothesResponse[]>>(
-            wishlistClothesPath(userId),
-          ),
+          api.get<BeApiResponse<ClothesResponse[]>>(wishlistClothesPath(userId)),
         ),
   ])
 
@@ -78,7 +76,7 @@ export async function fetchWardrobeGarments(
 
   const wishlist =
     wishlistResult.status === 'fulfilled' ? wishlistResult.value : []
-  if (!options?.favoritesOnly && wishlistResult.status === 'rejected') {
+  if (wishlistResult.status === 'rejected') {
     partialErrors.wishlist = toErrorMessage(wishlistResult.reason)
   }
 
@@ -129,7 +127,7 @@ export async function updateClothes(
 }
 
 export async function deleteClothes(clothesId: number): Promise<void> {
-  await api.delete(`/api/v1/clothes/${clothesId}`)
+  await unwrap(api.delete<BeApiResponse<null>>(`/api/v1/clothes/${clothesId}`))
 }
 
 export async function updateClothesFavorite(
@@ -157,7 +155,7 @@ export async function convertWishlistToOwned(
 ): Promise<Garment> {
   const updated = await unwrap(
     api.patch<BeApiResponse<ClothesResponse>>(
-      `/api/clothes/${clothesId}/convert-to-owned`,
+      `/api/v1/clothes/${clothesId}/convert-to-owned`,
       payload,
     ),
   )
