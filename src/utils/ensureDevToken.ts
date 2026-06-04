@@ -29,4 +29,3 @@ export async function ensureDevToken(
 export function clearDevToken(): void {
   localStorage.removeItem('token')
 }
-
