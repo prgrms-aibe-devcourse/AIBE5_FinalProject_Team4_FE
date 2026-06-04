@@ -734,19 +734,6 @@ export default function App() {
     return item.category === closetFilter;
   });
 
-  const toggleFavorite = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setClothes((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, isFavorite: !c.isFavorite } : c))
-    );
-  };
-
-  const moveToOwnedCloset = (id: string) => {
-    setClothes((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, isWishlist: false } : c))
-    );
-  };
-
   const handleSaveToCloset = () => {
     if (!analyzedDraft) return;
 
@@ -1050,8 +1037,6 @@ export default function App() {
                   setClothes={setClothes}
                   selectedGarment={selectedGarment}
                   setSelectedGarment={setSelectedGarment}
-                  toggleFavorite={toggleFavorite}
-                  moveToOwnedCloset={moveToOwnedCloset}
                 />
               )}
 

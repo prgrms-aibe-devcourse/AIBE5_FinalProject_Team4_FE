@@ -1,7 +1,10 @@
 import axios from 'axios'
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL,
+  // 개발: Vite 프록시(/api → BE). 운영: VITE_API_BASE_URL 직접 호출
+  baseURL: import.meta.env.DEV
+    ? ''
+    : (import.meta.env.VITE_API_BASE_URL ?? ''),
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',

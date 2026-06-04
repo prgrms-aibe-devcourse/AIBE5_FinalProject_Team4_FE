@@ -37,5 +37,9 @@ export interface Garment {
   isFavorite: boolean;
   isWishlist: boolean;
   anatomicalFit?: AnatomicalFitGuide;
+  /** BE 연동용 */
+  productCode?: string;
+  size?: string;
+  userImageUrl?: string;
 }
 

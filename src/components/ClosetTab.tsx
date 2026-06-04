@@ -1,8 +1,11 @@
-/* Todo: data를 실제로 쓸 준비가 되면 다시 추가
+import React, { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import Spinner from "@/components/common/Spinner";
-import useApi from "@/hooks/useApi";
- */
-import React, { useState, useMemo } from "react";
+import {
+  fetchWardrobeGarments,
+  updateClothesFavorite,
+  convertWishlistToOwned,
+} from "@/api/wardrobe";
+import { ensureDevToken, DEFAULT_DEV_USER_ID } from "@/utils/ensureDevToken";
 import { 
   Heart, 
   Layers, 
@@ -21,8 +24,7 @@ interface ClosetTabProps {
   setClothes: React.Dispatch<React.SetStateAction<Garment[]>>;
   selectedGarment: Garment | null;
   setSelectedGarment: (g: Garment | null) => void;
-  toggleFavorite: (id: string, e: React.MouseEvent) => void;
-  moveToOwnedCloset: (id: string) => void;
+  userId?: number;
 }
 
 export default function ClosetTab({
@@ -30,13 +32,37 @@ export default function ClosetTab({
   setClothes,
   selectedGarment,
   setSelectedGarment,
-  toggleFavorite,
-  moveToOwnedCloset
+  userId = DEFAULT_DEV_USER_ID,
 }: ClosetTabProps) {
-  // const {data, error, loading} = useApi('/api/v1/wardrobes/users/1'); Todo: data를 실제로 쓸 준비가 되면 다시 추가
   const [closetTab, setClosetTab] = useState<"owned" | "wishlist">("owned");
   const [closetFilter, setClosetFilter] = useState<string>("All");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const selectedRef = useRef(selectedGarment);
+  selectedRef.current = selectedGarment;
+
+  const loadWardrobe = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      await ensureDevToken(userId);
+      const garments = await fetchWardrobeGarments(userId);
+      setClothes(garments);
+      const preserved = garments.find((g) => g.id === selectedRef.current?.id);
+      setSelectedGarment(preserved ?? garments[0] ?? null);
+    } catch {
+      setError(
+        "옷장 데이터를 불러오지 못했습니다. 백엔드(local:8080) 실행 및 로그인 토큰을 확인해 주세요.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [userId, setClothes, setSelectedGarment]);
+
+  useEffect(() => {
+    loadWardrobe();
+  }, [loadWardrobe]);
 
   const triggerToast = (msg: string) => {
     setToastMessage(msg);
@@ -68,16 +94,73 @@ export default function ClosetTab({
     return counts;
   }, [clothes]);
 
-  // Handle wishlist promotion with visual feedback
-  const handlePromoteToOwned = (id: string, name: string) => {
-    moveToOwnedCloset(id);
-    triggerToast(`🛍️ 축하합니다! "${name}" 의상이 최상단 보유 옷장 목록으로 이동했습니다!`);
+  const toggleFavorite = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const item = clothes.find((c) => c.id === id);
+    if (!item) return;
+
+    const nextFavorite = !item.isFavorite;
+    setClothes((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, isFavorite: nextFavorite } : c)),
+    );
+
+    try {
+      const updated = await updateClothesFavorite(Number(id), nextFavorite);
+      setClothes((prev) =>
+        prev.map((c) => (c.id === id ? { ...c, ...updated } : c)),
+      );
+      triggerToast(
+        nextFavorite
+          ? "❤️ 최애 아이템으로 등록되었습니다."
+          : "💔 최애 목록에서 해제되었습니다.",
+      );
+    } catch {
+      setClothes((prev) =>
+        prev.map((c) => (c.id === id ? { ...c, isFavorite: item.isFavorite } : c)),
+      );
+      triggerToast("즐겨찾기 변경에 실패했습니다.");
+    }
   };
 
-  /* Todo: data를 실제로 쓸 준비가 되면 다시 추가
-  if(loading) return <Spinner />;
-  if(error) return <div>{error}</div>;
-   */
+  const handlePromoteToOwned = async (item: Garment) => {
+    const imageUrl = item.userImageUrl ?? item.thumbnailUrl;
+    if (!imageUrl?.startsWith("http")) {
+      triggerToast("보유 전환에 필요한 이미지 URL이 없습니다.");
+      return;
+    }
+
+    try {
+      const updated = await convertWishlistToOwned(Number(item.id), {
+        productCode: item.productCode ?? "UNKNOWN",
+        size: item.size ?? "FREE",
+        userImageUrl: imageUrl,
+        isVerified: false,
+      });
+      setClothes((prev) =>
+        prev.map((c) => (c.id === item.id ? { ...c, ...updated } : c)),
+      );
+      setClosetTab("owned");
+      triggerToast(`🛍️ "${item.name}" 이(가) 보유 옷장으로 이동했습니다!`);
+    } catch {
+      triggerToast("보유 옷장 전환에 실패했습니다.");
+    }
+  };
+
+  if (loading) return <Spinner />;
+  if (error) {
+    return (
+      <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-center space-y-3">
+        <p className="text-sm font-bold text-rose-800">{error}</p>
+        <button
+          type="button"
+          onClick={loadWardrobe}
+          className="text-xs font-black text-[#1E3A8A] underline cursor-pointer"
+        >
+          다시 시도
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in font-sans">
@@ -290,10 +373,7 @@ export default function ClosetTab({
 
                   {/* Top Heart favorite picker button */}
                   <button
-                    onClick={(e) => {
-                      toggleFavorite(item.id, e);
-                      triggerToast(item.isFavorite ? "💔 최애 목록에서 해제되었습니다." : "❤️ 최애 아이템으로 등록되어 홈 피드에서 추천 가중치가 가산되었습니다!");
-                    }}
+                    onClick={(e) => toggleFavorite(item.id, e)}
                     className="absolute top-3 right-3 p-1.5 rounded-full bg-white/95 hover:bg-white text-rose-500 border border-slate-100 shadow-3xs transition-transform duration-200 active:scale-90 cursor-pointer z-5 hover:rotate-3"
                     title="최애 위시 저장"
                   >
@@ -335,7 +415,7 @@ export default function ClosetTab({
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          handlePromoteToOwned(item.id, item.name);
+                          handlePromoteToOwned(item);
                         }}
                         className="w-full mt-3 h-8.5 text-[10.5px] font-black rounded-xl bg-orange-100 text-orange-900 border border-orange-250 hover:bg-orange-200 transition-all duration-200 flex items-center justify-center space-x-1 shadow-3xs cursor-pointer focus:ring-2 focus:ring-orange-300 active:scale-95"
                       >
