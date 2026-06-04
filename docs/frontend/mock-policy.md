@@ -1,7 +1,7 @@
 ---
 doc_type: fe_mock_policy
 source_of_truth: AIBE5_FinalProject_Team4_FE
-last_updated: 2026-06-03
+last_updated: 2026-06-04
 ---
 
 # Mock 데이터 사용 정책
@@ -38,8 +38,9 @@ last_updated: 2026-06-03
 
 ### 홈 추천
 
+- 현재 구현: `App.tsx`의 `MOCK_AI_CURATION` 상수. **`/api/recommend` HTTP 호출 없음**.
 - 추천 라벨 UI는 mock으로 시작할 수 있습니다.
-- API가 연결되면 추천 결과는 API 응답을 우선 표시합니다.
+- BE 추천 API(`RECO-002`~`004`, `similar-products`, `recommendations` 등) 연결 시 API 응답을 우선 표시합니다.
 - API 실패 시 fallback 데이터는 가능하지만, 실패 상태가 사용자에게 숨겨지지 않아야 합니다.
 
 ### 옷장
@@ -75,9 +76,9 @@ mock을 사용하는 화면은 관련 기능 문서에 아래를 적습니다.
 
 현재 FE 코드에는 개발 또는 mock 성격으로 볼 수 있는 API 경로가 남아 있을 수 있습니다.
 
-| 경로 | 기준 |
+| 경로 / 데이터 | 기준 |
 | --- | --- |
-| `/api/recommend` | BE API 계약에 없는 추천 mock 또는 개발용 경로입니다. 실제 추천 연동 완료 상태로 보지 않습니다. |
+| `App.tsx` `MOCK_AI_CURATION` | 홈 감각이 추천 영역용 **로컬 mock**. 네트워크 호출 없음. BE 추천 API 연동 시 대체 대상입니다. |
 | `/api/chat-gamyagi` | BE API 계약에 없는 AI 채팅 mock 또는 개발용 경로입니다. 실제 AI MD 연동 기준은 BE 계약 확정 후 사용합니다. |
 | `/api/analyze-garment` | BE API 계약에 없는 분석 mock 또는 개발용 경로입니다. 실제 옷 등록 분석은 photo/purchase-capture API 기준으로 사용합니다. |
 
