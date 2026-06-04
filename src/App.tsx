@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from "react";
+import { useState } from "react";
 import { 
   Plus, 
   Home, 
@@ -40,7 +40,7 @@ export default function App() {
     birthday: "",
   });
 
-  const { aiCuration } = useAiRecommendation(isLoggedIn, profile);
+  useAiRecommendation(isLoggedIn, profile);
   const { gamyagiChatOpen, setGamyagiChatOpen, chatMessages, pendingMsg, setPendingMsg, chatSending, handleSendChatToMD } = useChat();
 
   // 옷장
@@ -62,7 +62,6 @@ export default function App() {
 
   // Navigation state: 'home' | 'closet' | 'feed' | 'profile'
   const [currentTab, setCurrentTab] = useState<"home" | "closet" | "feed" | "profile">("home");
-  const [insightGlow, setInsightGlow] = useState<boolean>(false);
   const [homeResetSignal, setHomeResetSignal] = useState<number>(0);
 
 
@@ -78,7 +77,6 @@ export default function App() {
 
   const handleHomeNavigation = () => {
     setCurrentTab("home");
-    setInsightGlow(false);
     setHomeResetSignal((signal) => signal + 1);
     window.setTimeout(scrollAppToTop, 0);
   };
@@ -180,7 +178,6 @@ export default function App() {
                   clothes={clothes}
                   onAddWishlistItem={handleAddWishlistItem}
                   nickname={profile.nickname}
-                  insightGlow={insightGlow}
                   resetSignal={homeResetSignal}
                 />
               )}
