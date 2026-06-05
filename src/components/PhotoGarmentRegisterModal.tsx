@@ -15,7 +15,9 @@ import {
 import { GARMENT_STYLES } from '@/data/garmentStyles'
 import {
   GARMENT_NAME_MAX_LENGTH,
-  FABRIC_MATERIAL_MAX_LENGTH,
+  BRAND_NAME_MAX_LENGTH,
+  GARMENT_SIZE_MAX_LENGTH,
+  GARMENT_SEASON_OPTIONS,
 } from '@/utils/garmentRegisterValidation'
 import type { Garment } from '@/types'
 
@@ -585,22 +587,68 @@ export default function PhotoGarmentRegisterModal({
 
                 <div className="space-y-0.5">
                   <label className="text-xs font-bold text-slate-500">
-                    소재 물성 정보{' '}
+                    브랜드{' '}
                     <span className="text-slate-400 font-normal">(선택)</span>
                   </label>
                   <input
                     type="text"
-                    value={draft.fabricMaterial}
-                    maxLength={FABRIC_MATERIAL_MAX_LENGTH}
-                    onChange={(e) => setDraft({ fabricMaterial: e.target.value })}
-                    placeholder="예: 코튼 100%"
+                    value={draft.brandName}
+                    maxLength={BRAND_NAME_MAX_LENGTH}
+                    onChange={(e) => setDraft({ brandName: e.target.value })}
+                    placeholder="예: 무신사 스탠다드 (모를 경우 비워두세요)"
                     className={`w-full h-11 px-3 rounded-lg border text-sm bg-white ${
-                      fieldErrors.fabricMaterial ? 'border-red-400' : 'border-slate-200'
+                      fieldErrors.brandName ? 'border-red-400' : 'border-slate-200'
                     }`}
                   />
-                  {fieldErrors.fabricMaterial && (
-                    <p className="text-xs text-red-600">{fieldErrors.fabricMaterial}</p>
+                  {fieldErrors.brandName && (
+                    <p className="text-xs text-red-600">{fieldErrors.brandName}</p>
                   )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-0.5">
+                    <label className="text-xs font-bold text-slate-500">
+                      사이즈{' '}
+                      <span className="text-slate-400 font-normal">(선택)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={draft.size}
+                      maxLength={GARMENT_SIZE_MAX_LENGTH}
+                      onChange={(e) => setDraft({ size: e.target.value })}
+                      placeholder="예: L, M (비우면 FREE)"
+                      className={`w-full h-11 px-3 rounded-lg border text-sm bg-white ${
+                        fieldErrors.size ? 'border-red-400' : 'border-slate-200'
+                      }`}
+                    />
+                    {fieldErrors.size && (
+                      <p className="text-xs text-red-600">{fieldErrors.size}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-0.5">
+                    <label className="text-xs font-bold text-slate-500">
+                      시즌{' '}
+                      <span className="text-slate-400 font-normal">(선택)</span>
+                    </label>
+                    <select
+                      value={draft.season}
+                      onChange={(e) => setDraft({ season: e.target.value })}
+                      className={`w-full h-11 px-3 rounded-lg border text-sm bg-white outline-hidden ${
+                        fieldErrors.season ? 'border-red-400' : 'border-slate-200'
+                      }`}
+                    >
+                      <option value="">선택</option>
+                      {GARMENT_SEASON_OPTIONS.map(({ code, label }) => (
+                        <option key={code} value={code}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                    {fieldErrors.season && (
+                      <p className="text-xs text-red-600">{fieldErrors.season}</p>
+                    )}
+                  </div>
                 </div>
 
                 <button

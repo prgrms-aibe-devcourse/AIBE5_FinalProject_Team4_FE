@@ -32,7 +32,9 @@ export function mapPhotoDraftToRegisterDraft(
       .filter((c) => c !== resolveGarmentColorCode(beDraft?.primaryColor)),
     mainStyle,
     secondaryStyles,
-    fabricMaterial: (beDraft?.brandName ?? fallback?.fabricMaterial ?? '').trim(),
+    brandName: (beDraft?.brandName ?? fallback?.brandName ?? '').trim(),
+    size: (beDraft?.size ?? fallback?.size ?? '').trim(),
+    season: (beDraft?.season ?? fallback?.season ?? '').trim(),
   }
 }
 
@@ -51,13 +53,15 @@ export function buildPhotoSavePayload(
 
   return {
     name: draft.name.trim(),
-    brandName: draft.fabricMaterial.trim() || 'UNKNOWN',
+    brandName: draft.brandName.trim() || 'UNKNOWN',
     productCode: productCode ?? `PHOTO-${Date.now()}`,
     category: UI_CATEGORY_TO_BE[draft.category],
     itemType: draft.itemType,
     primaryColor: draft.mainColor,
     secondaryColors: draft.secondaryColors,
     styles,
+    size: draft.size.trim() || 'FREE',
+    season: draft.season.trim() || undefined,
     favorite: false,
     isVerified: false,
   }

@@ -1,7 +1,7 @@
 ---
 doc_type: fe_implementation_gaps
 source_of_truth: AIBE5_FinalProject_Team4_FE
-last_updated: 2026-06-04
+last_updated: 2026-06-05
 ---
 
 # FE 구현 정합성 현황
@@ -51,8 +51,8 @@ last_updated: 2026-06-04
 | `CLOTH-002` | `closet` tab 보유 목록 | `ClosetTab.tsx` | [frontend-api-usage.md](../api/frontend-api-usage.md), [wardrobe.md](../features/wardrobe.md) | BE API 연동 완료. `GET /api/v1/users/{userId}/clothes` 사용 |
 | `CLOTH-006` | `closet` tab 미보유 목록 | `ClosetTab.tsx` | [frontend-api-usage.md](../api/frontend-api-usage.md), [wardrobe.md](../features/wardrobe.md) | BE API 연동 완료. `GET /api/users/{userId}/wishlist-clothes` 사용 |
 | `CLOTH-007` | 옷 상세/옷장 전환 | `ClosetTab.tsx` | [frontend-api-usage.md](../api/frontend-api-usage.md), [wardrobe.md](../features/wardrobe.md) | BE API 연동 완료. `PATCH /api/clothes/{clothesId}/convert-to-owned` 사용 |
-| `REG-001` | 옷 등록 modal | `App.tsx`, `AiAnalyzing.tsx` | [garment-registration.md](../features/garment-registration.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | `/api/analyze-garment` mock 성격 경로 사용 |
-| `REG-002` | 구매내역 등록 modal | `App.tsx` | [garment-registration.md](../features/garment-registration.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | `/api/analyze-garment` mock 성격 경로 사용 |
+| `REG-001` | 사진 기반 등록 modal | `PhotoGarmentRegisterModal.tsx`, `photoRegistration.ts`, `usePhotoGarmentRegister.ts` | [garment-registration.md](../features/garment-registration.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | **BE API 연동 완료**. `POST/GET /api/v1/users/{userId}/clothes/photos/**` 사용 |
+| `REG-002` | 구매내역 등록 modal | `App.tsx`, `useCloset.ts` | [garment-registration.md](../features/garment-registration.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | `/api/analyze-garment` mock 성격 경로 사용 |
 | `RECO-001` | `home` tab | `HomeTab.tsx` | [home-recommendation.md](../features/home-recommendation.md), [recommendation-policy.md](../features/recommendation-policy.md) | **`/api/recommend` 미호출**. `HomeTab` 내부 static/mock 추천. BE 추천 API 미연동 |
 | `RECO-003` | `home` tab, 옷 상세 | `HomeTab.tsx` | [home-recommendation.md](../features/home-recommendation.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | static/mock 추천 |
 | `RECO-004` | `home` tab, 옷 상세 | `HomeTab.tsx` | [home-recommendation.md](../features/home-recommendation.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | static/mock 추천 |
@@ -114,11 +114,12 @@ BE API 계약이 확정되면 [frontend-api-usage.md](../api/frontend-api-usage.
 
 ### API 경로와 mock 경계
 
-#### 해소·변경 (이번 PR)
+#### 해소·변경
 
 | 이전 FE 기록 | 현재 코드 |
 | --- | --- |
 | `/api/recommend` 직접 `fetch` (`useAiRecommendation`) | **제거**. 홈은 `HomeTab` static/mock ([mock-policy.md](mock-policy.md)) |
+| `REG-001` 사진 등록 → `/api/analyze-garment` | **해소**. `src/api/photoRegistration.ts`가 `/api/v1/users/{userId}/clothes/photos/**` 공식 경로 사용 (`PhotoGarmentRegisterModal.tsx`) |
 
 #### 아직 남아 있는 mock 성격 경로
 
@@ -127,7 +128,7 @@ BE API 계약이 확정되면 [frontend-api-usage.md](../api/frontend-api-usage.
 | 현재 FE 경로 | 현재 용도 | 실제 기준 |
 | --- | --- | --- |
 | `/api/chat-gamyagi` | AI MD 채팅 mock 성격 | AI MD 기능 API가 확정되면 BE 계약 문서에 추가 후 사용 |
-| `/api/analyze-garment` | 사진/구매내역 분석 mock 성격 | photo 또는 purchase-capture analyze API 사용 |
+| `/api/analyze-garment` | 구매내역 등록 분석 mock 성격 (`REG-002`) | `POST /api/v1/users/{userId}/clothes/purchase-captures/**` 사용 |
 
 실제 API 연동 코드에서 위 경로가 계속 사용된다면 [frontend-api-usage.md](../api/frontend-api-usage.md)의 API 코드 정합성 기준을 충족하지 않습니다.
 

@@ -80,6 +80,10 @@ export function usePhotoGarmentRegister(userId: number | null) {
 
       const validationError = validateGarmentImageFile(file)
       if (validationError) {
+        revokePreview()
+        setSelectedFile(null)
+        setPreviewUrl(null)
+        setPhotoId(null)
         setUploadError(validationError)
         return
       }
@@ -164,7 +168,9 @@ export function usePhotoGarmentRegister(userId: number | null) {
             itemType: 'itemType',
             mainColor: 'mainColor',
             mainStyle: 'mainStyle',
-            fabricMaterial: 'fabricMaterial',
+            brandName: 'brandName',
+            size: 'size',
+            season: 'season',
           }
           const field = fieldMap[key]
           if (field) delete next[field]
