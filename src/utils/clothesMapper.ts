@@ -1,12 +1,6 @@
 import type { ClothesResponse } from '@/types/be'
 import type { Garment, GarmentBeMeta } from '@/types'
-
-const CATEGORY_TO_UI: Record<string, Garment['category']> = {
-  TOP: 'Top',
-  BOTTOM: 'Bottom',
-  OUTER: 'Outer',
-  SHOES: 'Shoes',
-}
+import { BE_CATEGORY_TO_UI } from '@/data/categoryItemTypes'
 
 function extractBeMeta(item: ClothesResponse): GarmentBeMeta {
   return {
@@ -26,7 +20,7 @@ export function mapClothesToGarment(item: ClothesResponse): Garment {
   return {
     id: String(item.clothesId),
     name: item.name,
-    category: CATEGORY_TO_UI[item.category] ?? 'Top',
+    category: BE_CATEGORY_TO_UI[item.category as keyof typeof BE_CATEGORY_TO_UI] ?? 'Top',
     color: item.primaryColorDisplay?.name ?? item.primaryColor ?? '',
     style: primaryStyle?.name ?? primaryStyle?.code ?? '',
     fitType: item.itemType,
