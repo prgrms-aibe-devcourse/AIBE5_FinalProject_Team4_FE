@@ -1,7 +1,7 @@
 ---
 doc_type: fe_doc_index
 source_of_truth: AIBE5_FinalProject_Team4_FE
-last_updated: 2026-06-03
+last_updated: 2026-06-04
 ---
 
 # 프로젝트 문서

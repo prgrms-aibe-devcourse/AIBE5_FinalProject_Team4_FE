@@ -2,7 +2,7 @@
 doc_type: fe_api_usage
 source_of_truth: AIBE5_FinalProject_Team4_FE
 api_contract_source_of_truth: AIBE5_FinalProject_Team4_BE/docs/api/api-contract.md
-last_updated: 2026-06-03
+last_updated: 2026-06-04
 ---
 
 # API 사용 기준
@@ -52,6 +52,15 @@ src/api/index.ts
 - 502 외부 서비스 오류는 외부 서비스 오류 안내로 처리합니다.
 - 네트워크 오류는 `/error/network`로 이동합니다.
 
+## 인증 (현재 `LoginPage` + `App.tsx`)
+
+| 환경 | 로그인 시작 | 토큰 | `{userId}` |
+| --- | --- | --- | --- |
+| 개발(`DEV`) | `LoginPage` provider 버튼 → `App.handleSocialLogin` → `ensureDevToken` → `GET /api/v1/auth/mock-token?userId=1` | `localStorage.token` | JWT `sub` → `authUserId` |
+| 운영 | 동일 버튼 → `redirectToOAuthLogin(provider)` → `GET {VITE_API_BASE_URL}/oauth2/authorization/{provider}` | OAuth 콜백 `?token=` → `captureOAuthTokenFromUrl()` | 동일 |
+
+옷장·보유/미보유 API path의 `{userId}`는 하드코딩 `1`이 아니라 **JWT `sub`** 를 사용합니다. dev의 `userId=1`은 mock-token 발급 파라미터에만 쓰입니다.
+
 ## 경로 작성 기준
 
 권장:
@@ -64,9 +73,11 @@ api.get(`/api/v1/users/${userId}/clothes`)
 지양:
 
 ```ts
-fetch('/api/recommend')
+fetch('/api/chat-gamyagi') // mock 경로 — 공통 api client·BE 계약 경로로 대체
 api.get('api/v1/categories')
 ```
+
+홈 추천(`RECO-001`)은 현재 `HomeTab.tsx` 내부 static/mock 데이터만 사용하며 `/api/recommend`를 호출하지 않습니다. ([implementation-gaps.md](../frontend/implementation-gaps.md))
 
 직접 `fetch`를 사용하는 경우에도 인증, 에러 처리, base URL 기준이 동일하게 적용되어야 하므로 공통 API 클라이언트로 옮기는 것을 우선합니다.
 

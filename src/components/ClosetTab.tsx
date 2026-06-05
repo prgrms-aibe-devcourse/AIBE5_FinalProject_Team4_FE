@@ -1,12 +1,16 @@
-/* Todo: data를 실제로 쓸 준비가 되면 다시 추가
+import React, { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import Spinner from "@/components/common/Spinner";
-import useApi from "@/hooks/useApi";
- */
-import React, { useState, useMemo } from "react";
+import {
+  fetchWardrobeGarments,
+  fetchWardrobeMeta,
+  updateClothesFavorite,
+  convertWishlistToOwned,
+} from "@/api/wardrobe";
+import { clearDevToken } from "@/utils/ensureDevToken";
+import axios from "axios";
+import ClosetGarmentDetail from "@/components/ClosetGarmentDetail";
 import { 
   Heart, 
-  Layers, 
-  Sparkles, 
   ShoppingBag, 
   Flame, 
   Award, 
@@ -21,8 +25,8 @@ interface ClosetTabProps {
   setClothes: React.Dispatch<React.SetStateAction<Garment[]>>;
   selectedGarment: Garment | null;
   setSelectedGarment: (g: Garment | null) => void;
-  toggleFavorite: (id: string, e: React.MouseEvent) => void;
-  moveToOwnedCloset: (id: string) => void;
+  /** JWT sub와 일치하는 인증 사용자 ID (App에서 전달) */
+  userId: number;
 }
 
 export default function ClosetTab({
@@ -30,19 +34,81 @@ export default function ClosetTab({
   setClothes,
   selectedGarment,
   setSelectedGarment,
-  toggleFavorite,
-  moveToOwnedCloset
+  userId,
 }: ClosetTabProps) {
-  // const {data, error, loading} = useApi('/api/v1/wardrobes/users/1'); Todo: data를 실제로 쓸 준비가 되면 다시 추가
   const [closetTab, setClosetTab] = useState<"owned" | "wishlist">("owned");
   const [closetFilter, setClosetFilter] = useState<string>("All");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [wardrobeId, setWardrobeId] = useState<number | null>(null);
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const selectedRef = useRef<Garment | null>(null);
 
-  const triggerToast = (msg: string) => {
+  useEffect(() => {
+    selectedRef.current = selectedGarment;
+  }, [selectedGarment]);
+
+  const triggerToast = useCallback((msg: string) => {
     setToastMessage(msg);
-    setTimeout(() => {
-      setToastMessage(null);
-    }, 3000);
+    setTimeout(() => setToastMessage(null), 3000);
+  }, []);
+
+  const loadWardrobe = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const meta = await fetchWardrobeMeta(userId);
+      setWardrobeId(meta?.wardrobeId ?? null);
+
+      const { garments, partialErrors } = await fetchWardrobeGarments(userId, {
+        favoritesOnly: showFavoritesOnly,
+      });
+      setClothes(garments);
+      const preserved = garments.find((g) => g.id === selectedRef.current?.id);
+      setSelectedGarment(preserved ?? garments[0] ?? null);
+
+      if (partialErrors?.wishlist) {
+        triggerToast("위시리스트를 불러오지 못했습니다. 보유 옷만 표시합니다.");
+      }
+      if (partialErrors?.owned) {
+        triggerToast("보유 옷을 불러오지 못했습니다. 위시리스트만 표시합니다.");
+      }
+    } catch (err) {
+      const isNetwork =
+        axios.isAxiosError(err) &&
+        (err.code === "ERR_NETWORK" || err.message === "Network Error");
+
+      if (axios.isAxiosError(err) && err.response?.status === 401) {
+        clearDevToken();
+      }
+
+      setError(
+        isNetwork
+          ? "백엔드에 연결할 수 없습니다. E:\\AIBE5_FinalProject_Team4_BE 에서 docker-compose up -d 후 .\\gradlew bootRun 으로 8080 포트를 띄운 뒤 다시 시도해 주세요."
+          : "옷장 데이터를 불러오지 못했습니다. BE(local:8080) 실행·local 프로필·mock-token을 확인해 주세요.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [userId, setClothes, setSelectedGarment, showFavoritesOnly, triggerToast]);
+
+  useEffect(() => {
+    loadWardrobe();
+  }, [loadWardrobe]);
+
+  const upsertGarment = (updated: Garment) => {
+    setClothes((prev) =>
+      prev.map((c) => (c.id === updated.id ? { ...c, ...updated } : c)),
+    );
+    if (selectedRef.current?.id === updated.id) {
+      setSelectedGarment(updated);
+    }
+  };
+
+  const handleGarmentDeleted = (clothesId: string) => {
+    setClothes((prev) => prev.filter((c) => c.id !== clothesId));
+    setSelectedGarment(null);
   };
 
   // Helper values
@@ -68,16 +134,69 @@ export default function ClosetTab({
     return counts;
   }, [clothes]);
 
-  // Handle wishlist promotion with visual feedback
-  const handlePromoteToOwned = (id: string, name: string) => {
-    moveToOwnedCloset(id);
-    triggerToast(`🛍️ 축하합니다! "${name}" 의상이 최상단 보유 옷장 목록으로 이동했습니다!`);
+  const toggleFavorite = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const item = clothes.find((c) => c.id === id);
+    if (!item) return;
+
+    const nextFavorite = !item.isFavorite;
+    setClothes((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, isFavorite: nextFavorite } : c)),
+    );
+
+    try {
+      const updated = await updateClothesFavorite(Number(id), nextFavorite);
+      upsertGarment(updated);
+      triggerToast(
+        nextFavorite
+          ? "❤️ 최애 아이템으로 등록되었습니다."
+          : "💔 최애 목록에서 해제되었습니다.",
+      );
+    } catch {
+      setClothes((prev) =>
+        prev.map((c) => (c.id === id ? { ...c, isFavorite: item.isFavorite } : c)),
+      );
+      triggerToast("즐겨찾기 변경에 실패했습니다.");
+    }
   };
 
-  /* Todo: data를 실제로 쓸 준비가 되면 다시 추가
-  if(loading) return <Spinner />;
-  if(error) return <div>{error}</div>;
-   */
+  const handlePromoteToOwned = async (item: Garment) => {
+    const imageUrl = item.userImageUrl ?? item.thumbnailUrl;
+    if (!imageUrl?.startsWith("http")) {
+      triggerToast("보유 전환에 필요한 이미지 URL이 없습니다.");
+      return;
+    }
+
+    try {
+      const updated = await convertWishlistToOwned(Number(item.id), {
+        productCode: item.productCode ?? "UNKNOWN",
+        size: item.size ?? "FREE",
+        userImageUrl: imageUrl,
+        isVerified: false,
+      });
+      upsertGarment(updated);
+      setClosetTab("owned");
+      triggerToast(`🛍️ "${item.name}" 이(가) 보유 옷장으로 이동했습니다!`);
+    } catch {
+      triggerToast("보유 옷장 전환에 실패했습니다.");
+    }
+  };
+
+  if (loading) return <Spinner />;
+  if (error) {
+    return (
+      <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-center space-y-3">
+        <p className="text-sm font-bold text-rose-800">{error}</p>
+        <button
+          type="button"
+          onClick={loadWardrobe}
+          className="text-xs font-black text-[#1E3A8A] underline cursor-pointer"
+        >
+          다시 시도
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in font-sans">
@@ -115,6 +234,11 @@ export default function ClosetTab({
             <p className="text-xs text-slate-550 text-slate-600 font-bold leading-relaxed max-w-md">
               보유 중인 품목을 조회하고, 위시리스트 아이템을 내 옷장으로 편입시켜 가상 해부학 핏(Fit) 시뮬레이션으로 코디의 완벽율을 높여보세요.
             </p>
+            {wardrobeId != null && (
+              <p className="text-[10px] text-slate-500 font-mono">
+                옷장 ID: {wardrobeId} · 회원 {userId}
+              </p>
+            )}
           </div>
 
           {/* Core Mini Smart Stats counter grid */}
@@ -203,8 +327,22 @@ export default function ClosetTab({
       </div>
 
       {/* ========================================================================= */}
-      {/* 3. HORIZONTAL CATEGORIES BAR */}
+      {/* 3. FILTER: FAVORITES + CATEGORIES */}
       {/* ========================================================================= */}
+      <div className="flex flex-wrap gap-2 items-center">
+        <button
+          type="button"
+          onClick={() => setShowFavoritesOnly((v) => !v)}
+          className={`px-4 py-2 rounded-full text-xs font-black border cursor-pointer ${
+            showFavoritesOnly
+              ? "bg-rose-500 text-white border-rose-500"
+              : "bg-white text-slate-500 border-slate-200"
+          }`}
+        >
+          ❤️ 즐겨찾기만
+        </button>
+      </div>
+
       <div className="flex space-x-2 overflow-x-auto pb-1.5 scrollbar-none select-none text-left">
         {["All", "Top", "Bottom", "Outer", "Shoes"].map((cat) => {
           const isSelected = closetFilter === cat;
@@ -290,10 +428,7 @@ export default function ClosetTab({
 
                   {/* Top Heart favorite picker button */}
                   <button
-                    onClick={(e) => {
-                      toggleFavorite(item.id, e);
-                      triggerToast(item.isFavorite ? "💔 최애 목록에서 해제되었습니다." : "❤️ 최애 아이템으로 등록되어 홈 피드에서 추천 가중치가 가산되었습니다!");
-                    }}
+                    onClick={(e) => toggleFavorite(item.id, e)}
                     className="absolute top-3 right-3 p-1.5 rounded-full bg-white/95 hover:bg-white text-rose-500 border border-slate-100 shadow-3xs transition-transform duration-200 active:scale-90 cursor-pointer z-5 hover:rotate-3"
                     title="최애 위시 저장"
                   >
@@ -335,7 +470,7 @@ export default function ClosetTab({
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          handlePromoteToOwned(item.id, item.name);
+                          handlePromoteToOwned(item);
                         }}
                         className="w-full mt-3 h-8.5 text-[10.5px] font-black rounded-xl bg-orange-100 text-orange-900 border border-orange-250 hover:bg-orange-200 transition-all duration-200 flex items-center justify-center space-x-1 shadow-3xs cursor-pointer focus:ring-2 focus:ring-orange-300 active:scale-95"
                       >
@@ -362,89 +497,24 @@ export default function ClosetTab({
           </div>
         </div>
 
-        {/* Right Active Drawer Card Column (Span 1) */}
+        {/* Right: BE 상세 / 수정 / 삭제 */}
         <div className="space-y-4">
-          
           <div className="flex items-center space-x-2 select-none justify-between lg:justify-start">
-            <h3 className="text-lg font-black text-slate-900 tracking-tight flex items-center gap-1.5">
-              <span>의상 상세 분석 정보</span>
+            <h3 className="text-lg font-black text-slate-900 tracking-tight">
+              의상 상세
             </h3>
-            <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md font-mono">SPEC SHEET</span>
+            <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md font-mono">
+              BE 연동
+            </span>
           </div>
 
-          {selectedGarment ? (
-            <div className="space-y-5">
-              
-              {/* Card Meta Banner */}
-              <div className="bg-white rounded-[24px] border border-slate-100 p-4.5 flex items-start gap-3.5 shadow-2xs text-left">
-                <div className="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-100">
-                  {selectedGarment.category === "Top" && <span className="text-2xl select-none">👕</span>}
-                  {selectedGarment.category === "Bottom" && <span className="text-2xl select-none">👖</span>}
-                  {selectedGarment.category === "Outer" && <span className="text-2xl select-none">🧥</span>}
-                  {selectedGarment.category === "Shoes" && <span className="text-2xl select-none">👟</span>}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center space-x-1.5">
-                    <span className="text-[9px] font-black text-indigo-750 bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 rounded-md uppercase font-mono tracking-wider font-bold">INFO SPEC</span>
-                    <span className="text-[9px] text-[#1E3A8A] font-bold font-mono">STYLE CHECK</span>
-                  </div>
-                  <h4 className="text-xs font-black text-slate-800 truncate mt-0.5 leading-tight">{selectedGarment.name}</h4>
-                  <p className="text-[10px] text-slate-400 font-semibold truncate">소재: {selectedGarment.fabricMaterial} | 스타일: {selectedGarment.style}</p>
-                </div>
-              </div>
-
-              {/* Gamyagi AI Smart Consultation comment */}
-              <div className="bg-slate-900 text-slate-300 p-5 rounded-[24px] space-y-4 font-mono text-xs relative overflow-hidden text-left shadow-md">
-                <div className="absolute -top-12 -right-12 w-28 h-28 bg-blue-500/10 rounded-full blur-xl pointer-events-none"></div>
-                <div className="flex items-center space-x-1.5 text-[#BBF7D0] font-black text-[12px] border-b border-white/10 pb-2.5">
-                  <Layers className="w-4 h-4 animate-spin [animation-duration:12s]" />
-                  <span>GARMENT SPECIFICATION</span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 text-[10.5px]">
-                  <div>
-                    <span className="text-slate-500 block uppercase tracking-wider text-[9px] font-black">CATEGORY:</span>
-                    <p className="font-bold text-white uppercase">{selectedGarment.category}_LAYER</p>
-                  </div>
-                  <div>
-                    <span className="text-slate-500 block uppercase tracking-wider text-[9px] font-black">COLOUR HUE:</span>
-                    <p className="font-bold text-white text-emerald-300">{selectedGarment.color}</p>
-                  </div>
-                  <div>
-                    <span className="text-slate-500 block uppercase tracking-wider text-[9px] font-black">SILHOUETTE FIT:</span>
-                    <p className="font-bold text-white">{selectedGarment.fitType || "Standard Silhouette"}</p>
-                  </div>
-                  <div>
-                    <span className="text-slate-500 block uppercase tracking-wider text-[9px] font-black">FABRIC:</span>
-                    <p className="font-bold text-emerald-300 truncate">{selectedGarment.fabricMaterial}</p>
-                  </div>
-                </div>
-
-                {/* Match comment panel from AI adviser */}
-                <div className="space-y-1 border-t border-white/10 pt-3 text-[11px] text-slate-400 font-sans">
-                  <div className="flex items-center space-x-1.5 text-[#BBF7D0] text-[11.5px] font-black mb-1">
-                    <Sparkles className="w-3.5 h-3.5" />
-                    <span>감각이의 스타일 코칭 조합법</span>
-                  </div>
-                  <p className="leading-relaxed leading-normal text-slate-300 text-justify text-[10.5px]">
-                    "이 {selectedGarment.category === "Top" ? "상의" : selectedGarment.category === "Bottom" ? "하의" : selectedGarment.category === "Outer" ? "아우터" : "신발"}는 
-                    {selectedGarment.color} 컬러감이 지닌 {selectedGarment.style} 톤의 미묘한 정서를 기반으로 합니다. 
-                    인체 골격 접합부와의 조화에 따라 실루엣 드레이프가 보정 및 최적 세정 매치되므로 일상에서 매끄러우면서도 아주 편안한 하루를 받쳐줍니다."
-                  </p>
-                </div>
-              </div>
-
-            </div>
-          ) : (
-            <div className="bg-slate-50/50 rounded-2xl border border-dashed border-slate-200 p-8 text-center text-slate-400 flex flex-col justify-center items-center h-72 select-none">
-              <span className="text-3xl block mb-2">👚</span>
-              <h4 className="text-xs font-bold text-slate-700">의상 분석 상세 정보</h4>
-              <p className="text-[10px] text-slate-400 mt-1 max-w-xs leading-normal">
-                좌측 컬렉션에서 임의의 의상을 터치해보세요. 등록된 의품의 물성과 색조, 감착 어드바이스 및 스타일 가이드를 한눈에 조회할 수 있는 전용 분석 명세서가 표시됩니다.
-              </p>
-            </div>
-          )}
-
+          <ClosetGarmentDetail
+            garment={selectedGarment}
+            onGarmentChange={setSelectedGarment}
+            onGarmentUpdated={upsertGarment}
+            onGarmentDeleted={handleGarmentDeleted}
+            onToast={triggerToast}
+          />
         </div>
 
       </div>

@@ -32,6 +32,18 @@ export interface AnatomicalFitGuide {
   recommendedBodyType: string;
 }
 
+/** BE ClothesResponse 기반 수정/전환 API용 메타 (clothesMapper가 채움) */
+export interface GarmentBeMeta {
+  categoryCode: string;
+  itemTypeCode: string;
+  primaryColorCode: string;
+  secondaryColorCodes: string[];
+  styleCodes: string[];
+  brandName: string;
+  imageUrl: string;
+  isVerified: boolean;
+}
+
 export interface Garment {
   id: string;
   name: string;
@@ -44,5 +56,11 @@ export interface Garment {
   isFavorite: boolean;
   isWishlist: boolean;
   anatomicalFit?: AnatomicalFitGuide;
+  /** BE productCode — 보유 전환·수정 시 사용 */
+  productCode?: string;
+  size?: string;
+  season?: string;
+  userImageUrl?: string;
+  be?: GarmentBeMeta;
 }
 

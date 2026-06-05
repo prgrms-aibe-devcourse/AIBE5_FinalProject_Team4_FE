@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Plus, 
   Home, 
@@ -18,18 +18,34 @@ import {
 import { UserProfile } from "@/types/index";
 import HomeTab from "./components/HomeTab";
 import ClosetTab from "./components/ClosetTab";
+import {
+  captureOAuthTokenFromUrl,
+  getUserIdFromAccessToken,
+} from "@/utils/authUser";
+import { ensureDevToken, DEFAULT_DEV_USER_ID } from "@/utils/ensureDevToken";
+import {
+  redirectToOAuthLogin,
+  type OAuthProvider,
+} from "@/utils/authLogin";
 import LoginPage from "@/pages/LoginPage";
 import OnboardingPage from "@/pages/OnboardingPage";
 import { useChat } from "@/hooks/useChat";
 import { useCloset } from "@/hooks/useCloset";
-import { useAiRecommendation } from "@/hooks/useAiRecommendation";
 
 // 기존 상수 data ( TRIGGER_PRODUCTS 는 사용을 하지않아 우선 주석처리함 )
 // import { TRIGGER_PRODUCTS } from "@/data/triggerProducts";
 
 export default function App() {
   // Login State
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(
+    () => getUserIdFromAccessToken() != null,
+  );
+  const [authUserId, setAuthUserId] = useState<number | null>(
+    getUserIdFromAccessToken,
+  );
+  /** 온보딩 후 dev mock-token 등 인증 동기화 완료 */
+  const [authReady, setAuthReady] = useState(false);
+  const [authTokenError, setAuthTokenError] = useState<string | null>(null);
   
   // User Profile Setup State
   const [profile, setProfile] = useState<UserProfile>({
@@ -40,7 +56,6 @@ export default function App() {
     birthday: "",
   });
 
-  useAiRecommendation(isLoggedIn, profile);
   const { gamyagiChatOpen, setGamyagiChatOpen, chatMessages, pendingMsg, setPendingMsg, chatSending, handleSendChatToMD } = useChat();
 
   // 옷장
@@ -64,6 +79,51 @@ export default function App() {
   const [currentTab, setCurrentTab] = useState<"home" | "closet" | "feed" | "profile">("home");
   const [homeResetSignal, setHomeResetSignal] = useState<number>(0);
 
+  // OAuth 콜백(?token=): URL에서 토큰 추출 후 상태 반영
+  useEffect(() => {
+    if (captureOAuthTokenFromUrl()) {
+      const uid = getUserIdFromAccessToken();
+      setAuthUserId(uid);
+      setIsLoggedIn(uid != null);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      setAuthUserId(null);
+      setAuthReady(false);
+      setAuthTokenError(null);
+      return;
+    }
+
+    let cancelled = false;
+    setAuthReady(false);
+    setAuthTokenError(null);
+
+    (async () => {
+      let tokenError: string | null = null;
+      if (import.meta.env.DEV && !getUserIdFromAccessToken()) {
+        try {
+          await ensureDevToken(DEFAULT_DEV_USER_ID, { forceRefresh: false });
+        } catch (err) {
+          tokenError =
+            err instanceof Error
+              ? err.message
+              : "개발용 토큰 발급에 실패했습니다.";
+          console.warn("[dev] mock-token 발급 실패:", err);
+        }
+      }
+
+      if (cancelled) return;
+      setAuthUserId(getUserIdFromAccessToken());
+      setAuthTokenError(tokenError);
+      setAuthReady(true);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoggedIn, profile.onboarded]);
 
   const scrollAppToTop = () => {
     const viewport = document.getElementById("app-viewport");
@@ -81,13 +141,30 @@ export default function App() {
     window.setTimeout(scrollAppToTop, 0);
   };
 
+  const handleSocialLogin = async (platform: OAuthProvider) => {
+    if (import.meta.env.DEV) {
+      try {
+        await ensureDevToken(DEFAULT_DEV_USER_ID, { forceRefresh: true });
+        setIsLoggedIn(true);
+      } catch (err) {
+        const msg =
+          err instanceof Error
+            ? err.message
+            : "개발용 토큰 발급에 실패했습니다.";
+        alert(`${msg}\n\nBE(local:8080) 실행 여부를 확인해 주세요.`);
+      }
+      return;
+    }
+    redirectToOAuthLogin(platform);
+  };
+
   return (
     <div id="root-container" className="min-h-screen bg-[#F1F5F9] font-sans antialiased text-slate-800 flex flex-col justify-between py-4 px-3 md:py-6 md:px-6 font-sans">
       
       {/* ========================================================= */}
       {/* 1. AUTH / LOGIN FLOW MODAL VIEW */}
       {/* ========================================================= */}
-      {!isLoggedIn && <LoginPage onLogin={() => setIsLoggedIn(true)} />}
+      {!isLoggedIn && <LoginPage onSocialLogin={handleSocialLogin} />}
 
       {/* ========================================================= */}
       {/* 2. ONBOARDING PROFILE FLOWS */}
@@ -186,15 +263,40 @@ export default function App() {
               {/* ========================================================= */}
               {/* TAB 2: MY CLOSET (Smart Closet view & Anatomical Fit Guide) */}
               {/* ========================================================= */}
-              {currentTab === "closet" && (
+              {currentTab === "closet" && profile.onboarded && !authReady && (
+                <div className="flex justify-center py-16 text-sm text-slate-500">
+                  로그인 토큰을 준비하는 중…
+                </div>
+              )}
+              {currentTab === "closet" &&
+                authReady &&
+                authTokenError != null && (
+                  <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-center text-sm text-amber-900">
+                    {authTokenError}
+                    <p className="mt-2 text-xs text-amber-800">
+                      BE를 local 프로필로 8080에서 실행한 뒤 새로고침해 주세요.
+                    </p>
+                  </div>
+                )}
+              {currentTab === "closet" &&
+                authReady &&
+                authTokenError == null &&
+                authUserId != null && (
                 <ClosetTab
                   clothes={clothes}
                   setClothes={setClothes}
                   selectedGarment={selectedGarment}
                   setSelectedGarment={setSelectedGarment}
-                  toggleFavorite={toggleFavorite}
-                  moveToOwnedCloset={moveToOwnedCloset}
+                  userId={authUserId}
                 />
+              )}
+              {currentTab === "closet" &&
+                authReady &&
+                authTokenError == null &&
+                authUserId == null && (
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-center text-sm text-amber-900">
+                  로그인 정보를 확인할 수 없습니다. 다시 로그인해 주세요.
+                </div>
               )}
 
               {/* ========================================================= */}
