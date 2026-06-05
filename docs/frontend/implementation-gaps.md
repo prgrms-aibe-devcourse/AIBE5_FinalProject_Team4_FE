@@ -37,13 +37,13 @@ last_updated: 2026-06-04
 | 카테고리 | `Top`, `Bottom`, `Outer`, `Shoes` | `TOP`, `BOTTOM`, `OUTER`, `SHOES` | [domain-types.md](domain-types.md) |
 | 보유 상태 | `isWishlist` boolean | `ownershipStatus: OWNED/WISHLIST` | [wardrobe.md](../features/wardrobe.md) |
 | 스타일 | `Amekaji`, `Dandy`, `Tech Casual` 등 | BE catalog의 `StyleCode` | [catalog.md](../domain/catalog.md) |
-| mock 데이터 | `MOCK_AI_CURATION`, static list, INITIAL_GARMENTS | 실제 API 응답 우선, mock 경계 표시 | [mock-policy.md](mock-policy.md) |
+| mock 데이터 | `HomeTab` static 추천, INITIAL_GARMENTS 등 | 실제 API 응답 우선, mock 경계 표시 | [mock-policy.md](mock-policy.md) |
 
 ## Feature ID 연결표
 
 | F-ID | 화면/Route/Tab | 현재 주요 컴포넌트 | 기준 문서 | 현재 구현 상태 |
 | --- | --- | --- | --- | --- |
-| `AUTH-001` | `/`, 로그인 화면 | `App.tsx`, `authLogin.ts`, `ensureDevToken.ts`, `authUser.ts` | [frontend-api-usage.md](../api/frontend-api-usage.md), [routing.md](routing.md) | **dev**: 소셜 버튼 → `GET /api/v1/auth/mock-token` → `localStorage.token`. **운영**: `GET /oauth2/authorization/{provider}` redirect. 콜백 `?token=` 저장 후 JWT `sub` → `authUserId`. `LoginPage.tsx` 분리는 미완 |
+| `AUTH-001` | `/`, 로그인 화면 | `LoginPage.tsx`, `App.tsx` (`handleSocialLogin`), `authLogin.ts`, `ensureDevToken.ts`, `authUser.ts` | [frontend-api-usage.md](../api/frontend-api-usage.md), [routing.md](routing.md) | **dev**: `LoginPage` provider 버튼 → `ensureDevToken` → `localStorage.token` → `setIsLoggedIn(true)`. **운영**: 동일 버튼 → `redirectToOAuthLogin(provider)`. 콜백 `?token=` → JWT `sub` → `authUserId` |
 | `USER-001` | `/onboarding` | `OnboardingPage.tsx`, `App.tsx` 내부 온보딩 | [feature-index.md](../requirements/feature-index.md), [routing.md](routing.md) | local state 기반 입력 |
 | `STYLE-001` | 온보딩, 마이페이지 | `OnboardingPage.tsx`, `ProfileEditTab.tsx` | [catalog.md](../domain/catalog.md), [domain-types.md](domain-types.md) | 일부 하드코딩 스타일 사용 |
 | `WARD-001` | `closet` tab | `ClosetTab.tsx` | [frontend-api-usage.md](../api/frontend-api-usage.md), [wardrobe.md](../features/wardrobe.md) | BE API 연동 완료. `fetchWardrobeMeta()` + `fetchWardrobeGarments()` 사용 |
@@ -53,44 +53,42 @@ last_updated: 2026-06-04
 | `CLOTH-007` | 옷 상세/옷장 전환 | `ClosetTab.tsx` | [frontend-api-usage.md](../api/frontend-api-usage.md), [wardrobe.md](../features/wardrobe.md) | BE API 연동 완료. `PATCH /api/clothes/{clothesId}/convert-to-owned` 사용 |
 | `REG-001` | 옷 등록 modal | `App.tsx`, `AiAnalyzing.tsx` | [garment-registration.md](../features/garment-registration.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | `/api/analyze-garment` mock 성격 경로 사용 |
 | `REG-002` | 구매내역 등록 modal | `App.tsx` | [garment-registration.md](../features/garment-registration.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | `/api/analyze-garment` mock 성격 경로 사용 |
-| `RECO-001` | `home` tab | `App.tsx` (`MOCK_AI_CURATION`), `HomeTab.tsx` | [home-recommendation.md](../features/home-recommendation.md), [recommendation-policy.md](../features/recommendation-policy.md) | **`/api/recommend` 미호출**. `MOCK_AI_CURATION` 상수로 홈 감각이 코멘트·추천 카드 표시. BE 추천 API 미연동 |
+| `RECO-001` | `home` tab | `HomeTab.tsx` | [home-recommendation.md](../features/home-recommendation.md), [recommendation-policy.md](../features/recommendation-policy.md) | **`/api/recommend` 미호출**. `HomeTab` 내부 static/mock 추천. BE 추천 API 미연동 |
 | `RECO-003` | `home` tab, 옷 상세 | `HomeTab.tsx` | [home-recommendation.md](../features/home-recommendation.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | static/mock 추천 |
 | `RECO-004` | `home` tab, 옷 상세 | `HomeTab.tsx` | [home-recommendation.md](../features/home-recommendation.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | static/mock 추천 |
 | `FEED-001` | `feed` tab | `App.tsx` 내부 feed section | [feature-index.md](../requirements/feature-index.md), [routing.md](routing.md) | static feed mock |
 
 ## FE 코드와 공식 기준 확인 필요
 
-### `AUTH-001` 로그인·JWT (2026-06-04 기준)
+### `AUTH-001` 로그인·JWT (현재 코드)
 
-이전 gap 기록의 “버튼 클릭 시 local state 로그인만 수행”은 **현재 코드와 맞지 않습니다**. 아래가 `App.tsx` 기준 실제 경계입니다.
-
-| 환경 | 로그인 버튼 | 토큰 저장 | 사용자 ID |
+| 환경 | UI → 코드 | 토큰 | 사용자 ID |
 | --- | --- | --- | --- |
-| `import.meta.env.DEV` | `handleSocialLogin` → `ensureDevToken(DEFAULT_DEV_USER_ID)` | `localStorage.token` | JWT `sub` → `authUserId` |
-| 운영 빌드 | `redirectToOAuthLogin(provider)` → BE `/oauth2/authorization/{provider}` | OAuth 성공 후 FE `?token=` → `captureOAuthTokenFromUrl()` | 동일 |
-| 세션 복구 | 마운트 시 `?token=` 또는 기존 `localStorage.token` | 동일 | 동일 |
+| `import.meta.env.DEV` | `LoginPage` 카카오/네이버/구글 → `onSocialLogin(provider)` → `App.handleSocialLogin` → `ensureDevToken` | `localStorage.token` | JWT `sub` → `authUserId` |
+| 운영 빌드 | 동일 버튼 → `redirectToOAuthLogin(provider)` (`authLogin.ts`) | OAuth 콜백 `?token=` → `captureOAuthTokenFromUrl()` | 동일 |
+| 세션 복구 | 마운트 `useEffect` | 기존 `localStorage.token` 또는 `?token=` | 동일 |
 
-옷장 탭은 `authReady` 완료 후 `authUserId`로 `ClosetTab`에 전달합니다. dev에서 mock-token 실패 시 무한 로딩 대신 `authTokenError` 안내를 표시합니다.
+`onLogin={() => setIsLoggedIn(true)}`만 호출하는 경로는 **사용하지 않습니다**.
+
+옷장 탭은 `authReady` 후 `authUserId`로 `ClosetTab`에 전달합니다. dev mock-token 실패 시 `authTokenError` 안내를 표시합니다.
 
 남은 gap:
 
-- `LoginPage.tsx` 등 라우트 분리 미완 ([routing.md](routing.md) 목표와 불일치)
-- dev mock-token의 `userId=1`은 **발급용 파라미터**이며, API path의 `{userId}`는 JWT `sub`를 따름
+- dev mock-token `userId=1`은 발급 파라미터만 해당, API `{userId}`는 JWT `sub`
 
-### `RECO-001` 홈 추천 mock (2026-06-04 기준)
+### `RECO-001` 홈 추천 mock (현재 코드)
 
-`/api/recommend`에 대한 직접 `fetch`는 **제거**되었습니다. 홈 초기화·프로필 저장 후 갱신은 `App.tsx`의 `MOCK_AI_CURATION`만 사용합니다.
+**`/api/recommend` HTTP 호출 없음.** `useAiRecommendation` hook(과 `POST /api/recommend`)은 제거되었습니다.
 
 ```text
-src/App.tsx
-- MOCK_AI_CURATION (comment + Recommendation[])
-- fetchAiRecommendations() → setAiCuration(MOCK_AI_CURATION) — HTTP 없음
+src/components/HomeTab.tsx
+- 라벨별 static/mock 추천 데이터 (컴포넌트 내부)
 ```
 
 남은 gap:
 
 - `RECO-002`~`RECO-007` 및 BE `similar-products` / `recommendations` API 미연동
-- `HomeTab.tsx` 내 트리거 상품 등 static/mock 데이터 병존
+- 홈 추천을 BE API로 통일할 때 `HomeTab` static 데이터와 계약 정합 필요
 
 ### `WARD-002` 옷장 통계
 
@@ -120,7 +118,7 @@ BE API 계약이 확정되면 [frontend-api-usage.md](../api/frontend-api-usage.
 
 | 이전 FE 기록 | 현재 코드 |
 | --- | --- |
-| `/api/recommend` 직접 `fetch` | **호출 없음**. `MOCK_AI_CURATION` 로컬 상수 ([mock-policy.md](mock-policy.md)) |
+| `/api/recommend` 직접 `fetch` (`useAiRecommendation`) | **제거**. 홈은 `HomeTab` static/mock ([mock-policy.md](mock-policy.md)) |
 
 #### 아직 남아 있는 mock 성격 경로
 

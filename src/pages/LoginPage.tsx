@@ -1,10 +1,11 @@
-import {Activity, Sparkle} from "../components/icons";
+import { Activity, Sparkle } from "../components/icons";
+import type { OAuthProvider } from "@/utils/authLogin";
 
 interface LoginPageProps {
-    onLogin: () => void;
+  onSocialLogin: (provider: OAuthProvider) => void | Promise<void>;
 }
 
-export default function LoginPage({ onLogin }: LoginPageProps) {
+export default function LoginPage({ onSocialLogin }: LoginPageProps) {
         return (
             <div className="flex-1 flex items-center justify-center py-12">
             <div id="view-login" className="w-full max-w-md bg-white border border-slate-200/60 rounded-[28px] shadow-2xl p-8 relative overflow-hidden flex flex-col justify-between min-h-[560px]">
@@ -32,7 +33,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                     <div className="text-center text-[10px] text-slate-400 font-bold tracking-wide uppercase">소셜 로그인으로 시작하기</div>
                     <button
                         id="btn-login-kakao"
-                        onClick={onLogin}
+                        onClick={() => onSocialLogin("kakao")}
                         className="w-full h-11.5 rounded-xl bg-[#FEE500] hover:bg-[#FEE500]/95 text-[#191919] font-bold text-xs flex items-center justify-center space-x-3 transition active:scale-98 cursor-pointer"
                     >
                         <span className="w-5 h-5 rounded-md bg-[#191919]/15 flex items-center justify-center text-[10px] font-black">K</span>
@@ -40,7 +41,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                     </button>
                     <button
                         id="btn-login-naver"
-                        onClick={onLogin}
+                        onClick={() => onSocialLogin("naver")}
                         className="w-full h-11.5 rounded-xl bg-[#03C75A] hover:bg-[#03C75A]/95 text-white font-bold text-xs flex items-center justify-center space-x-3 transition active:scale-98 cursor-pointer"
                     >
                         <span className="w-5 h-5 rounded-md bg-white/15 flex items-center justify-center text-[10px] font-black">N</span>
@@ -48,7 +49,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                     </button>
                     <button
                         id="btn-login-google"
-                        onClick={onLogin}
+                        onClick={() => onSocialLogin("google")}
                         className="w-full h-11.5 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center space-x-3 transition hover:bg-slate-50 active:scale-98 cursor-pointer shadow-2xs"
                     >
                         <span className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-black text-[#0284C7]">G</span>

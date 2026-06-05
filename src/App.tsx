@@ -23,11 +23,14 @@ import {
   getUserIdFromAccessToken,
 } from "@/utils/authUser";
 import { ensureDevToken, DEFAULT_DEV_USER_ID } from "@/utils/ensureDevToken";
+import {
+  redirectToOAuthLogin,
+  type OAuthProvider,
+} from "@/utils/authLogin";
 import LoginPage from "@/pages/LoginPage";
 import OnboardingPage from "@/pages/OnboardingPage";
 import { useChat } from "@/hooks/useChat";
 import { useCloset } from "@/hooks/useCloset";
-import { useAiRecommendation } from "@/hooks/useAiRecommendation";
 
 // 기존 상수 data ( TRIGGER_PRODUCTS 는 사용을 하지않아 우선 주석처리함 )
 // import { TRIGGER_PRODUCTS } from "@/data/triggerProducts";
@@ -53,7 +56,6 @@ export default function App() {
     birthday: "",
   });
 
-  useAiRecommendation(isLoggedIn, profile);
   const { gamyagiChatOpen, setGamyagiChatOpen, chatMessages, pendingMsg, setPendingMsg, chatSending, handleSendChatToMD } = useChat();
 
   // 옷장
@@ -139,13 +141,30 @@ export default function App() {
     window.setTimeout(scrollAppToTop, 0);
   };
 
+  const handleSocialLogin = async (platform: OAuthProvider) => {
+    if (import.meta.env.DEV) {
+      try {
+        await ensureDevToken(DEFAULT_DEV_USER_ID, { forceRefresh: true });
+        setIsLoggedIn(true);
+      } catch (err) {
+        const msg =
+          err instanceof Error
+            ? err.message
+            : "개발용 토큰 발급에 실패했습니다.";
+        alert(`${msg}\n\nBE(local:8080) 실행 여부를 확인해 주세요.`);
+      }
+      return;
+    }
+    redirectToOAuthLogin(platform);
+  };
+
   return (
     <div id="root-container" className="min-h-screen bg-[#F1F5F9] font-sans antialiased text-slate-800 flex flex-col justify-between py-4 px-3 md:py-6 md:px-6 font-sans">
       
       {/* ========================================================= */}
       {/* 1. AUTH / LOGIN FLOW MODAL VIEW */}
       {/* ========================================================= */}
-      {!isLoggedIn && <LoginPage onLogin={() => setIsLoggedIn(true)} />}
+      {!isLoggedIn && <LoginPage onSocialLogin={handleSocialLogin} />}
 
       {/* ========================================================= */}
       {/* 2. ONBOARDING PROFILE FLOWS */}
