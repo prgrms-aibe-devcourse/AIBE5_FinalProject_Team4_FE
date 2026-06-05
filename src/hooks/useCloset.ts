@@ -10,7 +10,8 @@ export function useCloset() {
     // Selection for active garment inspection
     const [selectedGarment, setSelectedGarment] = useState<Garment | null>(INITIAL_GARMENTS[0]);
 
-    // New Clothing Registration Modal flow items
+    // 옷 등록: 방식 선택 모달 → 등록 파이프라인 모달
+    const [isMethodSelectOpen, setIsMethodSelectOpen] = useState(false);
     const [isUploadModalOpen, setIsUploadModalOpen] = useState<boolean>(false);
     const [uploadType, setUploadType] = useState<"receipt" | "garment" | null>(null);
 
@@ -149,14 +150,43 @@ export function useCloset() {
         alert(`🎉 "${newGarment.name}" 의상을 옷장에 신규 등록 완료 하였습니다!`);
     };
 
-    const openUploadModal = () => {
+    const openGarmentRegister = () => {
         setUploadType(null);
-        setIsUploadModalOpen(true);
+        setAnalyzedDraft(null);
+        setSelectedLocalImg(null);
+        setIsUploadModalOpen(false);
+        setIsMethodSelectOpen(true);
     };
+
+    const closeGarmentRegisterMethod = () => {
+        setIsMethodSelectOpen(false);
+    };
+
+    const selectRegisterMethod = (type: "receipt" | "garment") => {
+        setIsMethodSelectOpen(false);
+        setUploadType(type);
+        if (type === "receipt") {
+            setIsUploadModalOpen(true);
+            void triggerImageUpload("receipt");
+        }
+    };
+
+    const backToRegisterMethodSelect = () => {
+        setIsUploadModalOpen(false);
+        setUploadType(null);
+        setAnalyzedDraft(null);
+        setSelectedLocalImg(null);
+        setIsAnalyzing(false);
+        setIsMethodSelectOpen(true);
+    };
+
+    /** @deprecated openGarmentRegister 사용 */
+    const openUploadModal = openGarmentRegister;
 
     return {
         clothes, setClothes,
         selectedGarment, setSelectedGarment,
+        isMethodSelectOpen,
         isUploadModalOpen, setIsUploadModalOpen,
         uploadType, setUploadType,
         isAnalyzing,
@@ -167,6 +197,10 @@ export function useCloset() {
         toggleFavorite,
         moveToOwnedCloset,
         handleSaveToCloset,
+        openGarmentRegister,
+        closeGarmentRegisterMethod,
+        selectRegisterMethod,
+        backToRegisterMethodSelect,
         openUploadModal,
     };
 }

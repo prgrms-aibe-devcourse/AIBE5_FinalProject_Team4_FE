@@ -5,19 +5,18 @@
 
 import { useState, useEffect } from "react";
 import { 
-  Plus, 
   Home, 
-  Camera, 
   X, 
   ChevronRight,
   Activity, 
-  FileText, 
   Info, 
   Layers,
 } from "./components/icons";
 import { UserProfile } from "@/types/index";
 import HomeTab from "./components/HomeTab";
 import ClosetTab from "./components/ClosetTab";
+import GarmentRegisterMethodModal from "./components/GarmentRegisterMethodModal";
+import PhotoGarmentRegisterModal from "./components/PhotoGarmentRegisterModal";
 import {
   captureOAuthTokenFromUrl,
   getUserIdFromAccessToken,
@@ -62,22 +61,26 @@ export default function App() {
   const {
     clothes, setClothes,
     selectedGarment, setSelectedGarment,
+    isMethodSelectOpen,
     isUploadModalOpen, setIsUploadModalOpen,
     uploadType, setUploadType,
     isAnalyzing,
     analyzedDraft, setAnalyzedDraft,
     selectedLocalImg, setSelectedLocalImg,
-    triggerImageUpload,
     handleAddWishlistItem,
     toggleFavorite,
     moveToOwnedCloset,
     handleSaveToCloset,
-    openUploadModal,
+    openGarmentRegister,
+    closeGarmentRegisterMethod,
+    selectRegisterMethod,
+    backToRegisterMethodSelect,
   } = useCloset();
 
   // Navigation state: 'home' | 'closet' | 'feed' | 'profile'
   const [currentTab, setCurrentTab] = useState<"home" | "closet" | "feed" | "profile">("home");
   const [homeResetSignal, setHomeResetSignal] = useState<number>(0);
+  const [isPhotoRegisterOpen, setIsPhotoRegisterOpen] = useState(false);
 
   // OAuth 콜백(?token=): URL에서 토큰 추출 후 상태 반영
   useEffect(() => {
@@ -172,7 +175,7 @@ export default function App() {
       {isLoggedIn && !profile.onboarded && (
           <OnboardingPage onComplete={(nickname, birthday, gender, styles, openModal) => {
             setProfile({ nickname, birthday, gender, styles, onboarded: true });
-            if (openModal) openUploadModal();
+            if (openModal) openGarmentRegister();
           }} />
       )}
 
@@ -288,6 +291,7 @@ export default function App() {
                   selectedGarment={selectedGarment}
                   setSelectedGarment={setSelectedGarment}
                   userId={authUserId}
+                  onOpenRegister={openGarmentRegister}
                 />
               )}
               {currentTab === "closet" &&
@@ -411,8 +415,8 @@ export default function App() {
 
             </main>
 
-            {/* ----------------- Floating Button '+' (Registration Choice Modal Entry Trigger) ----------------- */}
-            <div className="fixed bottom-20 right-5 z-40 flex flex-col items-center gap-2">
+            {/* ----------------- Floating scroll-to-top ----------------- */}
+            <div className="fixed bottom-20 right-5 z-40">
               <button
                 id="btn-scroll-top"
                 onClick={scrollAppToTop}
@@ -422,15 +426,6 @@ export default function App() {
                 type="button"
               >
                 <ChevronRight className="w-5 h-5 -rotate-90 stroke-[3]" />
-              </button>
-              <button
-                id="btn-upload-trigger"
-                onClick={openUploadModal}
-                className="w-12 h-12 rounded-full bg-[#1E3A8A] hover:bg-[#1E3A8A]/90 text-[#BBF7D0] shadow-lg flex items-center justify-center active:scale-95 cursor-pointer touch-manipulation"
-                title="의료 사진 분석 및 영수증 등록"
-                type="button"
-              >
-                <Plus className="w-6 h-6 stroke-[3]" />
               </button>
             </div>
 
@@ -553,18 +548,30 @@ export default function App() {
           </div>
         )}
 
-        {/* 2. Registration Entry Modal (Choice between Receipt Capture or Cameray Photo) */}
-        {isUploadModalOpen && (
-          <div id="modal-upload-pipeline" className="absolute inset-0 bg-slate-900/50 backdrop-blur-xs flex flex-col justify-end z-[40] animate-fade-in">
-            <div className="bg-white rounded-t-[32px] max-h-[80%] flex flex-col overflow-hidden shadow-2xl relative p-6 space-y-6">
+        <GarmentRegisterMethodModal
+          open={isMethodSelectOpen}
+          onClose={closeGarmentRegisterMethod}
+          onSelectReceipt={() => selectRegisterMethod("receipt")}
+          onSelectPhoto={() => {
+            closeGarmentRegisterMethod();
+            setUploadType("garment");
+            setIsPhotoRegisterOpen(true);
+          }}
+        />
+
+        {/* 구매내역 기반 등록 파이프라인 (방식 선택 후) */}
+        {isUploadModalOpen && uploadType === "receipt" && (
+          <div id="modal-upload-pipeline" className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center z-[40] animate-fade-in p-4">
+            <div className="w-full max-w-xl bg-white rounded-[28px] min-h-[720px] max-h-[95vh] flex flex-col shadow-2xl relative overflow-hidden">
               
               {/* Header */}
-              <div className="flex justify-between items-center pb-2 border-b border-slate-100">
-                <div className="space-y-0.5 text-left">
-                  <h3 className="text-base font-bold text-[#1E3A8A]">새 의류 등록 파이프라인</h3>
-                  <p className="text-xs text-slate-400">쇼핑 영수증 정보나 실물 이미지를 분석해 정밀 데일리 코디 가이드 및 디지털 옷장에 통합합니다.</p>
+              <div className="flex justify-between items-center px-7 pt-6 pb-4 border-b border-slate-100 shrink-0">
+                <div className="space-y-0 text-left leading-tight">
+                  <h3 className="text-lg font-bold text-[#1E3A8A]">구매내역 기반 등록</h3>
+                  <p className="text-sm text-slate-400 mt-1">구매내역을 분석해 옷장에 보유 옷으로 저장합니다.</p>
                 </div>
                 <button
+                  type="button"
                   onClick={() => {
                     setIsUploadModalOpen(false);
                     setAnalyzedDraft(null);
@@ -572,54 +579,13 @@ export default function App() {
                     setUploadType(null);
                   }}
                   className="p-1.5 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition"
+                  aria-label="닫기"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
 
-              {/* Upload selections (if no mock uploaded yet) */}
-              {!uploadType && !analyzedDraft && !isAnalyzing && (
-                <div className="grid grid-cols-2 gap-4">
-                  
-                  {/* Choice 1: Purchase receipt capture screen */}
-                  <button
-                    id="option-upload-receipt"
-                    onClick={() => {
-                      setUploadType("receipt");
-                      triggerImageUpload("receipt");
-                    }}
-                    className="p-5 bg-slate-50/70 hover:bg-[#BBF7D0]/20 rounded-2xl border border-slate-100 hover:border-[#BBF7D0]/60 text-left space-y-3.5 transition group active:scale-98 cursor-pointer"
-                  >
-                    <div className="p-2.5 rounded-xl bg-white text-[#1E3A8A] w-max shadow-3xs group-hover:bg-white">
-                      <FileText className="w-6 h-6" />
-                    </div>
-                    <div className="space-y-1">
-                      <h4 className="text-xs font-black text-slate-800">쇼핑 캡처 / 영수증 올리기</h4>
-                      <p className="text-[10px] text-slate-400 leading-normal">구매하신 옷 정보, 쇼핑몰 가구 캡쳐 등의 텍스트 특징점을 Gemini로 추출해냅니다.</p>
-                    </div>
-                  </button>
-
-                  {/* Choice 2: Direct Garment photo upload */}
-                  <button
-                    id="option-upload-direct"
-                    onClick={() => {
-                      setUploadType("garment");
-                      triggerImageUpload("garment_tee");
-                    }}
-                    className="p-5 bg-slate-50/70 hover:bg-[#BBF7D0]/20 rounded-2xl border border-dashed border-slate-200/80 hover:border-[#BBF7D0]/60 text-left space-y-3.5 transition group active:scale-98 cursor-pointer"
-                  >
-                    <div className="p-2.5 rounded-xl bg-white text-[#1E3A8A] w-max shadow-3xs group-hover:bg-white">
-                      <Camera className="w-6 h-6" />
-                    </div>
-                    <div className="space-y-1">
-                      <h4 className="text-xs font-black text-slate-800">의류 직접 촬영등록</h4>
-                      <p className="text-[10px] text-slate-400 leading-normal">실물 티셔츠나 아우터를 수동 촬영해 고해상 스마트 코디 매칭 가이드를 즉석 생성합니다.</p>
-                    </div>
-                  </button>
-
-                </div>
-              )}
-
+              <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain px-7 py-4">
               {/* Processing Loader Animation */}
               {isAnalyzing && (
                 <div className="py-12 flex flex-col items-center justify-center space-y-4">
@@ -631,12 +597,20 @@ export default function App() {
                     <p className="text-xs font-bold text-[#1E3A8A] animate-pulse">AI is analyzing your garment characteristics...</p>
                     <p className="text-[10px] text-slate-400 font-mono">Calculating musculoskeletal tension coefficient tags</p>
                   </div>
+                  <button
+                    id="btn-register-back-analyzing"
+                    type="button"
+                    onClick={backToRegisterMethodSelect}
+                    className="w-full h-10 mt-4 text-slate-500 hover:text-[#1E3A8A] hover:bg-slate-50 rounded-xl text-sm font-bold transition"
+                  >
+                    뒤로가기 · 등록 방식 다시 선택
+                  </button>
                 </div>
               )}
 
               {/* Analyzed Result Form and editing area */}
               {!isAnalyzing && analyzedDraft && (
-                <div className="space-y-4 text-left overflow-y-auto max-h-[460px] pb-4">
+                <div className="space-y-4 text-left pb-2">
                   
                   {/* Image render */}
                   <div className="flex items-center space-x-3 bg-slate-50 p-3 rounded-2xl border border-slate-100">
@@ -774,13 +748,41 @@ export default function App() {
                   >
                     Save to My Closet (옷장에 저장하기)
                   </button>
+                  <button
+                    id="btn-register-back"
+                    type="button"
+                    onClick={backToRegisterMethodSelect}
+                    className="w-full h-10 text-slate-500 hover:text-[#1E3A8A] hover:bg-slate-50 rounded-xl text-sm font-bold transition"
+                  >
+                    뒤로가기 · 등록 방식 다시 선택
+                  </button>
 
                 </div>
               )}
+              </div>
 
             </div>
           </div>
         )}
+
+        <PhotoGarmentRegisterModal
+          open={isPhotoRegisterOpen}
+          userId={authUserId}
+          onClose={() => {
+            setIsPhotoRegisterOpen(false);
+            setUploadType(null);
+          }}
+          onBackToMethodSelect={() => {
+            setIsPhotoRegisterOpen(false);
+            setUploadType(null);
+            openGarmentRegister();
+          }}
+          onSaved={(garment) => {
+            setClothes((prev) => [garment, ...prev]);
+            setSelectedGarment(garment);
+            setCurrentTab("closet");
+          }}
+        />
 
       </div>
     );
