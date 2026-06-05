@@ -522,6 +522,7 @@ export default function ClosetTab({
 
       </div>
 
+      {/* 옷 등록 — 방식 선택 모달 진입 */}
       <div className="fixed bottom-20 left-0 right-0 z-20 flex justify-center px-5 pointer-events-none">
         <button
           id="btn-closet-register"

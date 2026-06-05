@@ -1,3 +1,4 @@
+/** BE `CLOTHING_COLORS` / docs/domain/catalog.md 기준 */
 export type GarmentColorCode =
   | 'PINK'
   | 'RED'
@@ -55,9 +56,7 @@ export function getGarmentColorLabel(code: string): string {
   return isGarmentColorCode(code) ? COLOR_BY_CODE[code].name : code
 }
 
-export function resolveGarmentColorCode(
-  value: string | null | undefined,
-): GarmentColorCode {
+export function resolveGarmentColorCode(value: string | null | undefined): GarmentColorCode {
   const trimmed = (value ?? '').trim()
   if (!trimmed) return 'WHITE'
   if (isGarmentColorCode(trimmed)) return trimmed

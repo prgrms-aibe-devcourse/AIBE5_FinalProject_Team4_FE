@@ -1,3 +1,4 @@
+/** BE `STYLES` / docs/domain/catalog.md 기준 */
 export type GarmentStyleCode =
   | 'CASUAL'
   | 'STREET'
@@ -35,19 +36,37 @@ const STYLE_BY_CODE = Object.fromEntries(
 const STYLE_ALIASES: Record<string, GarmentStyleCode> = {
   CASUAL: 'CASUAL',
   Casual: 'CASUAL',
+  캐주얼: 'CASUAL',
   STREET: 'STREET',
   Street: 'STREET',
+  스트릿: 'STREET',
   MINIMAL: 'MINIMAL',
   Minimal: 'MINIMAL',
+  미니멀: 'MINIMAL',
   SPORTY: 'SPORTY',
+  Sporty: 'SPORTY',
+  스포티: 'SPORTY',
   CLASSIC: 'CLASSIC',
+  Classic: 'CLASSIC',
+  클래식: 'CLASSIC',
   CHIC: 'CHIC',
+  Chic: 'CHIC',
+  시크: 'CHIC',
   WORKWEAR: 'WORKWEAR',
-  CITYBOY: 'CITYBOY',
-  GORPCORE: 'GORPCORE',
-  RETRO: 'RETRO',
-  Amekaji: 'RETRO',
+  Workwear: 'WORKWEAR',
+  워크웨어: 'WORKWEAR',
   AMEKAJI: 'RETRO',
+  Amekaji: 'RETRO',
+  아메카지: 'RETRO',
+  CITYBOY: 'CITYBOY',
+  Cityboy: 'CITYBOY',
+  시티보이: 'CITYBOY',
+  GORPCORE: 'GORPCORE',
+  Gorpcore: 'GORPCORE',
+  고프코어: 'GORPCORE',
+  RETRO: 'RETRO',
+  Retro: 'RETRO',
+  레트로: 'RETRO',
 }
 
 export function isGarmentStyleCode(value: string): value is GarmentStyleCode {
