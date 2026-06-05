@@ -2,8 +2,11 @@ import React, { useState } from "react";
 import { Garment } from "@/types/index";
 import { INITIAL_GARMENTS } from "@/data/initialGarments";
 import {
-    CATEGORY_ITEM_TYPES,
+    isItemTypeInCategory,
+    isUiCategory,
     getItemTypeLabel,
+    resolveItemTypeForCategory,
+    resolveUiCategory,
 } from "@/data/categoryItemTypes";
 import {
     getGarmentColorLabel,
@@ -29,11 +32,11 @@ function getGarmentDraftValidationError(
     draft: GarmentDraftRequiredFields,
 ): string | null {
     if (!draft.name.trim()) return "의상명을 입력해 주세요.";
+    if (!isUiCategory(draft.category)) return "카테고리를 선택해 주세요.";
     if (!draft.itemType.trim()) return "세부 카테고리를 선택해 주세요.";
-    const validItemType = CATEGORY_ITEM_TYPES[draft.category].some(
-        (t) => t.code === draft.itemType,
-    );
-    if (!validItemType) return "세부 카테고리를 선택해 주세요.";
+    if (!isItemTypeInCategory(draft.category, draft.itemType)) {
+        return "세부 카테고리를 선택해 주세요.";
+    }
     if (!isGarmentColorCode(draft.mainColor.trim())) {
         return "메인 컬러를 선택해 주세요.";
     }
@@ -102,11 +105,12 @@ export function useCloset() {
             }
 
             const data = await response.json();
+            const category = resolveUiCategory(data.category);
             setAnalyzedDraft({
                 id: "draft_" + Date.now(),
                 name: mockType === "receipt" ? "영수증 추출 명세 아이템" : "카메라 캡처 베이직 반소매 티셔츠",
-                category: data.category || "Top",
-                itemType: data.itemType || "SHORT_SLEEVE",
+                category,
+                itemType: resolveItemTypeForCategory(category, data.itemType),
                 mainColor: resolveGarmentColorCode(
                     data.primaryColor ?? data.color,
                 ),

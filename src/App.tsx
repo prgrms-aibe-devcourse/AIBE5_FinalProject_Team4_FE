@@ -30,7 +30,10 @@ import LoginPage from "@/pages/LoginPage";
 import OnboardingPage from "@/pages/OnboardingPage";
 import { useChat } from "@/hooks/useChat";
 import { useCloset } from "@/hooks/useCloset";
-import { CATEGORY_ITEM_TYPES } from "@/data/categoryItemTypes";
+import {
+  CATEGORY_ITEM_TYPES,
+  resolveItemTypeForCategory,
+} from "@/data/categoryItemTypes";
 import {
   GARMENT_COLORS,
   getGarmentColor,
@@ -722,8 +725,6 @@ export default function App() {
                         {(["Top", "Bottom", "Outer", "Shoes"] as Garment["category"][]).map(
                           (cValue) => {
                             const active = analyzedDraft.category === cValue;
-                            const defaultItemType =
-                              CATEGORY_ITEM_TYPES[cValue][0]?.code ?? "";
                             return (
                               <button
                                 key={cValue}
@@ -737,9 +738,10 @@ export default function App() {
                                   setAnalyzedDraft({
                                     ...analyzedDraft,
                                     category: cValue,
-                                    itemType: active
-                                      ? analyzedDraft.itemType
-                                      : defaultItemType,
+                                    itemType: resolveItemTypeForCategory(
+                                      cValue,
+                                      active ? analyzedDraft.itemType : undefined,
+                                    ),
                                   });
                                 }}
                                 className={`h-10 rounded-lg text-sm font-bold transition flex items-center justify-center border ${
