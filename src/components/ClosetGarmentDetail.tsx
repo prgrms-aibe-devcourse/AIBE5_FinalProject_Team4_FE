@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import AuthenticatedImage from '@/components/common/AuthenticatedImage'
 import { Layers, Sparkles } from './icons'
 import type { Garment } from '@/types'
 import {
@@ -315,11 +316,10 @@ export default function ClosetGarmentDetail({
 
         <div className="bg-white rounded-[24px] border border-slate-100 p-4.5 shadow-2xs text-left space-y-3">
           {g.thumbnailUrl && (
-            <img
+            <AuthenticatedImage
               src={g.thumbnailUrl}
               alt={g.name}
               className="w-full h-40 object-cover rounded-xl border border-slate-100"
-              referrerPolicy="no-referrer"
             />
           )}
 
