@@ -64,5 +64,7 @@ export interface PhotoClothesRegistrationResponse {
   size?: string | null
   season?: string | null
   ownershipStatus?: OwnershipStatus | null
+  /** WARDROBE_CLOTHES.registration_source */
+  registrationSource?: string | null
   photoId?: number | null
 }

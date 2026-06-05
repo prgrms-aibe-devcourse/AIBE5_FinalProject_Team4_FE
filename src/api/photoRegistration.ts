@@ -172,7 +172,7 @@ export function mapPhotoSaveResponseToClothesResponse(
     isFavorite: raw.favorite ?? clothes.isFavorite ?? false,
     size: raw.size ?? clothes.size ?? null,
     season: raw.season ?? clothes.season ?? null,
-    ownershipStatus: raw.ownershipStatus ?? clothes.ownershipStatus ?? 'OWNED',
+    ownershipStatus: raw.ownershipStatus ?? clothes.ownershipStatus ?? 'OWNED' as const,
     secondaryColors: clothes.secondaryColors ?? [],
     styles: clothes.styles ?? [],
   }
