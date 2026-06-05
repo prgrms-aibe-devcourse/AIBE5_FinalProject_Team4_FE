@@ -16,7 +16,8 @@ import {
   Award, 
   HeartHandshake,
   ChevronRight,
-  Sparkle
+  Sparkle,
+  Plus,
 } from "./icons";
 import { Garment } from "@/types/index";
 
@@ -27,6 +28,7 @@ interface ClosetTabProps {
   setSelectedGarment: (g: Garment | null) => void;
   /** JWT sub와 일치하는 인증 사용자 ID (App에서 전달) */
   userId: number;
+  onOpenRegister: () => void;
 }
 
 export default function ClosetTab({
@@ -35,6 +37,7 @@ export default function ClosetTab({
   selectedGarment,
   setSelectedGarment,
   userId,
+  onOpenRegister,
 }: ClosetTabProps) {
   const [closetTab, setClosetTab] = useState<"owned" | "wishlist">("owned");
   const [closetFilter, setClosetFilter] = useState<string>("All");
@@ -490,7 +493,7 @@ export default function ClosetTab({
                 <span className="text-4xl block mb-2">📦</span>
                 <p className="text-xs text-slate-500 font-bold">선택하신 카테고리의 의상이 비어있습니다.</p>
                 <p className="text-[10px] text-slate-400 mt-1 max-w-sm mx-auto leading-relaxed">
-                  하단의 '+' 플로팅 추가 도구 파이프라인을 기동하어 AI 소매물성 보존 태깅 시스템으로 고정교정 옷을 투입해보세요!
+                  하단의 <strong>옷 등록</strong> 버튼으로 구매내역 또는 사진 기반 등록을 시작해 보세요.
                 </p>
               </div>
             )}
@@ -517,6 +520,19 @@ export default function ClosetTab({
           />
         </div>
 
+      </div>
+
+      {/* 옷 등록 — 방식 선택 모달 진입 */}
+      <div className="fixed bottom-20 left-0 right-0 z-20 flex justify-center px-5 pointer-events-none">
+        <button
+          id="btn-closet-register"
+          type="button"
+          onClick={onOpenRegister}
+          className="pointer-events-auto flex items-center gap-2 h-12 px-6 rounded-2xl bg-[#1E3A8A] hover:bg-[#1E3A8A]/90 text-[#BBF7D0] shadow-lg font-bold text-sm transition active:scale-95 cursor-pointer"
+        >
+          <Plus className="w-5 h-5 stroke-[3]" />
+          <span>옷 등록</span>
+        </button>
       </div>
 
     </div>

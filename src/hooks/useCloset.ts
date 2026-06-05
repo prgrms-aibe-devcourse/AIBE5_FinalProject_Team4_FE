@@ -1,6 +1,48 @@
 import React, { useState } from "react";
 import { Garment } from "@/types/index";
 import { INITIAL_GARMENTS } from "@/data/initialGarments";
+import {
+    CATEGORY_ITEM_TYPES,
+    getItemTypeLabel,
+} from "@/data/categoryItemTypes";
+import {
+    getGarmentColorLabel,
+    isGarmentColorCode,
+    resolveGarmentColorCode,
+} from "@/data/garmentColors";
+import {
+    getGarmentStyleLabel,
+    isGarmentStyleCode,
+    resolveGarmentStyleCode,
+} from "@/data/garmentStyles";
+
+type GarmentDraftRequiredFields = {
+    name: string;
+    category: "Top" | "Bottom" | "Outer" | "Shoes";
+    itemType: string;
+    mainColor: string;
+    mainStyle: string;
+    fabricMaterial: string;
+};
+
+function getGarmentDraftValidationError(
+    draft: GarmentDraftRequiredFields,
+): string | null {
+    if (!draft.name.trim()) return "의상명을 입력해 주세요.";
+    if (!draft.itemType.trim()) return "세부 카테고리를 선택해 주세요.";
+    const validItemType = CATEGORY_ITEM_TYPES[draft.category].some(
+        (t) => t.code === draft.itemType,
+    );
+    if (!validItemType) return "세부 카테고리를 선택해 주세요.";
+    if (!isGarmentColorCode(draft.mainColor.trim())) {
+        return "메인 컬러를 선택해 주세요.";
+    }
+    if (!isGarmentStyleCode(draft.mainStyle.trim())) {
+        return "메인 스타일을 선택해 주세요.";
+    }
+    if (!draft.fabricMaterial.trim()) return "소재 물성 정보를 입력해 주세요.";
+    return null;
+}
 
 export function useCloset() {
     // 상태
@@ -10,7 +52,8 @@ export function useCloset() {
     // Selection for active garment inspection
     const [selectedGarment, setSelectedGarment] = useState<Garment | null>(INITIAL_GARMENTS[0]);
 
-    // New Clothing Registration Modal flow items
+    // 옷 등록: 방식 선택 모달 → 등록 파이프라인 모달
+    const [isMethodSelectOpen, setIsMethodSelectOpen] = useState(false);
     const [isUploadModalOpen, setIsUploadModalOpen] = useState<boolean>(false);
     const [uploadType, setUploadType] = useState<"receipt" | "garment" | null>(null);
 
@@ -20,9 +63,11 @@ export function useCloset() {
         id: string;
         name: string;
         category: "Top" | "Bottom" | "Outer" | "Shoes";
-        color: string;
-        style: string;
-        fitType: string;
+        itemType: string;
+        mainColor: string;
+        secondaryColors: string[];
+        mainStyle: string;
+        secondaryStyles: string[];
         fabricMaterial: string;
         anatomicalFitGuide?: any;
         imageBase64?: string;
@@ -61,9 +106,13 @@ export function useCloset() {
                 id: "draft_" + Date.now(),
                 name: mockType === "receipt" ? "영수증 추출 명세 아이템" : "카메라 캡처 베이직 반소매 티셔츠",
                 category: data.category || "Top",
-                color: data.color || "Pure White",
-                style: data.style || "Minimal",
-                fitType: data.fitType || "Semi-Oversized",
+                itemType: data.itemType || "SHORT_SLEEVE",
+                mainColor: resolveGarmentColorCode(
+                    data.primaryColor ?? data.color,
+                ),
+                secondaryColors: [],
+                mainStyle: resolveGarmentStyleCode(data.style),
+                secondaryStyles: [],
                 fabricMaterial: data.fabricMaterial || "코튼 100%",
                 anatomicalFitGuide: data.anatomicalFitGuide || {},
                 imageBase64: sampleImg
@@ -75,9 +124,11 @@ export function useCloset() {
                 id: "draft_" + Date.now(),
                 name: mockType === "receipt" ? "영수증 추출 명세 아이템" : "카메라 캡처 베이직 반소매 티셔츠",
                 category: "Top",
-                color: "Pure White",
-                style: "Minimal",
-                fitType: "Semi-Oversized",
+                itemType: "SHORT_SLEEVE",
+                mainColor: "WHITE",
+                secondaryColors: [],
+                mainStyle: "MINIMAL",
+                secondaryStyles: [],
                 fabricMaterial: "헤비 웨이트 프렌치 테리 코튼 100%",
                 imageBase64: sampleImg,
                 anatomicalFitGuide: {
@@ -123,16 +174,40 @@ export function useCloset() {
         );
     };
 
-    const handleSaveToCloset = () => {
-        if (!analyzedDraft) return;
+    const handleSaveToCloset = (): boolean => {
+        if (!analyzedDraft) return false;
+
+        const validationError = getGarmentDraftValidationError(analyzedDraft);
+        if (validationError) {
+            alert(validationError);
+            return false;
+        }
+
+        const mainColorName = getGarmentColorLabel(analyzedDraft.mainColor);
+        const secondaryColorNames = analyzedDraft.secondaryColors
+            .map(getGarmentColorLabel)
+            .join(" · ");
+        const colorLabel = secondaryColorNames
+            ? `${mainColorName} · ${secondaryColorNames}`
+            : mainColorName;
+
+        const mainStyleName = getGarmentStyleLabel(analyzedDraft.mainStyle);
+        const secondaryStyleNames = analyzedDraft.secondaryStyles
+            .map(getGarmentStyleLabel)
+            .join(" · ");
+        const styleLabel = secondaryStyleNames
+            ? `${mainStyleName} · ${secondaryStyleNames}`
+            : mainStyleName;
 
         const newGarment: Garment = {
             id: analyzedDraft.id,
             name: analyzedDraft.name,
             category: analyzedDraft.category,
-            color: analyzedDraft.color,
-            style: analyzedDraft.style,
-            fitType: analyzedDraft.fitType,
+            color: colorLabel,
+            style: styleLabel,
+            fitType: analyzedDraft.itemType
+                ? getItemTypeLabel(analyzedDraft.category, analyzedDraft.itemType)
+                : "—",
             fabricMaterial: analyzedDraft.fabricMaterial,
             thumbnailUrl: analyzedDraft.imageBase64 || "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&q=80&w=600",
             isFavorite: false,
@@ -147,16 +222,43 @@ export function useCloset() {
         setIsUploadModalOpen(false);
         setSelectedLocalImg(null);
         alert(`🎉 "${newGarment.name}" 의상을 옷장에 신규 등록 완료 하였습니다!`);
+        return true;
     };
 
-    const openUploadModal = () => {
+    const openGarmentRegister = () => {
         setUploadType(null);
-        setIsUploadModalOpen(true);
+        setAnalyzedDraft(null);
+        setSelectedLocalImg(null);
+        setIsMethodSelectOpen(true);
     };
+
+    const closeGarmentRegisterMethod = () => {
+        setIsMethodSelectOpen(false);
+    };
+
+    const selectRegisterMethod = (type: "receipt" | "garment") => {
+        setIsMethodSelectOpen(false);
+        setUploadType(type);
+        setIsUploadModalOpen(true);
+        void triggerImageUpload(type === "receipt" ? "receipt" : "garment_tee");
+    };
+
+    const backToRegisterMethodSelect = () => {
+        setIsUploadModalOpen(false);
+        setUploadType(null);
+        setAnalyzedDraft(null);
+        setSelectedLocalImg(null);
+        setIsAnalyzing(false);
+        setIsMethodSelectOpen(true);
+    };
+
+    /** @deprecated openGarmentRegister 사용 */
+    const openUploadModal = openGarmentRegister;
 
     return {
         clothes, setClothes,
         selectedGarment, setSelectedGarment,
+        isMethodSelectOpen,
         isUploadModalOpen, setIsUploadModalOpen,
         uploadType, setUploadType,
         isAnalyzing,
@@ -167,6 +269,10 @@ export function useCloset() {
         toggleFavorite,
         moveToOwnedCloset,
         handleSaveToCloset,
+        openGarmentRegister,
+        closeGarmentRegisterMethod,
+        selectRegisterMethod,
+        backToRegisterMethodSelect,
         openUploadModal,
     };
 }
