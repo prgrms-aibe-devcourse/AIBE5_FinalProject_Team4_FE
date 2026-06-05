@@ -1,4 +1,4 @@
-import type { ClothesResponse } from '@/types/be'
+import type { ClothesResponse, ClothesInfoSource } from '@/types/be'
 import type { Garment, GarmentBeMeta } from '@/types'
 import { BE_CATEGORY_TO_UI } from '@/data/categoryItemTypes'
 
@@ -12,6 +12,8 @@ function extractBeMeta(item: ClothesResponse): GarmentBeMeta {
     brandName: item.brandName,
     imageUrl: item.userImageUrl ?? item.imageUrl,
     isVerified: item.isVerified ?? false,
+    clothesInfoSource: item.clothesInfoSource,
+    registrationSource: item.registrationSource ?? null,
   }
 }
 

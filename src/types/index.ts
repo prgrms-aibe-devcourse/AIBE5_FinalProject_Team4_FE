@@ -42,6 +42,10 @@ export interface GarmentBeMeta {
   brandName: string;
   imageUrl: string;
   isVerified: boolean;
+  /** CLOTHES.clothes_info_source */
+  clothesInfoSource?: string;
+  /** WARDROBE_CLOTHES.registration_source */
+  registrationSource?: string | null;
 }
 
 export interface Garment {
