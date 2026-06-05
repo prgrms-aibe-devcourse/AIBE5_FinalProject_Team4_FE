@@ -5,7 +5,6 @@
 
 import { useState, useEffect, type FormEvent } from "react";
 import { 
-  Plus, 
   Home, 
   X, 
   ChevronRight,
@@ -17,6 +16,7 @@ import { UserProfile } from "@/types/index";
 import HomeTab from "./components/HomeTab";
 import ClosetTab from "./components/ClosetTab";
 import GarmentRegisterMethodModal from "./components/GarmentRegisterMethodModal";
+import PhotoGarmentRegisterModal from "./components/PhotoGarmentRegisterModal";
 import {
   captureOAuthTokenFromUrl,
   getUserIdFromAccessToken,
@@ -92,6 +92,7 @@ export default function App() {
   // Navigation state: 'home' | 'closet' | 'feed' | 'profile'
   const [currentTab, setCurrentTab] = useState<"home" | "closet" | "feed" | "profile">("home");
   const [homeResetSignal, setHomeResetSignal] = useState<number>(0);
+  const [isPhotoRegisterOpen, setIsPhotoRegisterOpen] = useState(false);
   const [subCategoryOpen, setSubCategoryOpen] = useState(false);
   const [mainColorOpen, setMainColorOpen] = useState(false);
   const [secondaryColorOpen, setSecondaryColorOpen] = useState(false);
@@ -448,8 +449,8 @@ export default function App() {
 
             </main>
 
-            {/* ----------------- Floating Button '+' (Registration Choice Modal Entry Trigger) ----------------- */}
-            <div className="fixed bottom-20 right-5 z-40 flex flex-col items-center gap-2">
+            {/* ----------------- Floating scroll-to-top ----------------- */}
+            <div className="fixed bottom-20 right-5 z-40">
               <button
                 id="btn-scroll-top"
                 onClick={scrollAppToTop}
@@ -459,15 +460,6 @@ export default function App() {
                 type="button"
               >
                 <ChevronRight className="w-5 h-5 -rotate-90 stroke-[3]" />
-              </button>
-              <button
-                id="btn-upload-trigger"
-                onClick={openGarmentRegister}
-                className="w-12 h-12 rounded-full bg-[#1E3A8A] hover:bg-[#1E3A8A]/90 text-[#BBF7D0] shadow-lg flex items-center justify-center active:scale-95 cursor-pointer touch-manipulation"
-                title="옷 등록"
-                type="button"
-              >
-                <Plus className="w-6 h-6 stroke-[3]" />
               </button>
             </div>
 
@@ -594,26 +586,24 @@ export default function App() {
           open={isMethodSelectOpen}
           onClose={closeGarmentRegisterMethod}
           onSelectReceipt={() => selectRegisterMethod("receipt")}
-          onSelectPhoto={() => selectRegisterMethod("garment")}
+          onSelectPhoto={() => {
+            closeGarmentRegisterMethod();
+            setUploadType("garment");
+            setIsPhotoRegisterOpen(true);
+          }}
         />
 
-        {/* 옷 등록 파이프라인 모달 (방식 선택 후) */}
-        {isUploadModalOpen && uploadType && (
+        {/* 구매내역 기반 등록 파이프라인 (방식 선택 후) */}
+        {isUploadModalOpen && uploadType === "receipt" && (
           <div id="modal-upload-pipeline" className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center z-[40] animate-fade-in p-4">
             <div className="w-full max-w-xl bg-white rounded-[28px] min-h-[720px] max-h-[95vh] flex flex-col shadow-2xl relative overflow-hidden">
               
               {/* Header */}
               <div className="flex justify-between items-center px-7 pt-6 pb-4 border-b border-slate-100 shrink-0">
                 <div className="space-y-0 text-left leading-tight">
-                  <h3 className="text-lg font-bold text-[#1E3A8A]">
-                    {uploadType === "receipt"
-                      ? "구매내역 기반 등록"
-                      : "사진 기반 등록"}
-                  </h3>
+                  <h3 className="text-lg font-bold text-[#1E3A8A]">구매내역 기반 등록</h3>
                   <p className="text-sm text-slate-400 mt-1 leading-snug">
-                    {uploadType === "receipt"
-                      ? "구매내역을 분석해 옷장에 보유 옷으로 저장합니다."
-                      : "옷 사진을 분석해 옷장에 보유 옷으로 저장합니다."}
+                    구매내역을 분석해 옷장에 보유 옷으로 저장합니다.
                   </p>
                 </div>
                 <button
@@ -1087,6 +1077,25 @@ export default function App() {
             </div>
           </div>
         )}
+
+        <PhotoGarmentRegisterModal
+          open={isPhotoRegisterOpen}
+          userId={authUserId}
+          onClose={() => {
+            setIsPhotoRegisterOpen(false);
+            setUploadType(null);
+          }}
+          onBackToMethodSelect={() => {
+            setIsPhotoRegisterOpen(false);
+            setUploadType(null);
+            openGarmentRegister();
+          }}
+          onSaved={(garment) => {
+            setClothes((prev) => [garment, ...prev]);
+            setSelectedGarment(garment);
+            setCurrentTab("closet");
+          }}
+        />
 
       </div>
     );

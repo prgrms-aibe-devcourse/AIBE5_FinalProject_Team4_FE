@@ -233,6 +233,7 @@ export function useCloset() {
         setUploadType(null);
         setAnalyzedDraft(null);
         setSelectedLocalImg(null);
+        setIsUploadModalOpen(false);
         setIsMethodSelectOpen(true);
     };
 
@@ -243,8 +244,10 @@ export function useCloset() {
     const selectRegisterMethod = (type: "receipt" | "garment") => {
         setIsMethodSelectOpen(false);
         setUploadType(type);
-        setIsUploadModalOpen(true);
-        void triggerImageUpload(type === "receipt" ? "receipt" : "garment_tee");
+        if (type === "receipt") {
+            setIsUploadModalOpen(true);
+            void triggerImageUpload("receipt");
+        }
     };
 
     const backToRegisterMethodSelect = () => {

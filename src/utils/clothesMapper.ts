@@ -7,8 +7,8 @@ function extractBeMeta(item: ClothesResponse): GarmentBeMeta {
     categoryCode: item.category,
     itemTypeCode: item.itemType,
     primaryColorCode: item.primaryColor ?? item.primaryColorDisplay?.code ?? 'WHITE',
-    secondaryColorCodes: item.secondaryColors.map((c) => c.code),
-    styleCodes: item.styles.map((s) => s.code),
+    secondaryColorCodes: (item.secondaryColors ?? []).map((c) => c.code),
+    styleCodes: (item.styles ?? []).map((s) => s.code),
     brandName: item.brandName,
     imageUrl: item.userImageUrl ?? item.imageUrl,
     isVerified: item.isVerified ?? false,
@@ -16,7 +16,7 @@ function extractBeMeta(item: ClothesResponse): GarmentBeMeta {
 }
 
 export function mapClothesToGarment(item: ClothesResponse): Garment {
-  const primaryStyle = item.styles[0]
+  const primaryStyle = item.styles?.[0]
   return {
     id: String(item.clothesId),
     name: item.name,

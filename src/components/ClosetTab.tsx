@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import Spinner from "@/components/common/Spinner";
+import AuthenticatedImage from "@/components/common/AuthenticatedImage";
 import {
   fetchWardrobeGarments,
   fetchWardrobeMeta,
@@ -441,11 +442,13 @@ export default function ClosetTab({
                   {/* Apparel Display visual slot */}
                   <div className="w-full h-32 bg-[#F8FAFC]/55 rounded-2xl mb-3 mt-4 flex items-center justify-center overflow-hidden border border-slate-50 relative select-none">
                     {item.thumbnailUrl ? (
-                      <img 
-                        src={item.thumbnailUrl} 
-                        alt={item.name} 
+                      <AuthenticatedImage
+                        src={item.thumbnailUrl}
+                        alt={item.name}
                         className="w-full h-full object-cover object-top transition-transform duration-500 group-hover:scale-103"
-                        referrerPolicy="no-referrer"
+                        fallback={
+                          <span className="text-4xl filter drop-shadow-sm select-none">👚</span>
+                        }
                       />
                     ) : (
                       <span className="text-4xl filter drop-shadow-sm select-none">👚</span>
