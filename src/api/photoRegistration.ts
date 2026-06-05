@@ -1,6 +1,7 @@
 import api from '@/api'
 import type { BeApiResponse, ClothesResponse } from '@/types/be'
 import type {
+  PhotoClothesRegistrationResponse,
   PhotoGarmentDraftResponse,
   PhotoGarmentSaveRequest,
   PhotoUploadResponse,
@@ -159,16 +160,35 @@ export async function pollGarmentPhotoDraft(
   throw new Error('AI 분석 시간이 초과되었습니다. 직접 입력해 주세요.')
 }
 
+export function mapPhotoSaveResponseToClothesResponse(
+  raw: PhotoClothesRegistrationResponse,
+): ClothesResponse {
+  const clothes = raw.clothes
+  return {
+    ...clothes,
+    wardrobeClothesId: raw.wardrobeClothesId ?? clothes.wardrobeClothesId ?? null,
+    wardrobeId: raw.wardrobeId ?? clothes.wardrobeId ?? null,
+    userImageUrl: raw.userImageUrl ?? clothes.userImageUrl ?? clothes.imageUrl ?? null,
+    isFavorite: raw.favorite ?? clothes.isFavorite ?? false,
+    size: raw.size ?? clothes.size ?? null,
+    season: raw.season ?? clothes.season ?? null,
+    ownershipStatus: raw.ownershipStatus ?? clothes.ownershipStatus ?? 'OWNED',
+    secondaryColors: clothes.secondaryColors ?? [],
+    styles: clothes.styles ?? [],
+  }
+}
+
 export async function saveGarmentFromPhoto(
   userId: number,
   photoId: number,
   payload: PhotoGarmentSaveRequest,
 ): Promise<ClothesResponse> {
-  return unwrap(
-    api.post<BeApiResponse<ClothesResponse>>(
+  const saved = await unwrap(
+    api.post<BeApiResponse<PhotoClothesRegistrationResponse>>(
       `${photoBase(userId)}/${photoId}/save`,
       payload,
       { timeout: PHOTO_API_TIMEOUT_MS },
     ),
   )
+  return mapPhotoSaveResponseToClothesResponse(saved)
 }

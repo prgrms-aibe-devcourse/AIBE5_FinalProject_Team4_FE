@@ -1,3 +1,5 @@
+import type { ClothesResponse, OwnershipStatus } from '@/types/be'
+
 /** BE 사진 기반 등록 DTO (garment-registration.md 기준) */
 export interface PhotoUploadResponse {
   photoId: number
@@ -50,4 +52,17 @@ export interface PhotoGarmentSaveRequest {
   season?: string
   favorite?: boolean
   isVerified?: boolean
+}
+
+/** BE `PhotoClothesRegistrationResponse` — POST .../photos/{photoId}/save 의 data 본문 */
+export interface PhotoClothesRegistrationResponse {
+  clothes: ClothesResponse
+  wardrobeClothesId: number
+  wardrobeId?: number | null
+  userImageUrl?: string | null
+  favorite?: boolean | null
+  size?: string | null
+  season?: string | null
+  ownershipStatus?: OwnershipStatus | null
+  photoId?: number | null
 }
