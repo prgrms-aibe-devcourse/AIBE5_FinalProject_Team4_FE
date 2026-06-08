@@ -1,5 +1,9 @@
 import api from '@/api'
-import type { BeApiResponse, ClothesResponse } from '@/types/be'
+import type {
+  BeApiResponse,
+  ClothesResponse,
+  WardrobeStatisticsResponse,
+} from '@/types/be'
 import {
   mapClothesListToGarments,
   mapClothesToGarment,
@@ -34,6 +38,20 @@ export interface WardrobeGarmentsResult {
   partialErrors?: {
     owned?: string
     wishlist?: string
+  }
+}
+
+export async function fetchWardrobeStatistics(
+  userId: number,
+): Promise<WardrobeStatisticsResponse | null> {
+  try {
+    return await unwrap(
+      api.get<BeApiResponse<WardrobeStatisticsResponse>>(
+        `/api/v1/wardrobes/users/${userId}/statistics`,
+      ),
+    )
+  } catch {
+    return null
   }
 }
 
@@ -112,8 +130,15 @@ export async function updateClothes(
   edits: {
     name?: string
     brandName?: string
+    productCode?: string
+    category?: string
+    itemType?: string
+    primaryColor?: string
+    secondaryColors?: string[]
+    styles?: string[]
     size?: string
     season?: string
+    imageUrl?: string
   },
 ): Promise<Garment> {
   const payload = buildClothesUpdatePayload(garment, edits)

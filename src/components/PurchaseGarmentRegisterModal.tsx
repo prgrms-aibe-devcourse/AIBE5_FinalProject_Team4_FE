@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { FileText, Info, Sparkle, Upload, X } from './icons'
 import AuthenticatedImage from '@/components/common/AuthenticatedImage'
-import { EXTERNAL_SOURCES } from '@/data/externalSources'
+import { EXTERNAL_SOURCES, getExternalSourceLogoUrl } from '@/data/externalSources'
 import { usePurchaseGarmentRegister } from '@/hooks/usePurchaseGarmentRegister'
 import {
   CATEGORY_ITEM_TYPES,
@@ -18,16 +18,18 @@ import { GARMENT_STYLES } from '@/data/garmentStyles'
 import {
   GARMENT_NAME_MAX_LENGTH,
   BRAND_NAME_MAX_LENGTH,
-  GARMENT_SIZE_MAX_LENGTH,
+  getSizeOptionsByCategory,
   GARMENT_SEASON_OPTIONS,
 } from '@/utils/garmentRegisterValidation'
 import { PRODUCT_CODE_MAX_LENGTH } from '@/utils/purchaseRegisterValidation'
 import type { Garment } from '@/types'
 import type { ExternalSourceCode } from '@/data/externalSources'
+import { isDuplicateRegisterError } from '@/utils/garmentDuplicateCheck'
 
 interface PurchaseGarmentRegisterModalProps {
   open: boolean
   userId: number | null
+  existingGarments?: Garment[]
   onClose: () => void
   onBackToMethodSelect?: () => void
   onSaved: (garment: Garment, options?: { finished: boolean }) => void
@@ -36,6 +38,7 @@ interface PurchaseGarmentRegisterModalProps {
 export default function PurchaseGarmentRegisterModal({
   open,
   userId,
+  existingGarments = [],
   onClose,
   onBackToMethodSelect,
   onSaved,
@@ -52,6 +55,7 @@ export default function PurchaseGarmentRegisterModal({
     selectedFile,
     displayImageUrl,
     activeItemImageUrl,
+    resolveItemImageUrl,
     pendingItems,
     activeItemIndex,
     hasMultipleItems,
@@ -61,6 +65,7 @@ export default function PurchaseGarmentRegisterModal({
     fieldErrors,
     uploadError,
     globalError,
+    duplicateError,
     aiFailed,
     successMessage,
     selectFile,
@@ -70,7 +75,7 @@ export default function PurchaseGarmentRegisterModal({
     backToItemSelect,
     saveToCloset,
     reset,
-  } = usePurchaseGarmentRegister(userId)
+  } = usePurchaseGarmentRegister(userId, existingGarments)
 
   useEffect(() => {
     if (!open) reset()
@@ -144,7 +149,10 @@ export default function PurchaseGarmentRegisterModal({
         </div>
 
         <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain px-7 py-4 space-y-4">
-          {globalError && !(aiFailed && (step === 'form' || step === 'saving')) && step !== 'item-select' && (
+          {globalError &&
+            !isDuplicateRegisterError(globalError) &&
+            !(aiFailed && (step === 'form' || step === 'saving')) &&
+            step !== 'item-select' && (
             <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
               {globalError}
             </div>
@@ -291,6 +299,7 @@ export default function PurchaseGarmentRegisterModal({
                   ]
                     .filter(Boolean)
                     .join(' · ')
+                  const itemImageUrl = resolveItemImageUrl(item)
 
                   return (
                     <div
@@ -298,10 +307,10 @@ export default function PurchaseGarmentRegisterModal({
                       className="rounded-xl border border-slate-200 bg-slate-50/60 p-3 space-y-2"
                     >
                       <div className="flex items-start gap-2.5">
-                        {item.itemImageUrl && (
+                        {itemImageUrl && (
                           <div className="shrink-0 w-12 h-12 rounded-lg border border-slate-200 bg-white overflow-hidden">
                             <AuthenticatedImage
-                              src={item.itemImageUrl}
+                              src={itemImageUrl}
                               alt={label}
                               className="w-full h-full object-cover"
                             />
@@ -399,29 +408,6 @@ export default function PurchaseGarmentRegisterModal({
                 </div>
               )}
 
-              {activeItemImageUrl && (
-                <div className="flex items-center gap-3 bg-slate-50 rounded-2xl border border-slate-100 p-3">
-                  <div className="shrink-0 w-16 h-16 rounded-xl border border-slate-200 bg-white overflow-hidden flex items-center justify-center">
-                    <AuthenticatedImage
-                      src={activeItemImageUrl}
-                      alt={draft.name || '상품 이미지'}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div className="min-w-0">
-                    {draft.name && (
-                      <p className="text-sm font-bold text-slate-800 truncate">{draft.name}</p>
-                    )}
-                    {draft.brandName && (
-                      <p className="text-xs text-slate-500 truncate">{draft.brandName}</p>
-                    )}
-                    {draft.optionText && (
-                      <p className="text-xs text-slate-400 truncate">{draft.optionText}</p>
-                    )}
-                  </div>
-                </div>
-              )}
-
               {aiFailed && (
                 <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 space-y-1">
                   <p>AI 분석에 실패했습니다. 아래 항목을 직접 입력한 뒤 저장해 주세요.</p>
@@ -458,54 +444,93 @@ export default function PurchaseGarmentRegisterModal({
                   )}
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-0.5">
-                    <label className="text-xs font-bold text-slate-500">
-                      품번 <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={draft.productCode}
-                      maxLength={PRODUCT_CODE_MAX_LENGTH}
-                      onChange={(e) => setDraft({ productCode: e.target.value })}
-                      placeholder="구매내역의 상품코드"
-                      className={`w-full h-11 px-3 rounded-lg border text-sm bg-white ${
-                        fieldErrors.productCode ? 'border-red-400' : 'border-slate-200'
-                      }`}
-                      required
-                    />
-                    {fieldErrors.productCode && (
-                      <p className="text-xs text-red-600">{fieldErrors.productCode}</p>
-                    )}
-                  </div>
-
-                  <div className="space-y-0.5">
-                    <label className="text-xs font-bold text-slate-500">
-                      쇼핑몰 <span className="text-slate-400 font-normal">(선택)</span>
-                    </label>
-                    <select
-                      value={draft.externalSource}
-                      onChange={(e) =>
-                        setDraft({
-                          externalSource: e.target.value as ExternalSourceCode | '',
-                        })
-                      }
-                      className={`w-full h-11 px-3 rounded-lg border text-sm bg-white outline-hidden ${
-                        fieldErrors.externalSource ? 'border-red-400' : 'border-slate-200'
-                      }`}
-                    >
-                      <option value="">선택</option>
-                      {EXTERNAL_SOURCES.map(({ code, label }) => (
-                        <option key={code} value={code}>
-                          {label}
-                        </option>
-                      ))}
-                    </select>
-                    {fieldErrors.externalSource && (
-                      <p className="text-xs text-red-600">{fieldErrors.externalSource}</p>
-                    )}
-                  </div>
+                <div className="space-y-0.5">
+                  <label className="text-xs font-bold text-slate-500">
+                    품번 <span className="text-slate-400 font-normal">(선택)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={draft.productCode}
+                    maxLength={PRODUCT_CODE_MAX_LENGTH}
+                    onChange={(e) => setDraft({ productCode: e.target.value })}
+                    placeholder="구매내역의 상품코드"
+                    className={`w-full h-11 px-3 rounded-lg border text-sm bg-white ${
+                      fieldErrors.productCode ? 'border-red-400' : 'border-slate-200'
+                    }`}
+                  />
+                  {fieldErrors.productCode && (
+                    <p className="text-xs text-red-600">{fieldErrors.productCode}</p>
+                  )}
                 </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-500">
+                    쇼핑몰 <span className="text-slate-400 font-normal">(선택)</span>
+                  </label>
+                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                    {EXTERNAL_SOURCES.filter((s) => s.code !== 'CUSTOM').map(({ code, label }) => {
+                      const active = draft.externalSource === code
+                      const logoUrl = getExternalSourceLogoUrl(code)
+                      return (
+                        <button
+                          key={code}
+                          type="button"
+                          onClick={() =>
+                            setDraft({
+                              externalSource: active ? '' : (code as ExternalSourceCode),
+                            })
+                          }
+                          className={`flex flex-col items-center gap-1 p-2 rounded-xl border transition ${
+                            active
+                              ? 'bg-[#1E3A8A] text-white border-transparent'
+                              : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
+                          }`}
+                        >
+                          {logoUrl ? (
+                            <img
+                              src={logoUrl}
+                              alt=""
+                              className="w-7 h-7 object-contain rounded"
+                            />
+                          ) : (
+                            <span className="w-7 h-7 flex items-center justify-center text-xs font-bold rounded bg-slate-100">
+                              {label.charAt(0)}
+                            </span>
+                          )}
+                          <span className="text-[10px] font-bold leading-tight text-center line-clamp-2">
+                            {label}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                  {fieldErrors.externalSource && (
+                    <p className="text-xs text-red-600">{fieldErrors.externalSource}</p>
+                  )}
+                </div>
+
+                {activeItemImageUrl && (
+                  <div className="flex items-center gap-3 bg-slate-50 rounded-2xl border border-slate-100 p-3">
+                    <div className="shrink-0 w-16 h-16 rounded-xl border border-slate-200 bg-white overflow-hidden flex items-center justify-center">
+                      <AuthenticatedImage
+                        src={activeItemImageUrl}
+                        alt={draft.name || '상품 이미지'}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="min-w-0">
+                      {draft.name && (
+                        <p className="text-sm font-bold text-slate-800 truncate">{draft.name}</p>
+                      )}
+                      {draft.brandName && (
+                        <p className="text-xs text-slate-500 truncate">{draft.brandName}</p>
+                      )}
+                      {draft.optionText && (
+                        <p className="text-xs text-slate-400 truncate">{draft.optionText}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {draft.optionText && (
                   <p className="text-xs text-slate-500 bg-slate-50 rounded-lg px-3 py-2 border border-slate-100">
@@ -536,6 +561,7 @@ export default function PurchaseGarmentRegisterModal({
                                 cValue,
                                 active ? draft.itemType : undefined,
                               ),
+                              size: '',
                             })
                           }}
                           className={`h-10 rounded-lg text-sm font-bold border transition ${
@@ -827,49 +853,77 @@ export default function PurchaseGarmentRegisterModal({
                   )}
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-0.5">
-                    <label className="text-xs font-bold text-slate-500">
-                      사이즈 <span className="text-slate-400 font-normal">(선택)</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={draft.size}
-                      maxLength={GARMENT_SIZE_MAX_LENGTH}
-                      onChange={(e) => setDraft({ size: e.target.value })}
-                      placeholder="예: L (비우면 FREE)"
-                      className={`w-full h-11 px-3 rounded-lg border text-sm bg-white ${
-                        fieldErrors.size ? 'border-red-400' : 'border-slate-200'
-                      }`}
-                    />
-                    {fieldErrors.size && (
-                      <p className="text-xs text-red-600">{fieldErrors.size}</p>
-                    )}
-                  </div>
-
-                  <div className="space-y-0.5">
-                    <label className="text-xs font-bold text-slate-500">
-                      시즌 <span className="text-slate-400 font-normal">(선택)</span>
-                    </label>
-                    <select
-                      value={draft.season}
-                      onChange={(e) => setDraft({ season: e.target.value })}
-                      className={`w-full h-11 px-3 rounded-lg border text-sm bg-white outline-hidden ${
-                        fieldErrors.season ? 'border-red-400' : 'border-slate-200'
-                      }`}
-                    >
-                      <option value="">선택</option>
-                      {GARMENT_SEASON_OPTIONS.map(({ code, label }) => (
-                        <option key={code} value={code}>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-500">
+                    사이즈 <span className="text-slate-400 font-normal">(선택)</span>
+                  </label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {getSizeOptionsByCategory(draft.category).map(({ code, label }) => {
+                      const active = draft.size === code
+                      return (
+                        <button
+                          key={code}
+                          type="button"
+                          onClick={() => setDraft({ size: active ? '' : code })}
+                          className={`h-8 px-3 rounded-lg text-xs font-bold border transition ${
+                            active
+                              ? 'bg-[#1E3A8A] text-white border-transparent'
+                              : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
+                          }`}
+                        >
                           {label}
-                        </option>
-                      ))}
-                    </select>
-                    {fieldErrors.season && (
-                      <p className="text-xs text-red-600">{fieldErrors.season}</p>
-                    )}
+                        </button>
+                      )
+                    })}
                   </div>
+                  <input
+                    type="text"
+                    value={draft.size}
+                    maxLength={50}
+                    onChange={(e) => setDraft({ size: e.target.value })}
+                    placeholder="직접 입력"
+                    className={`w-full h-9 px-3 rounded-lg border text-sm bg-white ${
+                      fieldErrors.size ? 'border-red-400' : 'border-slate-200'
+                    }`}
+                  />
+                  {fieldErrors.size && (
+                    <p className="text-xs text-red-600">{fieldErrors.size}</p>
+                  )}
                 </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-500">
+                    시즌 <span className="text-slate-400 font-normal">(선택)</span>
+                  </label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {GARMENT_SEASON_OPTIONS.map(({ code, label }) => {
+                      const active = draft.season === code
+                      return (
+                        <button
+                          key={code}
+                          type="button"
+                          onClick={() => setDraft({ season: active ? '' : code })}
+                          className={`h-8 px-3 rounded-lg text-xs font-bold border transition ${
+                            active
+                              ? 'bg-[#1E3A8A] text-white border-transparent'
+                              : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  {fieldErrors.season && (
+                    <p className="text-xs text-red-600">{fieldErrors.season}</p>
+                  )}
+                </div>
+
+                {duplicateError && (
+                  <p className="text-sm font-bold text-red-600 text-center py-1">
+                    {duplicateError}
+                  </p>
+                )}
 
                 <button
                   type="submit"

@@ -556,6 +556,7 @@ export default function App() {
         <PurchaseGarmentRegisterModal
           open={isPurchaseRegisterOpen}
           userId={authUserId}
+          existingGarments={clothes}
           onClose={() => setIsPurchaseRegisterOpen(false)}
           onBackToMethodSelect={() => {
             setIsPurchaseRegisterOpen(false);
@@ -573,6 +574,7 @@ export default function App() {
         <PhotoGarmentRegisterModal
           open={isPhotoRegisterOpen}
           userId={authUserId}
+          existingGarments={clothes}
           onClose={() => setIsPhotoRegisterOpen(false)}
           onBackToMethodSelect={() => {
             setIsPhotoRegisterOpen(false);

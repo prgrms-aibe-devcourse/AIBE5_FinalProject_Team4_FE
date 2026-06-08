@@ -1,17 +1,17 @@
 /** BE `external_source` / docs/domain/catalog.md 기준 */
 export const EXTERNAL_SOURCES = [
-  { code: 'MUSINSA', label: '무신사' },
-  { code: 'NAVER_SHOPPING', label: '네이버쇼핑' },
-  { code: 'COUPANG', label: '쿠팡' },
-  { code: 'ABLY', label: '에이블리' },
-  { code: 'ZIGZAG', label: '지그재그' },
-  { code: 'TWENTYNINE_CM', label: '29CM' },
-  { code: 'WCONCEPT', label: 'W컨셉' },
-  { code: 'BRANDI', label: '브랜디' },
-  { code: 'UNIQLO', label: '유니클로' },
-  { code: 'SPAO', label: '스파오' },
-  { code: 'EIGHT_SECONDS', label: '에잇세컨즈' },
-  { code: 'HM', label: 'H&M' },
+  { code: 'MUSINSA', label: '무신사', logoDomain: 'www.musinsa.com' },
+  { code: 'NAVER_SHOPPING', label: '네이버쇼핑', logoDomain: 'shopping.naver.com' },
+  { code: 'COUPANG', label: '쿠팡', logoDomain: 'www.coupang.com' },
+  { code: 'ABLY', label: '에이블리', logoDomain: 'm.a-bly.com' },
+  { code: 'ZIGZAG', label: '지그재그', logoDomain: 'zigzag.kr' },
+  { code: 'TWENTYNINE_CM', label: '29CM', logoDomain: 'www.29cm.co.kr' },
+  { code: 'WCONCEPT', label: 'W컨셉', logoDomain: 'www.wconcept.co.kr' },
+  { code: 'BRANDI', label: '브랜디', logoDomain: 'www.brandi.co.kr' },
+  { code: 'UNIQLO', label: '유니클로', logoDomain: 'www.uniqlo.com' },
+  { code: 'SPAO', label: '스파오', logoDomain: 'www.spao.com' },
+  { code: 'EIGHT_SECONDS', label: '에잇세컨즈', logoDomain: 'www.8seconds.co.kr' },
+  { code: 'HM', label: 'H&M', logoDomain: 'www2.hm.com' },
   { code: 'CUSTOM', label: '직접입력' },
 ] as const
 
@@ -55,4 +55,10 @@ export function resolveExternalSourceCode(
   const upper = key.toUpperCase()
   if (isExternalSourceCode(upper)) return upper
   return EXTERNAL_SOURCE_ALIASES[key] ?? EXTERNAL_SOURCE_ALIASES[upper] ?? ''
+}
+
+export function getExternalSourceLogoUrl(code: ExternalSourceCode): string | null {
+  const source = EXTERNAL_SOURCES.find((s) => s.code === code)
+  if (!source || !('logoDomain' in source) || !source.logoDomain) return null
+  return `https://www.google.com/s2/favicons?domain=${source.logoDomain}&sz=64`
 }

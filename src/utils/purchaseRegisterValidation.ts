@@ -51,9 +51,7 @@ export function validatePurchaseRegisterDraft(
   }
 
   const productCode = draft.productCode.trim()
-  if (!productCode) {
-    errors.productCode = '품번을 입력해 주세요.'
-  } else if (productCode.length > PRODUCT_CODE_MAX_LENGTH) {
+  if (productCode.length > PRODUCT_CODE_MAX_LENGTH) {
     errors.productCode = `품번은 ${PRODUCT_CODE_MAX_LENGTH}자 이하로 입력해 주세요.`
   }
 

@@ -69,3 +69,27 @@ export interface MockTokenData {
   accessToken: string
   headerValue: string
 }
+
+/** GET /api/v1/wardrobes/users/{userId}/statistics (WARD-002) */
+export interface WardrobeItemTypeCount {
+  itemType: string
+  itemTypeLabel: string
+  category: string | null
+  count: number
+}
+
+export interface WardrobeUserStylePayload {
+  styleId: number
+  styleCode: string
+  styleName: string
+  weightedScore: number
+  wardrobeWeight: number
+}
+
+export interface WardrobeStatisticsResponse {
+  userId: number
+  wardrobeId: number
+  totalOwnedCount: number
+  itemTypes: WardrobeItemTypeCount[]
+  userStylePayloads: WardrobeUserStylePayload[]
+}

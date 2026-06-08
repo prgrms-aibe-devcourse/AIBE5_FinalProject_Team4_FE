@@ -22,6 +22,57 @@ export const GARMENT_SEASON_OPTIONS = [
   { code: 'ALL_SEASON', label: '사계절' },
 ] as const
 
+const SIZE_FREE = { code: 'FREE', label: 'FREE' } as const
+
+/** 공통 알파벳 사이즈 */
+const LETTER_SIZES = [
+  { code: 'XS',  label: 'XS' },
+  { code: 'S',   label: 'S' },
+  { code: 'M',   label: 'M' },
+  { code: 'L',   label: 'L' },
+  { code: 'XL',  label: 'XL' },
+  { code: 'XXL', label: 'XXL' },
+] as const
+
+/** 상의 · 아우터 — 알파벳 사이즈 */
+const TOP_SIZES = [...LETTER_SIZES, SIZE_FREE] as const
+
+/** 하의 — 알파벳 사이즈 */
+const BOTTOM_SIZES = [...LETTER_SIZES, SIZE_FREE] as const
+
+/** 신발 — mm 단위 */
+const SHOES_SIZES = [
+  { code: '220', label: '220' },
+  { code: '225', label: '225' },
+  { code: '230', label: '230' },
+  { code: '235', label: '235' },
+  { code: '240', label: '240' },
+  { code: '245', label: '245' },
+  { code: '250', label: '250' },
+  { code: '255', label: '255' },
+  { code: '260', label: '260' },
+  { code: '265', label: '265' },
+  { code: '270', label: '270' },
+  { code: '275', label: '275' },
+  { code: '280', label: '280' },
+  { code: '285', label: '285' },
+  { code: '290', label: '290' },
+  SIZE_FREE,
+] as const
+
+export const GARMENT_SIZE_OPTIONS_BY_CATEGORY = {
+  Top:    TOP_SIZES,
+  Bottom: BOTTOM_SIZES,
+  Outer:  TOP_SIZES,
+  Shoes:  SHOES_SIZES,
+} as const
+
+export type GarmentSizeCategory = keyof typeof GARMENT_SIZE_OPTIONS_BY_CATEGORY
+
+export function getSizeOptionsByCategory(category: string) {
+  return GARMENT_SIZE_OPTIONS_BY_CATEGORY[category as GarmentSizeCategory] ?? TOP_SIZES
+}
+
 export type GarmentRegisterDraft = {
   name: string
   category: UiCategory

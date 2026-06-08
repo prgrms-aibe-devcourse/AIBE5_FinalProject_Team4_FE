@@ -3,10 +3,12 @@ import Spinner from "@/components/common/Spinner";
 import AuthenticatedImage from "@/components/common/AuthenticatedImage";
 import {
   fetchWardrobeGarments,
-  fetchWardrobeMeta,
+  fetchWardrobeStatistics,
   updateClothesFavorite,
   convertWishlistToOwned,
 } from "@/api/wardrobe";
+import { getGarmentStyleLabel } from "@/data/garmentStyles";
+import type { WardrobeStatisticsResponse } from "@/types/be";
 import { clearDevToken } from "@/utils/ensureDevToken";
 import axios from "axios";
 import ClosetGarmentDetail from "@/components/ClosetGarmentDetail";
@@ -16,7 +18,6 @@ import {
   Flame, 
   Award, 
   HeartHandshake,
-  ChevronRight,
   Sparkle,
   Plus,
 } from "./icons";
@@ -45,7 +46,7 @@ export default function ClosetTab({
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [wardrobeId, setWardrobeId] = useState<number | null>(null);
+  const [wardrobeStats, setWardrobeStats] = useState<WardrobeStatisticsResponse | null>(null);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const selectedRef = useRef<Garment | null>(null);
 
@@ -58,16 +59,32 @@ export default function ClosetTab({
     setTimeout(() => setToastMessage(null), 3000);
   }, []);
 
+  const refreshWardrobeStats = useCallback(async () => {
+    try {
+      const stats = await fetchWardrobeStatistics(userId);
+      setWardrobeStats(stats);
+    } catch {
+      // 통계만 실패해도 목록은 유지
+    }
+  }, [userId]);
+
+  const skipStatsRefreshRef = useRef(true);
+
+  useEffect(() => {
+    skipStatsRefreshRef.current = true;
+  }, [userId, showFavoritesOnly]);
+
   const loadWardrobe = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const meta = await fetchWardrobeMeta(userId);
-      setWardrobeId(meta?.wardrobeId ?? null);
+      const [stats, garmentsResult] = await Promise.all([
+        fetchWardrobeStatistics(userId),
+        fetchWardrobeGarments(userId, { favoritesOnly: showFavoritesOnly }),
+      ]);
+      setWardrobeStats(stats);
 
-      const { garments, partialErrors } = await fetchWardrobeGarments(userId, {
-        favoritesOnly: showFavoritesOnly,
-      });
+      const { garments, partialErrors } = garmentsResult;
       setClothes(garments);
       const preserved = garments.find((g) => g.id === selectedRef.current?.id);
       setSelectedGarment(preserved ?? garments[0] ?? null);
@@ -100,6 +117,25 @@ export default function ClosetTab({
   useEffect(() => {
     loadWardrobe();
   }, [loadWardrobe]);
+
+  const ownedStatsRefreshKey = useMemo(
+    () =>
+      clothes
+        .filter((c) => !c.isWishlist)
+        .map((c) => `${c.id}:${(c.be?.styleCodes ?? []).join("+")}`)
+        .sort()
+        .join("|"),
+    [clothes],
+  );
+
+  useEffect(() => {
+    if (loading || error) return;
+    if (skipStatsRefreshRef.current) {
+      skipStatsRefreshRef.current = false;
+      return;
+    }
+    void refreshWardrobeStats();
+  }, [ownedStatsRefreshKey, loading, error, refreshWardrobeStats]);
 
   const upsertGarment = (updated: Garment) => {
     setClothes((prev) =>
@@ -138,6 +174,20 @@ export default function ClosetTab({
     return counts;
   }, [clothes]);
 
+  const STYLE_STATS_TOP_N = 5;
+
+  const topStyleStats = useMemo(() => {
+    const payloads = wardrobeStats?.userStylePayloads ?? [];
+    return payloads
+      .filter((s) => s.wardrobeWeight > 0)
+      .slice(0, STYLE_STATS_TOP_N)
+      .map((s) => ({
+        code: s.styleCode,
+        label: s.styleName || getGarmentStyleLabel(s.styleCode),
+        weight: s.wardrobeWeight,
+      }));
+  }, [wardrobeStats]);
+
   const toggleFavorite = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     const item = clothes.find((c) => c.id === id);
@@ -153,8 +203,8 @@ export default function ClosetTab({
       upsertGarment(updated);
       triggerToast(
         nextFavorite
-          ? "❤️ 최애 아이템으로 등록되었습니다."
-          : "💔 최애 목록에서 해제되었습니다.",
+          ? "❤️ 즐겨찾기에 등록되었습니다."
+          : "💔 즐겨찾기에서 해제되었습니다.",
       );
     } catch {
       setClothes((prev) =>
@@ -235,14 +285,6 @@ export default function ClosetTab({
             <h1 className="text-2xl md:text-3xl font-black text-slate-910 text-slate-900 tracking-tight leading-none">
               내 스마트 옷장 컬렉션
             </h1>
-            <p className="text-xs text-slate-550 text-slate-600 font-bold leading-relaxed max-w-md">
-              보유 중인 품목을 조회하고, 위시리스트 아이템을 내 옷장으로 편입시켜 가상 해부학 핏(Fit) 시뮬레이션으로 코디의 완벽율을 높여보세요.
-            </p>
-            {wardrobeId != null && (
-              <p className="text-[10px] text-slate-500 font-mono">
-                옷장 ID: {wardrobeId} · 회원 {userId}
-              </p>
-            )}
           </div>
 
           {/* Core Mini Smart Stats counter grid */}
@@ -256,7 +298,7 @@ export default function ClosetTab({
               <span className="text-sm font-black text-orange-650 block">{wishlistList.length}벌</span>
             </div>
             <div className="bg-white/80 p-2.5 rounded-2xl border border-white/40 text-left space-y-0.5">
-              <span className="text-[9px] text-slate-400 font-extrabold block uppercase leading-none">고정밀 최애</span>
+              <span className="text-[9px] text-slate-400 font-extrabold block uppercase leading-none">즐겨찾기</span>
               <span className="text-sm font-black text-rose-600 block">{favoritesCount}벌</span>
             </div>
           </div>
@@ -296,8 +338,12 @@ export default function ClosetTab({
       </div>
 
       {/* ========================================================================= */}
-      {/* 2. TAB TOGGLER (OWNED vs WISHLIST) */}
+      {/* 2–4. 컬렉션 + 오른쪽(스타일 통계 · 상세) */}
       {/* ========================================================================= */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-x-6 gap-y-4 items-start">
+        {/* Left: 탭 · 필터 · 컬렉션 */}
+        <div className="lg:col-span-2 space-y-4 text-left order-2 lg:order-1">
+      {/* TAB TOGGLER (OWNED vs WISHLIST) */}
       <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1.5 rounded-2xl select-none max-w-md mx-auto md:mx-0">
         <button
           onClick={() => {
@@ -330,9 +376,7 @@ export default function ClosetTab({
         </button>
       </div>
 
-      {/* ========================================================================= */}
-      {/* 3. FILTER: FAVORITES + CATEGORIES */}
-      {/* ========================================================================= */}
+      {/* FILTER: FAVORITES + CATEGORIES */}
       <div className="flex flex-wrap gap-2 items-center">
         <button
           type="button"
@@ -379,22 +423,11 @@ export default function ClosetTab({
         })}
       </div>
 
-      {/* ========================================================================= */}
-      {/* 4. MAIN LAYOUT DECK DESIGN */}
-      {/* ========================================================================= */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6.5 items-start">
-        
-        {/* Left Grid Area (Span 2): Collections Catalog Cards */}
-        <div className="lg:col-span-2 space-y-4 text-left">
           <div className="flex justify-between items-center select-none pb-1.5">
             <h2 className="text-lg font-black text-slate-900 tracking-tight flex items-center space-x-2">
               <span>{closetTab === "owned" ? "보유 컬렉션 목록" : "스마트 위시 보드"}</span>
               <span className="text-slate-400 font-normal text-xs">({filteredClothes.length}개 발견됨)</span>
             </h2>
-            <div className="flex items-center space-x-1 text-xs text-[#1E3A8A] font-bold">
-              <span>스펙 조율 기동</span>
-              <ChevronRight className="w-3.5 h-3.5" />
-            </div>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -434,7 +467,7 @@ export default function ClosetTab({
                   <button
                     onClick={(e) => toggleFavorite(item.id, e)}
                     className="absolute top-3 right-3 p-1.5 rounded-full bg-white/95 hover:bg-white text-rose-500 border border-slate-100 shadow-3xs transition-transform duration-200 active:scale-90 cursor-pointer z-5 hover:rotate-3"
-                    title="최애 위시 저장"
+                    title="즐겨찾기"
                   >
                     <Heart className={`w-3.5 h-3.5 transition-colors ${item.isFavorite ? "fill-rose-500 text-rose-500" : "text-slate-350"}`} />
                   </button>
@@ -445,7 +478,7 @@ export default function ClosetTab({
                       <AuthenticatedImage
                         src={item.thumbnailUrl}
                         alt={item.name}
-                        className="w-full h-full object-cover object-top transition-transform duration-500 group-hover:scale-103"
+                        className="w-full h-full object-contain p-1 transition-transform duration-500 group-hover:scale-103"
                         fallback={
                           <span className="text-4xl filter drop-shadow-sm select-none">👚</span>
                         }
@@ -456,8 +489,8 @@ export default function ClosetTab({
 
                     {/* Quick indicator check on favorited */}
                     {item.isFavorite && (
-                      <span className="absolute bottom-2 left-2 bg-gradient-to-r from-rose-500 to-pink-500 text-white text-[8px] font-black tracking-wider uppercase px-2 py-0.5 rounded-full shadow-2xs">
-                        FAVORITE ⭐️
+                      <span className="absolute bottom-2 left-2 bg-gradient-to-r from-rose-500 to-pink-500 text-white text-[8px] font-black tracking-wider px-2 py-0.5 rounded-full shadow-2xs">
+                        즐겨찾기 ⭐️
                       </span>
                     )}
                   </div>
@@ -503,25 +536,60 @@ export default function ClosetTab({
           </div>
         </div>
 
-        {/* Right: BE 상세 / 수정 / 삭제 */}
-        <div className="space-y-4">
-          <div className="flex items-center space-x-2 select-none justify-between lg:justify-start">
-            <h3 className="text-lg font-black text-slate-900 tracking-tight">
-              의상 상세
-            </h3>
-            <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md font-mono">
-              BE 연동
-            </span>
+        {/* Right: 스타일 통계(상단) + 의상 상세 */}
+        <aside className="lg:col-span-1 space-y-4 order-1 lg:order-2 lg:sticky lg:top-4 self-start">
+          <div className="bg-white rounded-[24px] border border-slate-100 p-5 shadow-2xs text-left space-y-3">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2 min-w-0">
+                <h3 className="text-base font-black text-slate-800 tracking-tight">
+                  옷 스타일 통계
+                </h3>
+                <span className="shrink-0 text-[10px] font-black px-2.5 py-0.5 rounded-full bg-[#1E3A8A] text-[#BBF7D0]">
+                  TOP {STYLE_STATS_TOP_N}
+                </span>
+              </div>
+              <span className="text-[11px] text-slate-400 font-bold shrink-0">
+                보유 {ownedList.length}벌 기준
+              </span>
+            </div>
+
+            {topStyleStats.length > 0 ? (
+              <div className="space-y-2.5">
+                {topStyleStats.map((style) => (
+                  <div key={style.code} className="space-y-1">
+                    <div className="flex items-center justify-between text-xs font-bold gap-2">
+                      <span className="text-slate-600 truncate">{style.label}</span>
+                      <span className="text-emerald-600 tabular-nums shrink-0">{style.weight}%</span>
+                    </div>
+                    <div className="h-2 rounded-full bg-slate-200 overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-[#BBF7D0] transition-all duration-500"
+                        style={{ width: `${Math.min(style.weight, 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-slate-400 leading-relaxed py-2">
+                보유 옷을 등록하면 내 옷장 스타일 비율이 여기에 표시됩니다.
+              </p>
+            )}
           </div>
+
+          <h3 className="text-lg font-black text-slate-900 tracking-tight">
+            의상 상세
+          </h3>
 
           <ClosetGarmentDetail
             garment={selectedGarment}
+            userId={userId}
             onGarmentChange={setSelectedGarment}
             onGarmentUpdated={upsertGarment}
             onGarmentDeleted={handleGarmentDeleted}
             onToast={triggerToast}
           />
-        </div>
+        </aside>
 
       </div>
 

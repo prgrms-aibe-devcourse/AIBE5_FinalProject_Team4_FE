@@ -56,17 +56,23 @@ export function extractPurchaseCaptureItems(
 ): PurchaseCaptureItemDraft[] {
   if (!raw) return []
 
+  const captureImageUrl = raw.imageUrl ?? raw.previewUrl ?? null
   const nested = raw.items ?? raw.detectedItems
   if (Array.isArray(nested) && nested.length > 0) {
-    const captureImageUrl = raw.imageUrl ?? raw.previewUrl ?? null
+    const isSingleItem = nested.length === 1
     return nested.map((item, index) => {
       const itemImageUrl = item.imageUrl ?? item.thumbnailUrl ?? null
       const isItemSpecificImage =
         itemImageUrl !== null && itemImageUrl !== captureImageUrl
+      const resolvedImageUrl = isItemSpecificImage
+        ? itemImageUrl
+        : isSingleItem
+          ? captureImageUrl
+          : null
       return {
         ...item,
         itemIndex: item.itemIndex ?? index,
-        imageUrl: isItemSpecificImage ? itemImageUrl : null,
+        imageUrl: resolvedImageUrl,
         thumbnailUrl: null,
       }
     })
@@ -97,6 +103,7 @@ export function extractPurchaseCaptureItems(
       optionText: raw.optionText,
       suggestedExternalSource: raw.suggestedExternalSource,
       externalSource: raw.externalSource,
+      imageUrl: captureImageUrl,
     },
   ]
 }

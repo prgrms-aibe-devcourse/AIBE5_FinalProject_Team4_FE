@@ -17,13 +17,16 @@ import {
   GARMENT_NAME_MAX_LENGTH,
   BRAND_NAME_MAX_LENGTH,
   GARMENT_SIZE_MAX_LENGTH,
+  getSizeOptionsByCategory,
   GARMENT_SEASON_OPTIONS,
 } from '@/utils/garmentRegisterValidation'
 import type { Garment } from '@/types'
+import { isDuplicateRegisterError } from '@/utils/garmentDuplicateCheck'
 
 interface PhotoGarmentRegisterModalProps {
   open: boolean
   userId: number | null
+  existingGarments?: Garment[]
   onClose: () => void
   onBackToMethodSelect?: () => void
   onSaved: (garment: Garment) => void
@@ -32,6 +35,7 @@ interface PhotoGarmentRegisterModalProps {
 export default function PhotoGarmentRegisterModal({
   open,
   userId,
+  existingGarments = [],
   onClose,
   onBackToMethodSelect,
   onSaved,
@@ -52,13 +56,14 @@ export default function PhotoGarmentRegisterModal({
     fieldErrors,
     uploadError,
     globalError,
+    duplicateError,
     aiFailed,
     successMessage,
     selectFile,
     runAnalyze,
     saveToCloset,
     reset,
-  } = usePhotoGarmentRegister(userId)
+  } = usePhotoGarmentRegister(userId, existingGarments)
 
   useEffect(() => {
     if (!open) reset()
@@ -121,7 +126,9 @@ export default function PhotoGarmentRegisterModal({
         </div>
 
         <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain px-7 py-4 space-y-4">
-          {globalError && !(aiFailed && (step === 'form' || step === 'saving')) && (
+          {globalError &&
+            !isDuplicateRegisterError(globalError) &&
+            !(aiFailed && (step === 'form' || step === 'saving')) && (
             <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
               {globalError}
             </div>
@@ -309,6 +316,7 @@ export default function PhotoGarmentRegisterModal({
                                 cValue,
                                 active ? draft.itemType : undefined,
                               ),
+                              size: '',
                             })
                           }}
                           className={`h-10 rounded-lg text-sm font-bold border transition ${
@@ -605,51 +613,79 @@ export default function PhotoGarmentRegisterModal({
                   )}
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-0.5">
-                    <label className="text-xs font-bold text-slate-500">
-                      사이즈{' '}
-                      <span className="text-slate-400 font-normal">(선택)</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={draft.size}
-                      maxLength={GARMENT_SIZE_MAX_LENGTH}
-                      onChange={(e) => setDraft({ size: e.target.value })}
-                      placeholder="예: L, M (비우면 FREE)"
-                      className={`w-full h-11 px-3 rounded-lg border text-sm bg-white ${
-                        fieldErrors.size ? 'border-red-400' : 'border-slate-200'
-                      }`}
-                    />
-                    {fieldErrors.size && (
-                      <p className="text-xs text-red-600">{fieldErrors.size}</p>
-                    )}
-                  </div>
-
-                  <div className="space-y-0.5">
-                    <label className="text-xs font-bold text-slate-500">
-                      시즌{' '}
-                      <span className="text-slate-400 font-normal">(선택)</span>
-                    </label>
-                    <select
-                      value={draft.season}
-                      onChange={(e) => setDraft({ season: e.target.value })}
-                      className={`w-full h-11 px-3 rounded-lg border text-sm bg-white outline-hidden ${
-                        fieldErrors.season ? 'border-red-400' : 'border-slate-200'
-                      }`}
-                    >
-                      <option value="">선택</option>
-                      {GARMENT_SEASON_OPTIONS.map(({ code, label }) => (
-                        <option key={code} value={code}>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-500">
+                    사이즈{' '}
+                    <span className="text-slate-400 font-normal">(선택)</span>
+                  </label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {getSizeOptionsByCategory(draft.category).map(({ code, label }) => {
+                      const active = draft.size === code
+                      return (
+                        <button
+                          key={code}
+                          type="button"
+                          onClick={() => setDraft({ size: active ? '' : code })}
+                          className={`h-8 px-3 rounded-lg text-xs font-bold border transition ${
+                            active
+                              ? 'bg-[#1E3A8A] text-white border-transparent'
+                              : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
+                          }`}
+                        >
                           {label}
-                        </option>
-                      ))}
-                    </select>
-                    {fieldErrors.season && (
-                      <p className="text-xs text-red-600">{fieldErrors.season}</p>
-                    )}
+                        </button>
+                      )
+                    })}
                   </div>
+                  <input
+                    type="text"
+                    value={draft.size}
+                    maxLength={GARMENT_SIZE_MAX_LENGTH}
+                    onChange={(e) => setDraft({ size: e.target.value })}
+                    placeholder="직접 입력"
+                    className={`w-full h-9 px-3 rounded-lg border text-sm bg-white ${
+                      fieldErrors.size ? 'border-red-400' : 'border-slate-200'
+                    }`}
+                  />
+                  {fieldErrors.size && (
+                    <p className="text-xs text-red-600">{fieldErrors.size}</p>
+                  )}
                 </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-500">
+                    시즌{' '}
+                    <span className="text-slate-400 font-normal">(선택)</span>
+                  </label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {GARMENT_SEASON_OPTIONS.map(({ code, label }) => {
+                      const active = draft.season === code
+                      return (
+                        <button
+                          key={code}
+                          type="button"
+                          onClick={() => setDraft({ season: active ? '' : code })}
+                          className={`h-8 px-3 rounded-lg text-xs font-bold border transition ${
+                            active
+                              ? 'bg-[#1E3A8A] text-white border-transparent'
+                              : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  {fieldErrors.season && (
+                    <p className="text-xs text-red-600">{fieldErrors.season}</p>
+                  )}
+                </div>
+
+                {duplicateError && (
+                  <p className="text-sm font-bold text-red-600 text-center py-1">
+                    {duplicateError}
+                  </p>
+                )}
 
                 <button
                   type="submit"

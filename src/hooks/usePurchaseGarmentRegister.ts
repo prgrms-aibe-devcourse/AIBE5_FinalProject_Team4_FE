@@ -10,6 +10,10 @@ import {
 import type { Garment } from '@/types'
 import { mapClothesToGarment } from '@/utils/clothesMapper'
 import { extractApiErrorMessage } from '@/utils/apiError'
+import {
+  buildDuplicateRegisterError,
+  normalizeDuplicateRegisterError,
+} from '@/utils/garmentDuplicateCheck'
 import { validateGarmentImageFile } from '@/utils/imageFileValidation'
 import {
   buildPurchaseSavePayload,
@@ -39,7 +43,10 @@ export type PurchasePendingItem = {
   itemImageUrl?: string | null
 }
 
-export function usePurchaseGarmentRegister(userId: number | null) {
+export function usePurchaseGarmentRegister(
+  userId: number | null,
+  existingGarments: Garment[] = [],
+) {
   const [step, setStep] = useState<PurchaseRegisterStep>('upload')
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
@@ -51,6 +58,7 @@ export function usePurchaseGarmentRegister(userId: number | null) {
   const [fieldErrors, setFieldErrors] = useState<PurchaseFormFieldErrors>({})
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [globalError, setGlobalError] = useState<string | null>(null)
+  const [duplicateError, setDuplicateError] = useState<string | null>(null)
   const [aiFailed, setAiFailed] = useState(false)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const previewRef = useRef<string | null>(null)
@@ -75,6 +83,7 @@ export function usePurchaseGarmentRegister(userId: number | null) {
     setFieldErrors({})
     setUploadError(null)
     setGlobalError(null)
+    setDuplicateError(null)
     setAiFailed(false)
     setSuccessMessage(null)
   }, [revokePreview])
@@ -85,6 +94,7 @@ export function usePurchaseGarmentRegister(userId: number | null) {
     (file: File | null) => {
       setUploadError(null)
       setGlobalError(null)
+      setDuplicateError(null)
       setAiFailed(false)
       setFieldErrors({})
       setSuccessMessage(null)
@@ -176,6 +186,7 @@ export function usePurchaseGarmentRegister(userId: number | null) {
 
     setUploadError(null)
     setGlobalError(null)
+    setDuplicateError(null)
     setAiFailed(false)
     setFieldErrors({})
     setStep('analyzing')
@@ -225,6 +236,7 @@ export function usePurchaseGarmentRegister(userId: number | null) {
       setDraft(target.draft)
       setFieldErrors({})
       setGlobalError(null)
+      setDuplicateError(null)
       setSuccessMessage(null)
       setStep('form')
     },
@@ -246,11 +258,13 @@ export function usePurchaseGarmentRegister(userId: number | null) {
     if (pendingItems.length <= 1) return
     setFieldErrors({})
     setGlobalError(null)
+    setDuplicateError(null)
     setActiveItemIndex(null)
     setStep('item-select')
   }, [pendingItems.length])
 
   const updateDraft = useCallback((patch: Partial<PurchaseRegisterDraft>) => {
+    setDuplicateError(null)
     setDraft((prev) => {
       const next = { ...prev, ...patch }
       if (activeItemIndex != null) {
@@ -289,6 +303,19 @@ export function usePurchaseGarmentRegister(userId: number | null) {
   const remainingPendingCount = pendingItems.filter((item) => item.status === 'pending').length
   const hasMultipleItems = pendingItems.length > 1
 
+  const resolveItemImageUrl = useCallback(
+    (item: PurchasePendingItem): string | null => {
+      if (item.itemImageUrl) return item.itemImageUrl
+      const pendingCount = pendingItems.filter((i) => i.status === 'pending').length
+      const useCaptureFallback =
+        serverImageUrl != null &&
+        (pendingItems.length === 1 ||
+          (pendingCount === 1 && item.status === 'pending'))
+      return useCaptureFallback ? serverImageUrl : null
+    },
+    [pendingItems, serverImageUrl],
+  )
+
   const saveToCloset = useCallback(async (): Promise<{
     garment: Garment
     hasMorePending: boolean
@@ -309,8 +336,24 @@ export function usePurchaseGarmentRegister(userId: number | null) {
       return null
     }
 
+    const duplicateMessage = buildDuplicateRegisterError(existingGarments, {
+      name: draft.name,
+      brandName: draft.brandName,
+      category: draft.category,
+      itemType: draft.itemType,
+      primaryColor: draft.mainColor,
+      productCode: draft.productCode,
+    })
+    if (duplicateMessage) {
+      setDuplicateError(duplicateMessage)
+      setGlobalError(null)
+      setStep('form')
+      return null
+    }
+
     setStep('saving')
     setGlobalError(null)
+    setDuplicateError(null)
 
     const itemIndex = activeItemIndex ?? 0
 
@@ -344,18 +387,29 @@ export function usePurchaseGarmentRegister(userId: number | null) {
 
       return { garment, hasMorePending }
     } catch (error) {
-      setGlobalError(extractApiErrorMessage(error, '옷장 저장에 실패했습니다.'))
+      const message = extractApiErrorMessage(error, '옷장 저장에 실패했습니다.')
+      const duplicate = normalizeDuplicateRegisterError(message)
+      if (duplicate) {
+        setDuplicateError(duplicate)
+        setGlobalError(null)
+      } else {
+        setDuplicateError(null)
+        setGlobalError(message)
+      }
       setStep('form')
       return null
     }
-  }, [activeItemIndex, captureId, draft, hasMultipleItems, pendingItems, userId])
+  }, [activeItemIndex, captureId, draft, existingGarments, hasMultipleItems, pendingItems, userId])
 
   const authenticatedServerImageUrl = useAuthenticatedImageSrc(serverImageUrl)
   const displayImageUrl = previewUrl ?? authenticatedServerImageUrl
 
   const activeItemImageUrl =
     activeItemIndex != null
-      ? (pendingItems.find((item) => item.itemIndex === activeItemIndex)?.itemImageUrl ?? null)
+      ? (() => {
+          const item = pendingItems.find((i) => i.itemIndex === activeItemIndex)
+          return item ? resolveItemImageUrl(item) : null
+        })()
       : null
 
   return {
@@ -364,6 +418,7 @@ export function usePurchaseGarmentRegister(userId: number | null) {
     previewUrl,
     displayImageUrl,
     activeItemImageUrl,
+    resolveItemImageUrl,
     captureId,
     pendingItems,
     activeItemIndex,
@@ -374,6 +429,7 @@ export function usePurchaseGarmentRegister(userId: number | null) {
     fieldErrors,
     uploadError,
     globalError,
+    duplicateError,
     aiFailed,
     successMessage,
     selectFile,
