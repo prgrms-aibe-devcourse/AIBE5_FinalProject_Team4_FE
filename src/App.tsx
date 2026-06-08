@@ -212,7 +212,7 @@ export default function App() {
       {/* ========================================================= */}
       {/* 1. AUTH / LOGIN FLOW MODAL VIEW */}
       {/* ========================================================= */}
-      {!isLoggedIn && <LoginPage onSocialLogin={handleSocialLogin} />}
+      {isLoginModalOpen && (<LoginPage isModal onClose={() => setIsLoginModalOpen(false)} onSocialLogin={handleSocialLogin} />)}
 
       {/* ========================================================= */}
       {/* 2. ONBOARDING PROFILE FLOWS */}
@@ -227,7 +227,7 @@ export default function App() {
         {/* ========================================================= */}
         {/* MAIN APPLICATION (Logged in & Onboarded) */}
         {/* ========================================================= */}
-        {isLoggedIn && profile.onboarded && (
+        {(!isLoggedIn || profile.onboarded) && (
           <div className="flex-1 flex flex-col justify-between overflow-hidden relative bg-[#F8FAFC]">
             
             {/* ----------------- Header GNB ----------------- */}
@@ -281,7 +281,9 @@ export default function App() {
 
                 {/* Profile Avatar Icon */}
                 <div 
-                  onClick={() => setCurrentTab("profile")}
+                  onClick={() => {
+                    if(!requireLogin()) return;
+                    setCurrentTab("profile")}}
                   className="w-8 h-8 rounded-full bg-slate-200 hover:bg-slate-300 flex items-center justify-center text-slate-500 stroke-2 text-xs font-bold ring-2 ring-slate-100 cursor-pointer transition"
                   title="Style Profile Screen"
                 >
@@ -487,7 +489,9 @@ export default function App() {
 
               <button 
                 id="nav-closet" 
-                onClick={() => setCurrentTab("closet")}
+                onClick={() => {
+                  if(!requireLogin()) return;
+                  setCurrentTab("closet")}}
                 className={`flex flex-col items-center justify-center flex-1 py-1 transition ${currentTab === "closet" ? "text-[#1E3A8A]" : "text-slate-400 hover:text-slate-600"}`}
               >
                 <Layers className="w-5 h-5" />

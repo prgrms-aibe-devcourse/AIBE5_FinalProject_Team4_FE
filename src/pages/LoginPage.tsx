@@ -61,7 +61,7 @@ export default function LoginPage({ onSocialLogin, isModal, onClose }: LoginPage
     );
 
     if (isModal){
-        return <div className="fixed inset-0 flex items-center justify-center bg-black/40 px-4"
+        return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
         onClick={(e) => { if (e.target === e.currentTarget ) onClose?.(); }}>{card}</div>;
     }
     return <div className="flex-1 flex items-center justify-center py-12">{card}</div>;
