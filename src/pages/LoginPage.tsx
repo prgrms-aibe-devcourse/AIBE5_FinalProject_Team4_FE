@@ -9,7 +9,7 @@ interface LoginPageProps {
 
 export default function LoginPage({ onSocialLogin, isModal, onClose }: LoginPageProps) {
     const card = (
-        <div id="view-login" className="w-full max-w-md bg-white border border-slate-200/60 rounded-[28px] shadow-2xl p-8 relative overflow-hidden flex flex-col justify-between min-h-[560px]">
+        <div id="view-login" className="w-full max-w-md bg-white border border-slate-200/60 rounded-[28px] shadow-2xl p-8 relative overflow-hidden flex flex-col justify-between min-h-[560px] animate-modal-in">
             <div className="absolute top-0 right-0 w-32 h-32 bg-[#BBF7D0]/20 rounded-full blur-2xl pointer-events-none"></div>
             <div className="text-center space-y-4 mt-6">
                 <div className="inline-flex p-3.5 rounded-2xl bg-[#BBF7D0]/20 text-[#0284C7] animate-bounce">
