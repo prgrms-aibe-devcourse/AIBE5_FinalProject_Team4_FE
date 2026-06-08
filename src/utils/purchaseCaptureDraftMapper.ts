@@ -10,13 +10,56 @@ import { resolveGarmentStyleCode } from '@/data/garmentStyles'
 import type {
   PurchaseCaptureDraftResponse,
   PurchaseCaptureItemDraft,
+  PurchaseCaptureItemStatus,
   PurchaseCaptureSaveRequest,
 } from '@/types/purchaseCaptureRegistration'
 import type { PurchaseRegisterDraft } from '@/utils/purchaseRegisterValidation'
 import { createEmptyPurchaseRegisterDraft } from '@/utils/purchaseRegisterValidation'
 
+type PurchaseCaptureDraftFields =
+  | PurchaseCaptureItemDraft
+  | PurchaseCaptureDraftResponse
+
+export type PurchasePendingItemStatus = 'pending' | 'saved' | 'skipped'
+
+export function mapPurchaseCaptureItemStatus(
+  status: PurchaseCaptureItemStatus,
+): PurchasePendingItemStatus {
+  if (status === 'SAVED') {
+    return 'saved'
+  }
+  if (status === 'SKIPPED') {
+    return 'skipped'
+  }
+  return 'pending'
+}
+
+export type PurchasePendingItemShape = {
+  itemIndex: number
+  draft: PurchaseRegisterDraft
+  status: PurchasePendingItemStatus
+  itemImageUrl?: string | null
+}
+
+/** BE draft 응답을 FE pending 목록으로 동기화 (기존 draft 입력값 유지) */
+export function buildPendingItemsFromCaptureDraft(
+  beDraft: PurchaseCaptureDraftResponse,
+  existingItems: PurchasePendingItemShape[] = [],
+): PurchasePendingItemShape[] {
+  const extracted = extractPurchaseCaptureItems(beDraft)
+  return extracted.map((item) => {
+    const existing = existingItems.find((entry) => entry.itemIndex === item.itemIndex)
+    return {
+      itemIndex: item.itemIndex,
+      draft: existing?.draft ?? mapPurchaseItemToRegisterDraft(item),
+      status: mapPurchaseCaptureItemStatus(item.status),
+      itemImageUrl: item.imageUrl ?? existing?.itemImageUrl ?? null,
+    }
+  })
+}
+
 function mapItemFieldsToRegisterDraft(
-  item: PurchaseCaptureItemDraft | PurchaseCaptureDraftResponse | null,
+  item: PurchaseCaptureDraftFields | null,
   fallback?: Partial<PurchaseRegisterDraft>,
 ): PurchaseRegisterDraft {
   const category = resolveUiCategory(item?.category ?? fallback?.category)
@@ -25,10 +68,9 @@ function mapItemFieldsToRegisterDraft(
   const secondaryStyles = (styles.slice(1) ?? fallback?.secondaryStyles ?? [])
     .map((s) => resolveGarmentStyleCode(s))
     .filter((s) => s !== mainStyle)
+  const suggestedSource = item?.suggestedExternalSource
   const externalSource = resolveExternalSourceCode(
-    item?.externalSource ??
-      item?.suggestedExternalSource ??
-      fallback?.externalSource,
+    suggestedSource ?? fallback?.externalSource,
   )
 
   return {
@@ -42,9 +84,9 @@ function mapItemFieldsToRegisterDraft(
     mainStyle,
     secondaryStyles,
     brandName: (item?.brandName ?? fallback?.brandName ?? '').trim(),
-    size: (item?.size ?? fallback?.size ?? '').trim(),
-    season: (item?.season ?? fallback?.season ?? '').trim(),
-    productCode: (item?.productCode ?? fallback?.productCode ?? '').trim(),
+    size: fallback?.size ?? '',
+    season: fallback?.season ?? '',
+    productCode: fallback?.productCode ?? '',
     externalSource,
     optionText: (item?.optionText ?? fallback?.optionText ?? '').trim(),
   }
@@ -56,12 +98,12 @@ export function extractPurchaseCaptureItems(
 ): PurchaseCaptureItemDraft[] {
   if (!raw) return []
 
-  const captureImageUrl = raw.imageUrl ?? raw.previewUrl ?? null
-  const nested = raw.items ?? raw.detectedItems
+  const captureImageUrl = raw.previewUrl ?? null
+  const nested = raw.items
   if (Array.isArray(nested) && nested.length > 0) {
     const isSingleItem = nested.length === 1
     return nested.map((item, index) => {
-      const itemImageUrl = item.imageUrl ?? item.thumbnailUrl ?? null
+      const itemImageUrl = item.imageUrl ?? null
       const isItemSpecificImage =
         itemImageUrl !== null && itemImageUrl !== captureImageUrl
       const resolvedImageUrl = isItemSpecificImage
@@ -72,37 +114,30 @@ export function extractPurchaseCaptureItems(
       return {
         ...item,
         itemIndex: item.itemIndex ?? index,
+        status: item.status ?? 'PENDING',
         imageUrl: resolvedImageUrl,
-        thumbnailUrl: null,
       }
     })
   }
 
   const hasSingleItemSignal = Boolean(
-    raw.name ||
-      raw.category ||
-      raw.itemType ||
-      raw.productCode ||
-      raw.brandName,
+    raw.name || raw.category || raw.itemType || raw.brandName,
   )
   if (!hasSingleItemSignal) return []
 
   return [
     {
       itemIndex: 0,
+      status: 'PENDING',
       name: raw.name,
       brandName: raw.brandName,
-      productCode: raw.productCode,
       category: raw.category,
       itemType: raw.itemType,
       primaryColor: raw.primaryColor,
-      secondaryColors: raw.secondaryColors,
-      styles: raw.styles,
-      size: raw.size,
-      season: raw.season,
+      secondaryColors: raw.secondaryColors ?? [],
+      styles: raw.styles ?? [],
       optionText: raw.optionText,
       suggestedExternalSource: raw.suggestedExternalSource,
-      externalSource: raw.externalSource,
       imageUrl: captureImageUrl,
     },
   ]
@@ -126,7 +161,12 @@ export function mapPurchaseDraftToRegisterDraft(
 
 export function buildPurchaseSavePayload(
   draft: PurchaseRegisterDraft,
-  options?: { itemIndex?: number; captureId?: number; productCodeFallback?: string },
+  options?: {
+    itemIndex?: number
+    captureId?: number
+    productCodeFallback?: string
+    imageUrl?: string | null
+  },
 ): PurchaseCaptureSaveRequest {
   const styles = [
     draft.mainStyle,
@@ -138,7 +178,7 @@ export function buildPurchaseSavePayload(
     options?.productCodeFallback ||
     `PURCHASE-${options?.captureId ?? 'NEW'}-${options?.itemIndex ?? 0}-${Date.now()}`
 
-  return {
+  const payload: PurchaseCaptureSaveRequest = {
     itemIndex: options?.itemIndex,
     name: draft.name.trim(),
     brandName: draft.brandName.trim() || 'UNKNOWN',
@@ -148,10 +188,17 @@ export function buildPurchaseSavePayload(
     primaryColor: draft.mainColor,
     secondaryColors: draft.secondaryColors,
     styles,
-    externalSource: draft.externalSource.trim() || undefined,
+    externalSource: draft.externalSource.trim() || 'UNKNOWN',
     size: draft.size.trim() || 'FREE',
     season: draft.season.trim() || undefined,
     favorite: false,
     isVerified: false,
   }
+
+  const imageUrl = options?.imageUrl?.trim()
+  if (imageUrl) {
+    payload.imageUrl = imageUrl
+  }
+
+  return payload
 }

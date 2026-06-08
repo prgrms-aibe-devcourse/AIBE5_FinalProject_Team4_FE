@@ -2,9 +2,9 @@ import api from '@/api'
 import type { BeApiResponse, ClothesResponse } from '@/types/be'
 import type {
   PurchaseCaptureDraftResponse,
+  PurchaseCaptureRegistrationResponse,
   PurchaseCaptureSaveRequest,
   PurchaseCaptureUploadResponse,
-  PurchaseClothesRegistrationResponse,
 } from '@/types/purchaseCaptureRegistration'
 
 const CAPTURE_API_TIMEOUT_MS = 90_000
@@ -42,17 +42,18 @@ function normalizeCaptureDraft(
 ): PurchaseCaptureDraftResponse {
   return {
     ...raw,
-    imageUrl: raw.imageUrl ?? raw.previewUrl ?? null,
+    items: raw.items ?? [],
+    pendingItemCount: raw.pendingItemCount ?? raw.items?.length ?? 0,
+    captureCompleted: raw.captureCompleted ?? false,
+    secondaryColors: raw.secondaryColors ?? [],
+    styles: raw.styles ?? [],
   }
 }
 
 function normalizeUploadResponse(
   raw: PurchaseCaptureUploadResponse,
 ): PurchaseCaptureUploadResponse {
-  return {
-    ...raw,
-    imageUrl: raw.imageUrl ?? raw.previewUrl ?? null,
-  }
+  return raw
 }
 
 export function isPurchaseAnalysisFailed(
@@ -74,9 +75,8 @@ export function isPurchaseAnalysisReady(
 ): boolean {
   if (!draft || isPurchaseAnalysisFailed(draft)) return false
   if (draft.analysisStatus === 'SUCCESS') return true
-  const items = draft.items ?? draft.detectedItems
-  if (Array.isArray(items) && items.length > 0) return true
-  return Boolean(draft.name || draft.category || draft.itemType || draft.productCode)
+  if (Array.isArray(draft.items) && draft.items.length > 0) return true
+  return Boolean(draft.name || draft.category || draft.itemType)
 }
 
 export async function analyzePurchaseCapture(
@@ -161,13 +161,13 @@ export async function pollPurchaseCaptureDraft(
 }
 
 export function mapPurchaseSaveResponseToClothesResponse(
-  raw: PurchaseClothesRegistrationResponse,
+  raw: PurchaseCaptureRegistrationResponse,
 ): ClothesResponse {
   const clothes = raw.clothes
   return {
     ...clothes,
     wardrobeClothesId: raw.wardrobeClothesId ?? clothes.wardrobeClothesId ?? null,
-    wardrobeId: raw.wardrobeId ?? clothes.wardrobeId ?? null,
+    wardrobeId: clothes.wardrobeId ?? null,
     userImageUrl: raw.userImageUrl ?? clothes.userImageUrl ?? clothes.imageUrl ?? null,
     isFavorite: raw.favorite ?? clothes.isFavorite ?? false,
     size: raw.size ?? clothes.size ?? null,
@@ -182,13 +182,27 @@ export async function saveGarmentFromPurchaseCapture(
   userId: number,
   captureId: number,
   payload: PurchaseCaptureSaveRequest,
-): Promise<ClothesResponse> {
-  const saved = await unwrap(
-    api.post<BeApiResponse<PurchaseClothesRegistrationResponse>>(
+): Promise<PurchaseCaptureRegistrationResponse> {
+  return unwrap(
+    api.post<BeApiResponse<PurchaseCaptureRegistrationResponse>>(
       `${captureBase(userId)}/${captureId}/save`,
       payload,
       { timeout: CAPTURE_API_TIMEOUT_MS },
     ),
   )
-  return mapPurchaseSaveResponseToClothesResponse(saved)
+}
+
+export async function skipPurchaseCaptureItem(
+  userId: number,
+  captureId: number,
+  itemIndex: number,
+): Promise<PurchaseCaptureDraftResponse> {
+  const draft = await unwrap(
+    api.post<BeApiResponse<PurchaseCaptureDraftResponse>>(
+      `${captureBase(userId)}/${captureId}/items/${itemIndex}/skip`,
+      {},
+      { timeout: CAPTURE_API_TIMEOUT_MS },
+    ),
+  )
+  return normalizeCaptureDraft(draft)
 }

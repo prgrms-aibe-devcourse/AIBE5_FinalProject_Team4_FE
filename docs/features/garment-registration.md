@@ -91,9 +91,12 @@ last_updated: 2026-06-03
 | POST | `/api/v1/users/{userId}/clothes/purchase-captures` | 구매내역 캡처 업로드 |
 | POST | `/api/v1/users/{userId}/clothes/purchase-captures/{captureId}/analyze` | 구매내역 캡처 AI 분석 |
 | GET | `/api/v1/users/{userId}/clothes/purchase-captures/{captureId}/draft` | 구매내역 기반 등록 초안 조회 |
-| POST | `/api/v1/users/{userId}/clothes/purchase-captures/{captureId}/save` | 구매내역 기반 옷 저장 |
+| POST | `/api/v1/users/{userId}/clothes/purchase-captures/{captureId}/save` | 구매내역 기반 옷 저장 (상품별 순차 저장) |
+| POST | `/api/v1/users/{userId}/clothes/purchase-captures/{captureId}/items/{itemIndex}/skip` | 복수 상품 캡처에서 특정 상품 건너뛰기 |
 
-저장 요청 예시:
+한 캡처에 여러 상품이 있으면 `itemIndex`별로 저장·건너뛰기를 반복합니다. 모든 상품이 `SAVED` 또는 `SKIPPED`가 되면 캡처가 완료됩니다. draft/analyze 응답의 `items[]`에는 `itemIndex`, `imageUrl`, `status`가 포함되고, `pendingItemCount`·`captureCompleted`로 진행 상태를 확인합니다.
+
+저장 요청 예시 (단일 상품 — `itemIndex` 생략 시 0번 상품):
 
 ```json
 {
@@ -112,6 +115,26 @@ last_updated: 2026-06-03
   "isVerified": false
 }
 ```
+
+복수 상품 저장 시 선택 필드:
+
+- `itemIndex` (선택, 기본값 0): 저장할 상품 인덱스
+- `imageUrl` (선택): 다중 상품일 때 상품별 미리보기 URL. draft `items[].imageUrl` 또는 요청 값 사용
+
+분석/초안 응답 공통 필드 (단일·복수 모두):
+
+| 필드 | 타입 | 설명 |
+| --- | --- | --- |
+| `items` | `PurchaseCaptureItemDraft[]` | 상품별 초안. `itemIndex`, `status`(`PENDING`/`SAVED`/`SKIPPED`), `imageUrl` 포함 |
+| `pendingItemCount` | number | 아직 저장·건너뛰기하지 않은 상품 수 |
+| `captureCompleted` | boolean | 모든 상품이 `SAVED` 또는 `SKIPPED`이면 true |
+
+## FE 확인 포인트 (복수 상품)
+
+- 상품 선택 화면은 `items[]`와 `pendingItemCount`를 기준으로 남은 상품을 표시합니다.
+- 카드 미리보기는 `items[].imageUrl`을 우선 사용하고, 단일 상품이면 `previewUrl` fallback을 사용할 수 있습니다.
+- 저장 시 `itemIndex`를 명시하고, 다중 상품이면 `imageUrl`을 함께 전달합니다.
+- 건너뛰기는 `POST .../items/{itemIndex}/skip`을 호출해 서버 진행 상태와 동기화합니다.
 
 ## 외부 쇼핑몰 상품 저장
 

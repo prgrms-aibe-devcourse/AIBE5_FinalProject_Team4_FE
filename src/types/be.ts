@@ -93,3 +93,19 @@ export interface WardrobeStatisticsResponse {
   itemTypes: WardrobeItemTypeCount[]
   userStylePayloads: WardrobeUserStylePayload[]
 }
+
+/**
+ * 구매내역 캡처 등록(REG-002, BE #77) 타입은 `src/types/purchaseCaptureRegistration.ts`에 정의합니다.
+ * - PurchaseCaptureDraftResponse: analyze/draft/skip 응답 (`items`, `pendingItemCount`, `captureCompleted`)
+ * - PurchaseCaptureSaveRequest: save 요청 (`itemIndex?`, `imageUrl?`)
+ * - PurchaseCaptureRegistrationResponse: save 응답
+ */
+export type {
+  PurchaseCaptureAnalysisStatus,
+  PurchaseCaptureDraftResponse,
+  PurchaseCaptureItemDraft,
+  PurchaseCaptureItemStatus,
+  PurchaseCaptureRegistrationResponse,
+  PurchaseCaptureSaveRequest,
+  PurchaseCaptureUploadResponse,
+} from '@/types/purchaseCaptureRegistration'

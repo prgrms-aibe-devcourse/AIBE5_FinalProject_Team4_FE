@@ -3,8 +3,10 @@ import { useAuthenticatedImageSrc } from '@/utils/authenticatedImageUrl'
 import {
   getPurchaseAnalysisFailureMessage,
   isPurchaseAnalysisFailed,
+  mapPurchaseSaveResponseToClothesResponse,
   resolvePurchaseAnalysisDraft,
   saveGarmentFromPurchaseCapture,
+  skipPurchaseCaptureItem,
   uploadPurchaseCapture,
 } from '@/api/purchaseCaptureRegistration'
 import type { Garment } from '@/types'
@@ -16,9 +18,9 @@ import {
 } from '@/utils/garmentDuplicateCheck'
 import { validateGarmentImageFile } from '@/utils/imageFileValidation'
 import {
+  buildPendingItemsFromCaptureDraft,
   buildPurchaseSavePayload,
   extractPurchaseCaptureItems,
-  mapPurchaseItemToRegisterDraft,
 } from '@/utils/purchaseCaptureDraftMapper'
 import {
   createEmptyPurchaseRegisterDraft,
@@ -61,6 +63,7 @@ export function usePurchaseGarmentRegister(
   const [duplicateError, setDuplicateError] = useState<string | null>(null)
   const [aiFailed, setAiFailed] = useState(false)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const previewRef = useRef<string | null>(null)
 
   const revokePreview = useCallback(() => {
@@ -86,6 +89,7 @@ export function usePurchaseGarmentRegister(
     setDuplicateError(null)
     setAiFailed(false)
     setSuccessMessage(null)
+    setIsSubmitting(false)
   }, [revokePreview])
 
   useEffect(() => () => revokePreview(), [revokePreview])
@@ -151,12 +155,7 @@ export function usePurchaseGarmentRegister(
       return
     }
 
-    const nextPending: PurchasePendingItem[] = extracted.map((item) => ({
-      itemIndex: item.itemIndex ?? 0,
-      draft: mapPurchaseItemToRegisterDraft(item),
-      status: 'pending' as const,
-      itemImageUrl: item.imageUrl ?? item.thumbnailUrl ?? null,
-    }))
+    const nextPending = buildPendingItemsFromCaptureDraft(beDraft)
 
     setPendingItems(nextPending)
     setAiFailed(false)
@@ -201,7 +200,7 @@ export function usePurchaseGarmentRegister(
 
       try {
         const beDraft = await resolvePurchaseAnalysisDraft(userId, uploaded.captureId)
-        if (beDraft.imageUrl) setServerImageUrl(beDraft.imageUrl)
+        if (beDraft.previewUrl) setServerImageUrl(beDraft.previewUrl)
         applyAnalysisResult(beDraft)
       } catch (analyzeError) {
         setAiFailed(true)
@@ -243,16 +242,41 @@ export function usePurchaseGarmentRegister(
     [pendingItems],
   )
 
-  const skipPendingItem = useCallback((itemIndex: number) => {
-    setPendingItems((prev) =>
-      prev.map((item) =>
-        item.itemIndex === itemIndex ? { ...item, status: 'skipped' } : item,
-      ),
-    )
-    setSuccessMessage('상품을 건너뛰었습니다.')
-    setStep('item-select')
-    setActiveItemIndex(null)
-  }, [])
+  const skipPendingItem = useCallback(
+    async (itemIndex: number) => {
+      if (!userId) {
+        setGlobalError('로그인이 필요합니다. 다시 로그인해 주세요.')
+        return
+      }
+      if (captureId == null) {
+        setGlobalError('캡처 업로드 후 건너뛸 수 있습니다.')
+        return
+      }
+
+      setIsSubmitting(true)
+      setGlobalError(null)
+      setDuplicateError(null)
+
+      try {
+        const beDraft = await skipPurchaseCaptureItem(userId, captureId, itemIndex)
+        setPendingItems((prev) => buildPendingItemsFromCaptureDraft(beDraft, prev))
+        if (beDraft.captureCompleted) {
+          setSuccessMessage('모든 상품 처리가 완료되었습니다.')
+        } else {
+          setSuccessMessage(
+            `상품을 건너뛰었습니다. 남은 상품 ${beDraft.pendingItemCount}개를 이어서 등록할 수 있습니다.`,
+          )
+        }
+        setStep('item-select')
+        setActiveItemIndex(null)
+      } catch (error) {
+        setGlobalError(extractApiErrorMessage(error, '상품 건너뛰기에 실패했습니다.'))
+      } finally {
+        setIsSubmitting(false)
+      }
+    },
+    [captureId, userId],
+  )
 
   const backToItemSelect = useCallback(() => {
     if (pendingItems.length <= 1) return
@@ -352,32 +376,41 @@ export function usePurchaseGarmentRegister(
     }
 
     setStep('saving')
+    setIsSubmitting(true)
     setGlobalError(null)
     setDuplicateError(null)
 
     const itemIndex = activeItemIndex ?? 0
+    const targetItem = pendingItems.find((item) => item.itemIndex === itemIndex)
+    const resolvedImageUrl = targetItem ? resolveItemImageUrl(targetItem) : serverImageUrl
 
     try {
-      const saved = await saveGarmentFromPurchaseCapture(
+      const registration = await saveGarmentFromPurchaseCapture(
         userId,
         captureId,
-        buildPurchaseSavePayload(draft, { itemIndex, captureId }),
+        buildPurchaseSavePayload(draft, {
+          itemIndex,
+          captureId,
+          imageUrl: hasMultipleItems ? resolvedImageUrl : undefined,
+        }),
       )
-      const garment = mapClothesToGarment(saved)
+      const garment = mapClothesToGarment(
+        mapPurchaseSaveResponseToClothesResponse(registration),
+      )
 
       setPendingItems((prev) =>
         prev.map((item) =>
-          item.itemIndex === itemIndex ? { ...item, status: 'saved' } : item,
+          item.itemIndex === registration.itemIndex ? { ...item, status: 'saved' } : item,
         ),
       )
 
-      const remaining = pendingItems.filter(
-        (item) => item.status === 'pending' && item.itemIndex !== itemIndex,
-      ).length
-      const hasMorePending = hasMultipleItems && remaining > 0
+      const hasMorePending =
+        hasMultipleItems && !registration.captureCompleted && registration.pendingItemCount > 0
 
       if (hasMorePending) {
-        setSuccessMessage(`"${garment.name}" 저장 완료. 남은 상품 ${remaining}개를 이어서 등록할 수 있습니다.`)
+        setSuccessMessage(
+          `"${garment.name}" 저장 완료. 남은 상품 ${registration.pendingItemCount}개를 이어서 등록할 수 있습니다.`,
+        )
         setActiveItemIndex(null)
         setDraft(createEmptyPurchaseRegisterDraft())
         setStep('item-select')
@@ -398,8 +431,20 @@ export function usePurchaseGarmentRegister(
       }
       setStep('form')
       return null
+    } finally {
+      setIsSubmitting(false)
     }
-  }, [activeItemIndex, captureId, draft, existingGarments, hasMultipleItems, pendingItems, userId])
+  }, [
+    activeItemIndex,
+    captureId,
+    draft,
+    existingGarments,
+    hasMultipleItems,
+    pendingItems,
+    resolveItemImageUrl,
+    serverImageUrl,
+    userId,
+  ])
 
   const authenticatedServerImageUrl = useAuthenticatedImageSrc(serverImageUrl)
   const displayImageUrl = previewUrl ?? authenticatedServerImageUrl
@@ -432,6 +477,7 @@ export function usePurchaseGarmentRegister(
     duplicateError,
     aiFailed,
     successMessage,
+    isSubmitting,
     selectFile,
     runAnalyze,
     selectPendingItem,

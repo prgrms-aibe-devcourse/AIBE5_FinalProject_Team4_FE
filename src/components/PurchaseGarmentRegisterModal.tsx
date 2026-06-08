@@ -68,6 +68,7 @@ export default function PurchaseGarmentRegisterModal({
     duplicateError,
     aiFailed,
     successMessage,
+    isSubmitting,
     selectFile,
     runAnalyze,
     selectPendingItem,
@@ -345,17 +346,19 @@ export default function PurchaseGarmentRegisterModal({
                         <div className="flex gap-2">
                           <button
                             type="button"
+                            disabled={isSubmitting}
                             onClick={() => selectPendingItem(item.itemIndex)}
-                            className="flex-1 h-9 rounded-lg bg-[#1E3A8A] text-[#BBF7D0] text-xs font-bold"
+                            className="flex-1 h-9 rounded-lg bg-[#1E3A8A] text-[#BBF7D0] text-xs font-bold disabled:opacity-50"
                           >
                             확인·저장
                           </button>
                           <button
                             type="button"
-                            onClick={() => skipPendingItem(item.itemIndex)}
-                            className="h-9 px-3 rounded-lg border border-slate-200 text-xs font-bold text-slate-500 hover:bg-white"
+                            disabled={isSubmitting}
+                            onClick={() => void skipPendingItem(item.itemIndex)}
+                            className="h-9 px-3 rounded-lg border border-slate-200 text-xs font-bold text-slate-500 hover:bg-white disabled:opacity-50"
                           >
-                            건너뛰기
+                            {isSubmitting ? '처리 중…' : '건너뛰기'}
                           </button>
                         </div>
                       )}
