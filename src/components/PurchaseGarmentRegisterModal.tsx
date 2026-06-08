@@ -152,7 +152,7 @@ export default function PurchaseGarmentRegisterModal({
         <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain px-7 py-4 space-y-4">
           {globalError &&
             !isDuplicateRegisterError(globalError) &&
-            !(aiFailed && (step === 'form' || step === 'saving')) &&
+            !(aiFailed && (step === 'upload' || step === 'form' || step === 'saving')) &&
             step !== 'item-select' && (
             <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
               {globalError}
@@ -235,12 +235,23 @@ export default function PurchaseGarmentRegisterModal({
 
           {step === 'upload' && (
             <>
+              {aiFailed && (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 space-y-1">
+                  <p>
+                    AI 분석에 실패했습니다. 다른 캡처를 선택하거나 아래에서 분석을 다시 시도해
+                    주세요.
+                  </p>
+                  {globalError && <p className="text-xs text-amber-800/90">{globalError}</p>}
+                </div>
+              )}
               <p
                 className={`text-xs text-center font-medium ${
                   canAnalyze ? 'text-emerald-600' : 'text-slate-400'
                 }`}
               >
-                {analyzeHint}
+                {aiFailed
+                  ? '캡처를 바꾸거나 같은 캡처로 분석을 다시 시도할 수 있습니다.'
+                  : analyzeHint}
               </p>
               <button
                 type="button"
@@ -255,7 +266,7 @@ export default function PurchaseGarmentRegisterModal({
                 <Sparkle
                   className={`w-4 h-4 ${canAnalyze ? 'text-[#BBF7D0]' : 'text-slate-300'}`}
                 />
-                AI 분석 시작
+                {aiFailed ? 'AI 분석 다시 시도' : 'AI 분석 시작'}
               </button>
               {onBackToMethodSelect && (
                 <button
@@ -408,13 +419,6 @@ export default function PurchaseGarmentRegisterModal({
                   >
                     상품 목록
                   </button>
-                </div>
-              )}
-
-              {aiFailed && (
-                <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 space-y-1">
-                  <p>AI 분석에 실패했습니다. 아래 항목을 직접 입력한 뒤 저장해 주세요.</p>
-                  {globalError && <p className="text-xs text-amber-800/90">{globalError}</p>}
                 </div>
               )}
 

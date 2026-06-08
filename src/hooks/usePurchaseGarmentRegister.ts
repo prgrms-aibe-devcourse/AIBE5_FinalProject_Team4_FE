@@ -37,6 +37,9 @@ export type PurchaseRegisterStep =
   | 'form'
   | 'saving'
 
+const PURCHASE_SAVE_BLOCKED_MESSAGE =
+  'AI 분석에 실패한 캡처는 저장할 수 없습니다. 다른 캡처를 선택하거나 분석을 다시 시도해 주세요.'
+
 export type PurchasePendingItem = {
   itemIndex: number
   draft: PurchaseRegisterDraft
@@ -138,20 +141,22 @@ export function usePurchaseGarmentRegister(
       setAiFailed(true)
       setGlobalError(getPurchaseAnalysisFailureMessage(beDraft))
       setPendingItems([])
-      setActiveItemIndex(0)
+      setActiveItemIndex(null)
       setDraft(createEmptyPurchaseRegisterDraft())
-      setStep('form')
+      setStep('upload')
       return
     }
 
     const extracted = extractPurchaseCaptureItems(beDraft)
     if (extracted.length === 0) {
       setAiFailed(true)
-      setGlobalError('분석된 상품을 찾지 못했습니다. 직접 입력해 주세요.')
+      setGlobalError(
+        '분석된 상품을 찾지 못했습니다. 다른 캡처를 선택하거나 분석을 다시 시도해 주세요.',
+      )
       setPendingItems([])
-      setActiveItemIndex(0)
+      setActiveItemIndex(null)
       setDraft(createEmptyPurchaseRegisterDraft())
-      setStep('form')
+      setStep('upload')
       return
     }
 
@@ -206,9 +211,9 @@ export function usePurchaseGarmentRegister(
         setAiFailed(true)
         setGlobalError(extractApiErrorMessage(analyzeError))
         setPendingItems([])
-        setActiveItemIndex(0)
+        setActiveItemIndex(null)
         setDraft(createEmptyPurchaseRegisterDraft())
-        setStep('form')
+        setStep('upload')
       }
     } catch (error) {
       const message = extractApiErrorMessage(error, '캡처 업로드 또는 분석에 실패했습니다.')
@@ -216,9 +221,9 @@ export function usePurchaseGarmentRegister(
         setAiFailed(true)
         setGlobalError(message)
         setPendingItems([])
-        setActiveItemIndex(0)
+        setActiveItemIndex(null)
         setDraft(createEmptyPurchaseRegisterDraft())
-        setStep('form')
+        setStep('upload')
       } else {
         setGlobalError(message)
         setUploadError(message)
@@ -352,6 +357,11 @@ export function usePurchaseGarmentRegister(
       setGlobalError('캡처 업로드 후 저장할 수 있습니다.')
       return null
     }
+    if (aiFailed || pendingItems.length === 0) {
+      setGlobalError(PURCHASE_SAVE_BLOCKED_MESSAGE)
+      setStep('upload')
+      return null
+    }
 
     const errors = validatePurchaseRegisterDraft(draft)
     setFieldErrors(errors)
@@ -436,6 +446,7 @@ export function usePurchaseGarmentRegister(
     }
   }, [
     activeItemIndex,
+    aiFailed,
     captureId,
     draft,
     existingGarments,

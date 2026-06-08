@@ -204,7 +204,8 @@ analyze/draft 응답(`PurchaseCaptureDraftResponse`)과 save 응답(`PurchaseCap
 분석 실패 (`analysisStatus=FAILED`):
 
 - AI가 카탈로그 code가 아닌 값을 반환하면 BE가 `analysisStatus=FAILED`로 내립니다. 유효한 code만 `SUCCESS` 초안이 됩니다.
-- FE는 FAILED 상태에서 수동 보정 UI를 제공하고, 저장 전 카탈로그 code를 사용자가 수정할 수 있어야 합니다.
+- BE #77 저장 API는 `analysisStatus=SUCCESS` 캡처만 허용합니다. FAILED 캡처는 수동 입력 저장 경로가 없습니다.
+- FE는 FAILED·분석 API 오류 시 업로드 단계로 되돌리고 저장 버튼을 제공하지 않으며, 다른 캡처 선택 또는 **AI 분석 다시 시도**로 유도합니다.
 
 건너뛰기:
 

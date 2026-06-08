@@ -67,7 +67,7 @@ export function getPurchaseAnalysisFailureMessage(
 ): string {
   const message = draft?.failureMessage?.trim()
   if (message) return message
-  return 'AI가 구매내역을 분석하지 못했습니다. 직접 입력해 주세요.'
+  return 'AI가 구매내역을 분석하지 못했습니다. 다른 캡처를 선택하거나 분석을 다시 시도해 주세요.'
 }
 
 export function isPurchaseAnalysisReady(
@@ -157,7 +157,7 @@ export async function pollPurchaseCaptureDraft(
     await sleep(intervalMs)
   }
 
-  throw new Error('AI 분석 시간이 초과되었습니다. 직접 입력해 주세요.')
+  throw new Error('AI 분석 시간이 초과되었습니다. 다른 캡처를 선택하거나 분석을 다시 시도해 주세요.')
 }
 
 export function mapPurchaseSaveResponseToClothesResponse(
