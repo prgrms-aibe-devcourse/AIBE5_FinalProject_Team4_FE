@@ -190,10 +190,12 @@ export default function App() {
   };
 
   const handleSocialLogin = async (platform: OAuthProvider) => {
-    if (import.meta.env.DEV) {
+    //if (import.meta.env.DEV) {
+    if (import.meta.env.DEV && !import.meta.env.VITE_USE_REAL_AUTH) {
       try {
         await ensureDevToken(DEFAULT_DEV_USER_ID, { forceRefresh: true });
         setIsLoggedIn(true);
+        setIsLoginModalOpen(false);
       } catch (err) {
         const msg =
           err instanceof Error
