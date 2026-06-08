@@ -11,6 +11,10 @@ import type { Garment } from '@/types'
 import { mapClothesToGarment } from '@/utils/clothesMapper'
 import { extractApiErrorMessage } from '@/utils/apiError'
 import {
+  buildDuplicateRegisterError,
+  normalizeDuplicateRegisterError,
+} from '@/utils/garmentDuplicateCheck'
+import {
   hasFormErrors,
   validateGarmentRegisterDraft,
   type GarmentFormFieldErrors,
@@ -25,7 +29,10 @@ import {
 
 export type PhotoRegisterStep = 'upload' | 'analyzing' | 'form' | 'saving'
 
-export function usePhotoGarmentRegister(userId: number | null) {
+export function usePhotoGarmentRegister(
+  userId: number | null,
+  existingGarments: Garment[] = [],
+) {
   const [step, setStep] = useState<PhotoRegisterStep>('upload')
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
@@ -35,6 +42,7 @@ export function usePhotoGarmentRegister(userId: number | null) {
   const [fieldErrors, setFieldErrors] = useState<GarmentFormFieldErrors>({})
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [globalError, setGlobalError] = useState<string | null>(null)
+  const [duplicateError, setDuplicateError] = useState<string | null>(null)
   const [aiFailed, setAiFailed] = useState(false)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const previewRef = useRef<string | null>(null)
@@ -57,6 +65,7 @@ export function usePhotoGarmentRegister(userId: number | null) {
     setFieldErrors({})
     setUploadError(null)
     setGlobalError(null)
+    setDuplicateError(null)
     setAiFailed(false)
     setSuccessMessage(null)
   }, [revokePreview])
@@ -67,6 +76,7 @@ export function usePhotoGarmentRegister(userId: number | null) {
     (file: File | null) => {
       setUploadError(null)
       setGlobalError(null)
+      setDuplicateError(null)
       setAiFailed(false)
       setFieldErrors({})
       setSuccessMessage(null)
@@ -111,6 +121,7 @@ export function usePhotoGarmentRegister(userId: number | null) {
 
     setUploadError(null)
     setGlobalError(null)
+    setDuplicateError(null)
     setAiFailed(false)
     setFieldErrors({})
     setStep('analyzing')
@@ -159,6 +170,7 @@ export function usePhotoGarmentRegister(userId: number | null) {
   const updateDraft = useCallback(
     (patch: Partial<GarmentRegisterDraft>) => {
       setDraft((prev) => ({ ...prev, ...patch }))
+      setDuplicateError(null)
       setFieldErrors((prev) => {
         const next = { ...prev }
         for (const key of Object.keys(patch) as (keyof GarmentRegisterDraft)[]) {
@@ -198,8 +210,23 @@ export function usePhotoGarmentRegister(userId: number | null) {
       return null
     }
 
+    const duplicateMessage = buildDuplicateRegisterError(existingGarments, {
+      name: draft.name,
+      brandName: draft.brandName,
+      category: draft.category,
+      itemType: draft.itemType,
+      primaryColor: draft.mainColor,
+    })
+    if (duplicateMessage) {
+      setDuplicateError(duplicateMessage)
+      setGlobalError(null)
+      setStep('form')
+      return null
+    }
+
     setStep('saving')
     setGlobalError(null)
+    setDuplicateError(null)
 
     try {
       const saved = await saveGarmentFromPhoto(
@@ -211,11 +238,19 @@ export function usePhotoGarmentRegister(userId: number | null) {
       setSuccessMessage(`"${garment.name}" 옷이 옷장에 등록되었습니다.`)
       return garment
     } catch (error) {
-      setGlobalError(extractApiErrorMessage(error, '옷장 저장에 실패했습니다.'))
+      const message = extractApiErrorMessage(error, '옷장 저장에 실패했습니다.')
+      const duplicate = normalizeDuplicateRegisterError(message)
+      if (duplicate) {
+        setDuplicateError(duplicate)
+        setGlobalError(null)
+      } else {
+        setDuplicateError(null)
+        setGlobalError(message)
+      }
       setStep('form')
       return null
     }
-  }, [draft, photoId, userId])
+  }, [draft, existingGarments, photoId, userId])
 
   const authenticatedServerImageUrl = useAuthenticatedImageSrc(serverImageUrl)
   const displayImageUrl = previewUrl ?? authenticatedServerImageUrl
@@ -231,6 +266,7 @@ export function usePhotoGarmentRegister(userId: number | null) {
     fieldErrors,
     uploadError,
     globalError,
+    duplicateError,
     aiFailed,
     successMessage,
     selectFile,

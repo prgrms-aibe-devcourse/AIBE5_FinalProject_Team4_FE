@@ -3,13 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect, type FormEvent } from "react";
+import { useState, useEffect } from "react";
 import { 
   Home, 
   X, 
   ChevronRight,
   Activity, 
-  Info, 
   Layers,
 } from "./components/icons";
 import { UserProfile } from "@/types/index";
@@ -17,6 +16,7 @@ import HomeTab from "./components/HomeTab";
 import ClosetTab from "./components/ClosetTab";
 import GarmentRegisterMethodModal from "./components/GarmentRegisterMethodModal";
 import PhotoGarmentRegisterModal from "./components/PhotoGarmentRegisterModal";
+import PurchaseGarmentRegisterModal from "./components/PurchaseGarmentRegisterModal";
 import {
   captureOAuthTokenFromUrl,
   getUserIdFromAccessToken,
@@ -30,19 +30,6 @@ import LoginPage from "@/pages/LoginPage";
 import OnboardingPage from "@/pages/OnboardingPage";
 import { useChat } from "@/hooks/useChat";
 import { useCloset } from "@/hooks/useCloset";
-import {
-  CATEGORY_ITEM_TYPES,
-  resolveItemTypeForCategory,
-} from "@/data/categoryItemTypes";
-import {
-  GARMENT_COLORS,
-  getGarmentColor,
-  isGarmentColorCode,
-  needsLightColorBorder,
-} from "@/data/garmentColors";
-import { GARMENT_STYLES } from "@/data/garmentStyles";
-import type { Garment } from "@/types/index";
-
 // 기존 상수 data ( TRIGGER_PRODUCTS 는 사용을 하지않아 우선 주석처리함 )
 // import { TRIGGER_PRODUCTS } from "@/data/triggerProducts";
 
@@ -74,47 +61,18 @@ export default function App() {
     clothes, setClothes,
     selectedGarment, setSelectedGarment,
     isMethodSelectOpen,
-    isUploadModalOpen, setIsUploadModalOpen,
-    uploadType, setUploadType,
-    isAnalyzing,
-    analyzedDraft, setAnalyzedDraft,
-    selectedLocalImg, setSelectedLocalImg,
     handleAddWishlistItem,
     toggleFavorite,
     moveToOwnedCloset,
-    handleSaveToCloset,
     openGarmentRegister,
     closeGarmentRegisterMethod,
-    selectRegisterMethod,
-    backToRegisterMethodSelect,
   } = useCloset();
 
   // Navigation state: 'home' | 'closet' | 'feed' | 'profile'
   const [currentTab, setCurrentTab] = useState<"home" | "closet" | "feed" | "profile">("home");
   const [homeResetSignal, setHomeResetSignal] = useState<number>(0);
   const [isPhotoRegisterOpen, setIsPhotoRegisterOpen] = useState(false);
-  const [subCategoryOpen, setSubCategoryOpen] = useState(false);
-  const [mainColorOpen, setMainColorOpen] = useState(false);
-  const [secondaryColorOpen, setSecondaryColorOpen] = useState(false);
-  const [secondaryStyleOpen, setSecondaryStyleOpen] = useState(false);
-
-  useEffect(() => {
-    setSubCategoryOpen(false);
-    setMainColorOpen(false);
-    setSecondaryColorOpen(false);
-    setSecondaryStyleOpen(false);
-  }, [analyzedDraft?.id]);
-
-  const handleGarmentRegisterSubmit = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const form = e.currentTarget;
-    if (!form.reportValidity()) return;
-    const saved = handleSaveToCloset();
-    if (!saved && analyzedDraft) {
-      if (!analyzedDraft.itemType.trim()) setSubCategoryOpen(true);
-      if (!analyzedDraft.mainColor.trim()) setMainColorOpen(true);
-    }
-  };
+  const [isPurchaseRegisterOpen, setIsPurchaseRegisterOpen] = useState(false);
 
   // OAuth 콜백(?token=): URL에서 토큰 추출 후 상태 반영
   useEffect(() => {
@@ -585,509 +543,41 @@ export default function App() {
         <GarmentRegisterMethodModal
           open={isMethodSelectOpen}
           onClose={closeGarmentRegisterMethod}
-          onSelectReceipt={() => selectRegisterMethod("receipt")}
+          onSelectReceipt={() => {
+            closeGarmentRegisterMethod();
+            setIsPurchaseRegisterOpen(true);
+          }}
           onSelectPhoto={() => {
             closeGarmentRegisterMethod();
-            setUploadType("garment");
             setIsPhotoRegisterOpen(true);
           }}
         />
 
-        {/* 구매내역 기반 등록 파이프라인 (방식 선택 후) */}
-        {isUploadModalOpen && uploadType === "receipt" && (
-          <div id="modal-upload-pipeline" className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center z-[40] animate-fade-in p-4">
-            <div className="w-full max-w-xl bg-white rounded-[28px] min-h-[720px] max-h-[95vh] flex flex-col shadow-2xl relative overflow-hidden">
-              
-              {/* Header */}
-              <div className="flex justify-between items-center px-7 pt-6 pb-4 border-b border-slate-100 shrink-0">
-                <div className="space-y-0 text-left leading-tight">
-                  <h3 className="text-lg font-bold text-[#1E3A8A]">구매내역 기반 등록</h3>
-                  <p className="text-sm text-slate-400 mt-1 leading-snug">
-                    구매내역을 분석해 옷장에 보유 옷으로 저장합니다.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsUploadModalOpen(false);
-                    setAnalyzedDraft(null);
-                    setSelectedLocalImg(null);
-                    setUploadType(null);
-                  }}
-                  className="p-1.5 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition"
-                  aria-label="닫기"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain px-7 py-4">
-              {/* Processing Loader Animation */}
-              {isAnalyzing && (
-                <div className="py-6 flex flex-col items-center justify-center space-y-3">
-                  <div className="relative">
-                    <div className="w-16 h-16 rounded-full border-4 border-slate-100 border-t-[#1E3A8A] animate-spin"></div>
-                    <span className="absolute inset-0 flex items-center justify-center text-xl">👕</span>
-                  </div>
-                  <div className="text-center space-y-1">
-                    <p className="text-sm font-bold text-[#1E3A8A] animate-pulse">AI is analyzing your garment characteristics...</p>
-                    <p className="text-xs text-slate-400 font-mono">Calculating musculoskeletal tension coefficient tags</p>
-                  </div>
-                  <button
-                    id="btn-register-back-analyzing"
-                    type="button"
-                    onClick={backToRegisterMethodSelect}
-                    className="w-full h-10 mt-4 text-slate-500 hover:text-[#1E3A8A] hover:bg-slate-50 rounded-xl text-sm font-bold transition"
-                  >
-                    뒤로가기 · 등록 방식 다시 선택
-                  </button>
-                </div>
-              )}
-
-              {/* Analyzed Result Form and editing area */}
-              {!isAnalyzing && analyzedDraft && (
-                <div className="space-y-3 text-left pb-2 leading-tight">
-                  
-                  {/* Image render */}
-                  <div className="flex items-center space-x-3 bg-slate-50 p-3 rounded-2xl border border-slate-100">
-                    <div className="w-16 h-16 rounded-xl bg-slate-200 border overflow-hidden flex-shrink-0">
-                      {analyzedDraft.imageBase64 && (
-                        <img 
-                          src={analyzedDraft.imageBase64} 
-                          alt="Analyzed clothing mockup" 
-                          className="w-full h-full object-cover"
-                        />
-                      )}
-                    </div>
-                    <div>
-                      <span className="text-xs bg-[#BBF7D0] text-[#1E3A8A] font-extrabold px-2 py-0.5 rounded-full">
-                        GEMINI EXTRACTION COMPLETE
-                      </span>
-                      <h4 className="text-sm font-black text-slate-700 mt-1 line-clamp-1">{analyzedDraft.name}</h4>
-                      <p className="text-xs text-slate-400 font-sans mt-0.5">인체 상단(Top) 입체 텐션 이음 결합 감지</p>
-                    </div>
-                  </div>
-
-                  <div className="p-3 bg-indigo-50/50 rounded-xl space-y-1.5 border border-indigo-100">
-                    <div className="flex items-center space-x-1.5 text-sm text-indigo-900 font-semibold">
-                      <Info className="w-4 h-4" />
-                      <span>추출 결과 및 태그 에디터</span>
-                    </div>
-                    <p className="text-xs text-indigo-700/80">AI가 아래와 같이 의상을 분석했습니다. 원하시는 카테고리나 정보를 선택/수정할 수 있습니다.</p>
-                  </div>
-
-                  {/* Form input fields */}
-                  <form
-                    id="form-garment-register"
-                    className="space-y-2.5"
-                    onSubmit={handleGarmentRegisterSubmit}
-                  >
-                    <input
-                      type="text"
-                      className="sr-only"
-                      tabIndex={-1}
-                      value={analyzedDraft.itemType}
-                      readOnly
-                      required
-                      aria-label="세부 카테고리"
-                    />
-
-                    {/* Item Name */}
-                    <div className="space-y-0.5">
-                      <label className="text-xs font-bold text-slate-500 block">
-                        의상명 <span className="text-red-500" aria-hidden="true">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={analyzedDraft.name}
-                        onChange={(e) => setAnalyzedDraft({ ...analyzedDraft, name: e.target.value })}
-                        className="w-full h-11 px-3 rounded-lg border border-slate-200 text-sm bg-white focus:border-[#1E3A8A] outline-hidden"
-                        required
-                      />
-                    </div>
-
-                    {/* Category + 세부 카테고리 */}
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-500 block">
-                        카테고리 <span className="text-red-500" aria-hidden="true">*</span>
-                      </label>
-                      <div className="grid grid-cols-4 gap-2">
-                        {(["Top", "Bottom", "Outer", "Shoes"] as Garment["category"][]).map(
-                          (cValue) => {
-                            const active = analyzedDraft.category === cValue;
-                            return (
-                              <button
-                                key={cValue}
-                                type="button"
-                                onClick={() => {
-                                  if (active && subCategoryOpen) {
-                                    setSubCategoryOpen(false);
-                                    return;
-                                  }
-                                  setSubCategoryOpen(true);
-                                  setAnalyzedDraft({
-                                    ...analyzedDraft,
-                                    category: cValue,
-                                    itemType: resolveItemTypeForCategory(
-                                      cValue,
-                                      active ? analyzedDraft.itemType : undefined,
-                                    ),
-                                  });
-                                }}
-                                className={`h-10 rounded-lg text-sm font-bold transition flex items-center justify-center border ${
-                                  active
-                                    ? "bg-[#1E3A8A] text-white border-transparent"
-                                    : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"
-                                }`}
-                              >
-                                {cValue}
-                              </button>
-                            );
-                          },
-                        )}
-                      </div>
-
-                      {subCategoryOpen && (
-                        <div className="mt-2 pt-2 border-t border-slate-100 animate-fade-in space-y-1.5">
-                          <label className="text-xs font-bold text-slate-500 block">
-                            세부 카테고리 <span className="text-red-500" aria-hidden="true">*</span>
-                          </label>
-                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                            {CATEGORY_ITEM_TYPES[analyzedDraft.category].map(
-                              ({ code, label }) => {
-                                const active = analyzedDraft.itemType === code;
-                                return (
-                                  <button
-                                    key={code}
-                                    type="button"
-                                    onClick={() =>
-                                      setAnalyzedDraft({
-                                        ...analyzedDraft,
-                                        itemType: code,
-                                      })
-                                    }
-                                    className={`h-10 px-2 rounded-lg text-xs font-bold transition flex items-center justify-center border ${
-                                      active
-                                        ? "bg-[#BBF7D0] text-[#1E3A8A] border-[#BBF7D0]"
-                                        : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"
-                                    }`}
-                                  >
-                                    {label}
-                                  </button>
-                                );
-                              },
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-500 block">
-                        메인 컬러 <span className="text-red-500" aria-hidden="true">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        className="sr-only"
-                        tabIndex={-1}
-                        value={analyzedDraft.mainColor}
-                        readOnly
-                        required
-                        aria-label="메인 컬러"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setMainColorOpen((open) => !open)}
-                        className={`w-full h-10 px-3 rounded-lg border text-sm bg-white flex items-center gap-2 transition ${
-                          mainColorOpen
-                            ? "border-[#1E3A8A] ring-1 ring-[#1E3A8A]/20"
-                            : "border-slate-200 hover:bg-slate-50"
-                        }`}
-                      >
-                        {getGarmentColor(analyzedDraft.mainColor) ? (
-                          <span
-                            className={`w-7 h-7 rounded-full shrink-0 ${
-                              isGarmentColorCode(analyzedDraft.mainColor) &&
-                              needsLightColorBorder(analyzedDraft.mainColor)
-                                ? "border border-slate-300"
-                                : ""
-                            }`}
-                            style={{
-                              backgroundColor: getGarmentColor(analyzedDraft.mainColor)!.hex,
-                            }}
-                          />
-                        ) : (
-                          <span className="w-7 h-7 rounded-full shrink-0 border border-dashed border-slate-300 bg-slate-50" />
-                        )}
-                      </button>
-                      {mainColorOpen && (
-                        <div className="mt-2 pt-2 border-t border-slate-100 animate-fade-in">
-                          <div className="grid grid-cols-6 sm:grid-cols-8 gap-2">
-                            {GARMENT_COLORS.map(({ code, name, hex }) => {
-                              const active = analyzedDraft.mainColor === code;
-                              return (
-                                <button
-                                  key={code}
-                                  type="button"
-                                  onClick={() =>
-                                    setAnalyzedDraft({
-                                      ...analyzedDraft,
-                                      mainColor: code,
-                                      secondaryColors: analyzedDraft.secondaryColors.filter(
-                                        (c) => c !== code,
-                                      ),
-                                    })
-                                  }
-                                  className={`p-1 rounded-lg border transition flex items-center justify-center ${
-                                    active
-                                      ? "border-[#1E3A8A] bg-indigo-50/60 ring-1 ring-[#1E3A8A]/30"
-                                      : "border-transparent hover:bg-slate-50"
-                                  }`}
-                                  aria-pressed={active}
-                                  title={name}
-                                >
-                                  <span
-                                    className={`w-7 h-7 rounded-full ${
-                                      needsLightColorBorder(code)
-                                        ? "border border-slate-300"
-                                        : ""
-                                    }`}
-                                    style={{ backgroundColor: hex }}
-                                  />
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-500 block">
-                        보조 컬러{" "}
-                        <span className="text-slate-400 font-normal">(선택)</span>
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => setSecondaryColorOpen((open) => !open)}
-                        className={`w-full min-h-10 px-3 py-2 rounded-lg border text-sm bg-white flex items-center gap-2 flex-wrap transition ${
-                          secondaryColorOpen
-                            ? "border-[#1E3A8A] ring-1 ring-[#1E3A8A]/20"
-                            : "border-slate-200 hover:bg-slate-50"
-                        }`}
-                      >
-                        {analyzedDraft.secondaryColors.length > 0 ? (
-                          analyzedDraft.secondaryColors.map((code) => {
-                            const color = getGarmentColor(code);
-                            if (!color) return null;
-                            return (
-                              <span
-                                key={code}
-                                className={`w-7 h-7 rounded-full shrink-0 ${
-                                  isGarmentColorCode(code) &&
-                                  needsLightColorBorder(code)
-                                    ? "border border-slate-300"
-                                    : ""
-                                }`}
-                                style={{ backgroundColor: color.hex }}
-                                title={color.name}
-                              />
-                            );
-                          })
-                        ) : (
-                          <span className="w-7 h-7 rounded-full shrink-0 border border-dashed border-slate-300 bg-slate-50" />
-                        )}
-                      </button>
-                      {secondaryColorOpen && (
-                        <div className="mt-2 pt-2 border-t border-slate-100 animate-fade-in">
-                          <div className="grid grid-cols-6 sm:grid-cols-8 gap-2">
-                            {GARMENT_COLORS.filter(
-                              (c) => c.code !== analyzedDraft.mainColor,
-                            ).map(({ code, name, hex }) => {
-                              const active = analyzedDraft.secondaryColors.includes(code);
-                              return (
-                                <button
-                                  key={code}
-                                  type="button"
-                                  onClick={() => {
-                                    const next = active
-                                      ? analyzedDraft.secondaryColors.filter((c) => c !== code)
-                                      : [...analyzedDraft.secondaryColors, code];
-                                    setAnalyzedDraft({
-                                      ...analyzedDraft,
-                                      secondaryColors: next,
-                                    });
-                                  }}
-                                  className={`p-1 rounded-lg border transition flex items-center justify-center ${
-                                    active
-                                      ? "border-[#BBF7D0] bg-[#BBF7D0]/20 ring-1 ring-[#1E3A8A]/20"
-                                      : "border-transparent hover:bg-slate-50"
-                                  }`}
-                                  aria-pressed={active}
-                                  title={name}
-                                >
-                                  <span
-                                    className={`w-7 h-7 rounded-full ${
-                                      needsLightColorBorder(code)
-                                        ? "border border-slate-300"
-                                        : ""
-                                    }`}
-                                    style={{ backgroundColor: hex }}
-                                  />
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="space-y-0.5">
-                      <label className="text-xs font-bold text-slate-500 block">
-                        메인 스타일 <span className="text-red-500" aria-hidden="true">*</span>
-                      </label>
-                      <select
-                        value={analyzedDraft.mainStyle}
-                        onChange={(e) =>
-                          setAnalyzedDraft({
-                            ...analyzedDraft,
-                            mainStyle: e.target.value,
-                            secondaryStyles: analyzedDraft.secondaryStyles.filter(
-                              (s) => s !== e.target.value,
-                            ),
-                          })
-                        }
-                        className="w-full h-11 px-3 rounded-lg border border-slate-200 text-sm bg-white outline-hidden"
-                        required
-                      >
-                        <option value="">선택</option>
-                        {GARMENT_STYLES.map(({ code, label }) => (
-                          <option key={code} value={code}>
-                            {label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-500 block">
-                        보조 스타일{" "}
-                        <span className="text-slate-400 font-normal">(선택)</span>
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => setSecondaryStyleOpen((open) => !open)}
-                        className={`w-full min-h-10 px-3 py-2 rounded-lg border text-sm bg-white flex items-center gap-2 flex-wrap transition ${
-                          secondaryStyleOpen
-                            ? "border-[#1E3A8A] ring-1 ring-[#1E3A8A]/20"
-                            : "border-slate-200 hover:bg-slate-50"
-                        }`}
-                      >
-                        {analyzedDraft.secondaryStyles.length > 0 ? (
-                          analyzedDraft.secondaryStyles.map((code) => {
-                            const style = GARMENT_STYLES.find((s) => s.code === code);
-                            return (
-                              <span
-                                key={code}
-                                className="px-2 py-0.5 rounded-md bg-[#BBF7D0]/40 text-[#1E3A8A] text-xs font-bold"
-                              >
-                                {style?.label ?? code}
-                              </span>
-                            );
-                          })
-                        ) : (
-                          <span className="text-slate-400 text-xs">스타일 선택</span>
-                        )}
-                      </button>
-                      {secondaryStyleOpen && (
-                        <div className="mt-2 pt-2 border-t border-slate-100 animate-fade-in">
-                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                            {GARMENT_STYLES.filter(
-                              (s) => s.code !== analyzedDraft.mainStyle,
-                            ).map(({ code, label }) => {
-                              const active = analyzedDraft.secondaryStyles.includes(code);
-                              return (
-                                <button
-                                  key={code}
-                                  type="button"
-                                  onClick={() => {
-                                    const next = active
-                                      ? analyzedDraft.secondaryStyles.filter((s) => s !== code)
-                                      : [...analyzedDraft.secondaryStyles, code];
-                                    setAnalyzedDraft({
-                                      ...analyzedDraft,
-                                      secondaryStyles: next,
-                                    });
-                                  }}
-                                  className={`h-10 px-2 rounded-lg text-xs font-bold transition flex items-center justify-center border ${
-                                    active
-                                      ? "bg-[#BBF7D0] text-[#1E3A8A] border-[#BBF7D0]"
-                                      : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"
-                                  }`}
-                                >
-                                  {label}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="space-y-0.5">
-                      <label className="text-xs font-bold text-slate-500 block">
-                        소재 물성 정보 <span className="text-red-500" aria-hidden="true">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={analyzedDraft.fabricMaterial}
-                        onChange={(e) =>
-                          setAnalyzedDraft({
-                            ...analyzedDraft,
-                            fabricMaterial: e.target.value,
-                          })
-                        }
-                        className="w-full h-11 px-3 rounded-lg border border-slate-200 text-sm bg-white outline-hidden"
-                        required
-                      />
-                    </div>
-
-                    {/* Final Save button */}
-                    <button
-                      id="btn-save-garment"
-                      type="submit"
-                      className="w-full h-11 bg-[#1E3A8A] text-[#BBF7D0] hover:bg-[#1E3A8A]/95 rounded-xl font-bold text-sm tracking-wider transition shadow-sm cursor-pointer"
-                    >
-                      Save to My Closet (옷장에 저장하기)
-                    </button>
-                  </form>
-                  <button
-                    id="btn-register-back"
-                    type="button"
-                    onClick={backToRegisterMethodSelect}
-                    className="w-full h-10 text-slate-500 hover:text-[#1E3A8A] hover:bg-slate-50 rounded-xl text-sm font-bold transition"
-                  >
-                    뒤로가기 · 등록 방식 다시 선택
-                  </button>
-
-                </div>
-              )}
-              </div>
-
-            </div>
-          </div>
-        )}
+        <PurchaseGarmentRegisterModal
+          open={isPurchaseRegisterOpen}
+          userId={authUserId}
+          existingGarments={clothes}
+          onClose={() => setIsPurchaseRegisterOpen(false)}
+          onBackToMethodSelect={() => {
+            setIsPurchaseRegisterOpen(false);
+            openGarmentRegister();
+          }}
+          onSaved={(garment, options) => {
+            setClothes((prev) => [garment, ...prev]);
+            if (options?.finished !== false) {
+              setSelectedGarment(garment);
+              setCurrentTab("closet");
+            }
+          }}
+        />
 
         <PhotoGarmentRegisterModal
           open={isPhotoRegisterOpen}
           userId={authUserId}
-          onClose={() => {
-            setIsPhotoRegisterOpen(false);
-            setUploadType(null);
-          }}
+          existingGarments={clothes}
+          onClose={() => setIsPhotoRegisterOpen(false)}
           onBackToMethodSelect={() => {
             setIsPhotoRegisterOpen(false);
-            setUploadType(null);
             openGarmentRegister();
           }}
           onSaved={(garment) => {

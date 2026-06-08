@@ -2,7 +2,7 @@
 doc_type: fe_api_usage
 source_of_truth: AIBE5_FinalProject_Team4_FE
 api_contract_source_of_truth: AIBE5_FinalProject_Team4_BE/docs/api/api-contract.md
-last_updated: 2026-06-04
+last_updated: 2026-06-02
 ---
 
 # API 사용 기준
@@ -170,7 +170,8 @@ API를 호출하는 화면은 아래 상태를 구분합니다.
 | 구매내역 기반 등록 | POST | `/api/v1/users/{userId}/clothes/purchase-captures` | 구매내역 캡처 업로드 |
 | 구매내역 기반 등록 | POST | `/api/v1/users/{userId}/clothes/purchase-captures/{captureId}/analyze` | 구매내역 분석 요청 |
 | 구매내역 기반 등록 | GET | `/api/v1/users/{userId}/clothes/purchase-captures/{captureId}/draft` | 구매내역 분석 초안 표시 |
-| 구매내역 기반 등록 | POST | `/api/v1/users/{userId}/clothes/purchase-captures/{captureId}/save` | 구매내역 기반 옷 저장 |
+| 구매내역 기반 등록 | POST | `/api/v1/users/{userId}/clothes/purchase-captures/{captureId}/save` | 상품별 옷 저장 (`itemIndex` 선택, 생략 시 0) |
+| 구매내역 기반 등록 | POST | `/api/v1/users/{userId}/clothes/purchase-captures/{captureId}/items/{itemIndex}/skip` | 복수 상품 캡처에서 특정 상품 건너뛰기 |
 | 외부 상품 | GET | `/api/naver/search` | 네이버쇼핑 상품 검색 |
 | 외부 상품 | POST | `/api/v1/external/clothes/naver` | 외부 상품을 옷 정보로 저장 |
 | 추천 | GET | `/api/v1/users/{userId}/clothes/{clothesId}/similar-products` | 유사 상품 추천 표시 |
@@ -182,6 +183,39 @@ API를 호출하는 화면은 아래 상태를 구분합니다.
 | 코디 | POST | `/api/v1/outfit-books/{bookId}/outfits` | 코디 저장 |
 | 이미지 | GET | `/api/v1/images/clothes/{userId}/{filename}` | 옷 이미지 표시 |
 | 이미지 | GET | `/api/v1/images/purchase-captures/{userId}/{filename}` | 구매내역 캡처 이미지 표시 |
+
+## 구매내역 복수 상품 등록 (`REG-002`, BE #77)
+
+analyze/draft 응답(`PurchaseCaptureDraftResponse`)과 save 응답(`PurchaseCaptureRegistrationResponse`)은 아래 필드를 공통으로 사용합니다.
+
+| 필드 | FE 처리 |
+| --- | --- |
+| `items[]` | 상품 카드 목록. `itemIndex`, `status`(`PENDING`/`SAVED`/`SKIPPED`), `imageUrl` 사용 |
+| `pendingItemCount` | 남은 상품 수 표시, 완료 여부 판단 |
+| `captureCompleted` | true이면 등록 플로우 종료 |
+
+저장 요청(`PurchaseCaptureSaveRequest`):
+
+- 단일 상품: 기존과 같이 `itemIndex` 생략 가능 (BE가 0으로 처리)
+- 복수 상품: `itemIndex` 필수 권장
+- `imageUrl` (선택): 요청 값을 최우선 사용. 생략 시 BE가 draft `items[].imageUrl` → 캡처 `previewUrl` 순으로 fallback. FE는 `buildPurchaseSavePayload`에서 URL이 있을 때만 필드를 포함합니다.
+- `externalSource` (필수): 카탈로그 code. FE는 쇼핑몰 미선택·미인식 시 `CUSTOM`으로 전송합니다 (`UNKNOWN`은 카탈로그에 없음).
+
+분석 실패 (`analysisStatus=FAILED`):
+
+- AI가 카탈로그 code가 아닌 값을 반환하면 BE가 `analysisStatus=FAILED`로 내립니다. 유효한 code만 `SUCCESS` 초안이 됩니다.
+- BE #77 저장 API는 `analysisStatus=SUCCESS` 캡처만 허용합니다. FAILED 캡처는 수동 입력 저장 경로가 없습니다.
+- FE는 FAILED·분석 API 오류 시 업로드 단계로 되돌리고 저장 버튼을 제공하지 않으며, 다른 캡처 선택 또는 **AI 분석 다시 시도**로 유도합니다.
+
+건너뛰기:
+
+```ts
+POST /api/v1/users/{userId}/clothes/purchase-captures/{captureId}/items/{itemIndex}/skip
+```
+
+응답은 갱신된 draft(`PurchaseCaptureDraftResponse`)입니다. FE local state만 `skipped`로 바꾸지 않고 API를 호출해 서버 `item_progress`와 동기화합니다.
+
+타입 위치: `src/types/purchaseCaptureRegistration.ts` (공통 `BeApiResponse`는 `src/types/be.ts`)
 
 ## 사용자 ID 기준
 

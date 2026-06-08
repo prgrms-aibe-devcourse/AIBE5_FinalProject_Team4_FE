@@ -1,6 +1,11 @@
 import type { ClothesResponse, ClothesInfoSource } from '@/types/be'
 import type { Garment, GarmentBeMeta } from '@/types'
-import { BE_CATEGORY_TO_UI } from '@/data/categoryItemTypes'
+import {
+  BE_CATEGORY_TO_UI,
+  getItemTypeLabel,
+} from '@/data/categoryItemTypes'
+import { getGarmentColorLabel } from '@/data/garmentColors'
+import { getGarmentStyleLabel } from '@/data/garmentStyles'
 
 function extractBeMeta(item: ClothesResponse): GarmentBeMeta {
   return {
@@ -19,13 +24,19 @@ function extractBeMeta(item: ClothesResponse): GarmentBeMeta {
 
 export function mapClothesToGarment(item: ClothesResponse): Garment {
   const primaryStyle = item.styles?.[0]
+  const category =
+    BE_CATEGORY_TO_UI[item.category as keyof typeof BE_CATEGORY_TO_UI] ?? 'Top'
+  const primaryColorCode =
+    item.primaryColor ?? item.primaryColorDisplay?.code ?? 'WHITE'
   return {
     id: String(item.clothesId),
     name: item.name,
-    category: BE_CATEGORY_TO_UI[item.category as keyof typeof BE_CATEGORY_TO_UI] ?? 'Top',
-    color: item.primaryColorDisplay?.name ?? item.primaryColor ?? '',
-    style: primaryStyle?.name ?? primaryStyle?.code ?? '',
-    fitType: item.itemType,
+    category,
+    color: item.primaryColorDisplay?.name ?? getGarmentColorLabel(primaryColorCode),
+    style:
+      primaryStyle?.name ??
+      getGarmentStyleLabel(primaryStyle?.code ?? ''),
+    fitType: getItemTypeLabel(category, item.itemType),
     fabricMaterial: item.brandName || '—',
     thumbnailUrl: (item.userImageUrl ?? item.imageUrl) || undefined,
     isFavorite: item.isFavorite ?? false,
@@ -57,29 +68,53 @@ export interface ClothesUpdatePayload {
   isVerified: boolean
 }
 
+function uniqueOrderedCodes(codes: string[]): string[] {
+  const seen = new Set<string>()
+  return codes.filter((code) => {
+    const trimmed = code.trim()
+    if (!trimmed || seen.has(trimmed)) return false
+    seen.add(trimmed)
+    return true
+  })
+}
+
 export function buildClothesUpdatePayload(
   garment: Garment,
   edits: {
     name?: string
     brandName?: string
+    productCode?: string
+    category?: string
+    itemType?: string
+    primaryColor?: string
+    secondaryColors?: string[]
+    styles?: string[]
     size?: string
     season?: string
+    imageUrl?: string
   },
 ): ClothesUpdatePayload {
   const be = garment.be
   if (!be) {
     throw new Error('옷 정보가 불완전합니다. 상세를 다시 불러와 주세요.')
   }
+  const styles = uniqueOrderedCodes(
+    edits.styles ??
+      (be.styleCodes.length > 0 ? be.styleCodes : ['CASUAL']),
+  )
+  const secondaryColors = uniqueOrderedCodes(
+    edits.secondaryColors ?? be.secondaryColorCodes,
+  )
   return {
     name: edits.name ?? garment.name,
-    brandName: edits.brandName ?? be.brandName,
-    productCode: garment.productCode ?? 'UNKNOWN',
-    imageUrl: garment.userImageUrl ?? be.imageUrl,
-    category: be.categoryCode,
-    itemType: be.itemTypeCode,
-    primaryColor: be.primaryColorCode,
-    secondaryColors: be.secondaryColorCodes,
-    styles: be.styleCodes.length > 0 ? be.styleCodes : ['CASUAL'],
+    brandName: (edits.brandName ?? be.brandName).trim() || '미입력',
+    productCode: edits.productCode ?? garment.productCode ?? 'UNKNOWN',
+    imageUrl: edits.imageUrl ?? garment.userImageUrl ?? be.imageUrl,
+    category: edits.category ?? be.categoryCode,
+    itemType: edits.itemType ?? be.itemTypeCode,
+    primaryColor: edits.primaryColor ?? be.primaryColorCode,
+    secondaryColors,
+    styles,
     size: edits.size ?? garment.size ?? 'FREE',
     season: edits.season ?? garment.season,
     isVerified: be.isVerified,
