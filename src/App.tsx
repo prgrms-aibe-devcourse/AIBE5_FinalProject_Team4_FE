@@ -54,6 +54,17 @@ export default function App() {
   const [authUserId, setAuthUserId] = useState<number | null>(
     getUserIdFromAccessToken,
   );
+  // 로그인 모달 열림 여부
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+
+  // 비로그인 상태면 모달을 열고 false를 반환, 로그인 상태면 true를 반환
+  const requireLogin = (): boolean => {
+    if(!isLoggedIn){
+      setIsLoginModalOpen(true);
+      return false;
+    }
+    return true;
+  }
   /** 온보딩 후 dev mock-token 등 인증 동기화 완료 */
   const [authReady, setAuthReady] = useState(false);
   const [authTokenError, setAuthTokenError] = useState<string | null>(null);
