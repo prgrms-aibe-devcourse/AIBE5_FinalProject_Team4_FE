@@ -1,7 +1,7 @@
 ---
 doc_type: shared_with_be_details
 source_of_truth: AIBE5_FinalProject_Team4_BE
-last_updated: 2026-06-03
+last_updated: 2026-06-08
 ---
 
 # 옷 등록 플로우 가이드
@@ -119,7 +119,7 @@ last_updated: 2026-06-03
 복수 상품 저장 시 선택 필드:
 
 - `itemIndex` (선택, 기본값 0): 저장할 상품 인덱스
-- `imageUrl` (선택): 다중 상품일 때 상품별 미리보기 URL. draft `items[].imageUrl` 또는 요청 값 사용
+- `imageUrl` (선택): 상품별 미리보기 URL. draft `items[].imageUrl`, 요청 값, 없으면 캡처 `previewUrl` 순으로 fallback
 
 분석/초안 응답 공통 필드 (단일·복수 모두):
 
@@ -129,11 +129,13 @@ last_updated: 2026-06-03
 | `pendingItemCount` | number | 아직 저장·건너뛰기하지 않은 상품 수 |
 | `captureCompleted` | boolean | 모든 상품이 `SAVED` 또는 `SKIPPED`이면 true |
 
+저장 응답(`PurchaseCaptureRegistrationResponse`)도 `itemIndex`, `pendingItemCount`, `captureCompleted`를 포함합니다. 건너뛰기 API는 갱신된 draft 응답을 반환합니다.
+
 ## FE 확인 포인트 (복수 상품)
 
 - 상품 선택 화면은 `items[]`와 `pendingItemCount`를 기준으로 남은 상품을 표시합니다.
-- 카드 미리보기는 `items[].imageUrl`을 우선 사용하고, 단일 상품이면 `previewUrl` fallback을 사용할 수 있습니다.
-- 저장 시 `itemIndex`를 명시하고, 다중 상품이면 `imageUrl`을 함께 전달합니다.
+- 카드 미리보기는 draft `items[].imageUrl`을 우선 사용하고, 없으면 캡처 `previewUrl` fallback을 표시할 수 있습니다.
+- 저장 시 `itemIndex`를 명시합니다. `imageUrl`은 선택이며, FE에서 생략해도 BE가 draft `items[].imageUrl` → 캡처 `previewUrl` 순으로 fallback합니다.
 - 건너뛰기는 `POST .../items/{itemIndex}/skip`을 호출해 서버 진행 상태와 동기화합니다.
 
 ## 외부 쇼핑몰 상품 저장
@@ -186,6 +188,7 @@ last_updated: 2026-06-03
 - 분석 결과는 사용자가 수정할 수 있어야 합니다.
 - 카테고리, 아이템 타입, 색상, 스타일은 [카탈로그 사용 가이드](../domain/catalog.md)의 code 값을 사용합니다.
 - 구매내역 캡처 분석에서 일부 값이 불확실할 수 있으므로 수동 보정 UI가 필요합니다.
+- AI가 카탈로그 code가 아닌 값을 반환하면 `analysisStatus=FAILED`로 처리하고, 유효한 code만 `SUCCESS` 초안으로 내려갑니다.
 - 외부 쇼핑몰 상품 저장은 보유 옷 등록과 미보유 저장을 구분해야 합니다.
 
 ## BE 확인 포인트
@@ -193,7 +196,7 @@ last_updated: 2026-06-03
 - 사용자별 리소스는 인증 사용자와 요청 `userId` 일치를 확인합니다.
 - `CLOTHES`에는 공통 옷 정보를 저장하고, `WARDROBE_CLOTHES`에는 사용자별 상태를 저장합니다.
 - 옷 삭제 시 공통 옷 정보는 삭제하지 않습니다.
-- 카탈로그 값 validation은 저장 전에 수행합니다.
+- 카탈로그 값 validation은 AI 분석 성공 처리 전·저장 전 모두 수행합니다. 유효하지 않은 code는 `SUCCESS` 초안으로 저장하지 않습니다.
 - 외부 출처는 가능한 경우 `external_source`, `external_product_id`, `external_product_url`에 저장합니다.
 
 ## 백엔드 코드 위치

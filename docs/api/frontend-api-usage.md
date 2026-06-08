@@ -170,7 +170,7 @@ API를 호출하는 화면은 아래 상태를 구분합니다.
 | 구매내역 기반 등록 | POST | `/api/v1/users/{userId}/clothes/purchase-captures` | 구매내역 캡처 업로드 |
 | 구매내역 기반 등록 | POST | `/api/v1/users/{userId}/clothes/purchase-captures/{captureId}/analyze` | 구매내역 분석 요청 |
 | 구매내역 기반 등록 | GET | `/api/v1/users/{userId}/clothes/purchase-captures/{captureId}/draft` | 구매내역 분석 초안 표시 |
-| 구매내역 기반 등록 | POST | `/api/v1/users/{userId}/clothes/purchase-captures/{captureId}/save` | 상품별 옷 저장 (`itemIndex` 선택, 생략 시 0; 다중 상품 시 `imageUrl` 권장) |
+| 구매내역 기반 등록 | POST | `/api/v1/users/{userId}/clothes/purchase-captures/{captureId}/save` | 상품별 옷 저장 (`itemIndex` 선택, 생략 시 0) |
 | 구매내역 기반 등록 | POST | `/api/v1/users/{userId}/clothes/purchase-captures/{captureId}/items/{itemIndex}/skip` | 복수 상품 캡처에서 특정 상품 건너뛰기 |
 | 외부 상품 | GET | `/api/naver/search` | 네이버쇼핑 상품 검색 |
 | 외부 상품 | POST | `/api/v1/external/clothes/naver` | 외부 상품을 옷 정보로 저장 |
@@ -197,7 +197,13 @@ analyze/draft 응답(`PurchaseCaptureDraftResponse`)과 save 응답(`PurchaseCap
 저장 요청(`PurchaseCaptureSaveRequest`):
 
 - 단일 상품: 기존과 같이 `itemIndex` 생략 가능 (BE가 0으로 처리)
-- 복수 상품: `itemIndex` 필수 권장, `imageUrl`은 draft `items[].imageUrl` 또는 사용자 지정 URL
+- 복수 상품: `itemIndex` 필수 권장
+- `imageUrl` (선택): 요청 값을 우선 사용. 생략 시 BE가 draft `items[].imageUrl` → 캡처 `previewUrl` 순으로 fallback. FE는 `buildPurchaseSavePayload`에서 URL이 있을 때만 필드를 포함합니다.
+
+분석 실패 (`analysisStatus=FAILED`):
+
+- AI가 카탈로그 code가 아닌 값을 반환하면 BE가 `analysisStatus=FAILED`로 내립니다. 유효한 code만 `SUCCESS` 초안이 됩니다.
+- FE는 FAILED 상태에서 수동 보정 UI를 제공하고, 저장 전 카탈로그 code를 사용자가 수정할 수 있어야 합니다.
 
 건너뛰기:
 
