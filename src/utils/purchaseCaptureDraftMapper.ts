@@ -4,7 +4,7 @@ import {
   UI_CATEGORY_TO_BE,
   type UiCategory,
 } from '@/data/categoryItemTypes'
-import { resolveExternalSourceCode } from '@/data/externalSources'
+import { isExternalSourceCode, resolveExternalSourceCode } from '@/data/externalSources'
 import { resolveGarmentColorCode } from '@/data/garmentColors'
 import { resolveGarmentStyleCode } from '@/data/garmentStyles'
 import type {
@@ -178,6 +178,11 @@ export function buildPurchaseSavePayload(
     options?.productCodeFallback ||
     `PURCHASE-${options?.captureId ?? 'NEW'}-${options?.itemIndex ?? 0}-${Date.now()}`
 
+  const trimmedExternalSource = draft.externalSource.trim()
+  const externalSource = isExternalSourceCode(trimmedExternalSource)
+    ? trimmedExternalSource
+    : 'CUSTOM'
+
   const payload: PurchaseCaptureSaveRequest = {
     itemIndex: options?.itemIndex,
     name: draft.name.trim(),
@@ -188,7 +193,7 @@ export function buildPurchaseSavePayload(
     primaryColor: draft.mainColor,
     secondaryColors: draft.secondaryColors,
     styles,
-    externalSource: draft.externalSource.trim() || 'UNKNOWN',
+    externalSource,
     size: draft.size.trim() || 'FREE',
     season: draft.season.trim() || undefined,
     favorite: false,

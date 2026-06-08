@@ -198,7 +198,8 @@ analyze/draft 응답(`PurchaseCaptureDraftResponse`)과 save 응답(`PurchaseCap
 
 - 단일 상품: 기존과 같이 `itemIndex` 생략 가능 (BE가 0으로 처리)
 - 복수 상품: `itemIndex` 필수 권장
-- `imageUrl` (선택): 요청 값을 우선 사용. 생략 시 BE가 draft `items[].imageUrl` → 캡처 `previewUrl` 순으로 fallback. FE는 `buildPurchaseSavePayload`에서 URL이 있을 때만 필드를 포함합니다.
+- `imageUrl` (선택): 요청 값을 최우선 사용. 생략 시 BE가 draft `items[].imageUrl` → 캡처 `previewUrl` 순으로 fallback. FE는 `buildPurchaseSavePayload`에서 URL이 있을 때만 필드를 포함합니다.
+- `externalSource` (필수): 카탈로그 code. FE는 쇼핑몰 미선택·미인식 시 `CUSTOM`으로 전송합니다 (`UNKNOWN`은 카탈로그에 없음).
 
 분석 실패 (`analysisStatus=FAILED`):
 

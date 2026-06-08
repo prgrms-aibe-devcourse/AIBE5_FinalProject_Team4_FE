@@ -119,7 +119,8 @@ last_updated: 2026-06-08
 복수 상품 저장 시 선택 필드:
 
 - `itemIndex` (선택, 기본값 0): 저장할 상품 인덱스
-- `imageUrl` (선택): 상품별 미리보기 URL. draft `items[].imageUrl`, 요청 값, 없으면 캡처 `previewUrl` 순으로 fallback
+- `imageUrl` (선택): 상품별 미리보기 URL. 요청 값을 최우선 사용하고, 생략 시 draft `items[].imageUrl` → 캡처 `previewUrl` 순으로 fallback
+- `externalSource` (필수): 카탈로그 code. FE는 쇼핑몰 미선택 시 `CUSTOM`으로 전송
 
 분석/초안 응답 공통 필드 (단일·복수 모두):
 
@@ -135,7 +136,7 @@ last_updated: 2026-06-08
 
 - 상품 선택 화면은 `items[]`와 `pendingItemCount`를 기준으로 남은 상품을 표시합니다.
 - 카드 미리보기는 draft `items[].imageUrl`을 우선 사용하고, 없으면 캡처 `previewUrl` fallback을 표시할 수 있습니다.
-- 저장 시 `itemIndex`를 명시합니다. `imageUrl`은 선택이며, FE에서 생략해도 BE가 draft `items[].imageUrl` → 캡처 `previewUrl` 순으로 fallback합니다.
+- 저장 시 `itemIndex`를 명시합니다. `imageUrl`은 선택이며, 요청에 포함하면 BE가 요청 값을 최우선 사용하고, 생략하면 draft `items[].imageUrl` → 캡처 `previewUrl` 순으로 fallback합니다.
 - 건너뛰기는 `POST .../items/{itemIndex}/skip`을 호출해 서버 진행 상태와 동기화합니다.
 
 ## 외부 쇼핑몰 상품 저장
