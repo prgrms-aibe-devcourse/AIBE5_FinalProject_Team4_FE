@@ -3,6 +3,7 @@ import {
   isUiCategory,
   type UiCategory,
 } from '@/data/categoryItemTypes'
+import { resolveClothesGender, isClothesGender, type ClothesGender } from '@/data/garmentGender'
 import { isGarmentColorCode } from '@/data/garmentColors'
 import { isGarmentStyleCode } from '@/data/garmentStyles'
 
@@ -77,6 +78,7 @@ export type GarmentRegisterDraft = {
   name: string
   category: UiCategory
   itemType: string
+  gender: ClothesGender
   mainColor: string
   secondaryColors: string[]
   mainStyle: string
@@ -90,6 +92,7 @@ export type GarmentFormField =
   | 'name'
   | 'category'
   | 'itemType'
+  | 'gender'
   | 'mainColor'
   | 'mainStyle'
   | 'brandName'
@@ -128,6 +131,10 @@ export function validateGarmentRegisterDraft(
 
   if (!isGarmentStyleCode(draft.mainStyle.trim())) {
     errors.mainStyle = '메인 스타일을 선택해 주세요.'
+  }
+
+  if (!isClothesGender(draft.gender)) {
+    errors.gender = '대상 성별을 선택해 주세요.'
   }
 
   const brand = draft.brandName.trim()

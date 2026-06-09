@@ -1,6 +1,7 @@
 import api from '@/api'
 import type {
   BeApiResponse,
+  ClothesGender,
   ClothesResponse,
   WardrobeStatisticsResponse,
 } from '@/types/be'
@@ -133,6 +134,7 @@ export async function updateClothes(
     productCode?: string
     category?: string
     itemType?: string
+    gender?: ClothesGender
     primaryColor?: string
     secondaryColors?: string[]
     styles?: string[]

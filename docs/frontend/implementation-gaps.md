@@ -1,7 +1,7 @@
 ---
 doc_type: fe_implementation_gaps
 source_of_truth: AIBE5_FinalProject_Team4_FE
-last_updated: 2026-06-02
+last_updated: 2026-06-08
 ---
 
 # FE 구현 정합성 현황
@@ -28,7 +28,7 @@ last_updated: 2026-06-02
 
 | 영역 | 현재 코드에 남아 있는 형태 | 목표 기준 | 관련 문서 |
 | --- | --- | --- | --- |
-| API 경로 | `/api/chat-gamyagi`, `/api/analyze-garment` 직접 `fetch` (홈 추천은 네트워크 미호출) | BE API 계약 경로와 공통 API client 사용 | [frontend-api-usage.md](../api/frontend-api-usage.md) |
+| API 경로 | `/api/chat-gamyagi`, `/api/analyze-garment` 직접 `fetch`. 홈 `match` 탭만 BE `recommendations` 연동, 나머지 추천 탭은 static/mock | BE API 계약 경로와 공통 API client 사용 | [frontend-api-usage.md](../api/frontend-api-usage.md) |
 | 사용자 ID | 옷장 API는 JWT `sub` → `authUserId`. dev만 `mock-token?userId=1` 발급 경계 | 인증 사용자 ID 사용(OAuth·JWT 기준) | [frontend-api-usage.md](../api/frontend-api-usage.md) |
 | 로그인·토큰 | dev `mock-token`, 운영 OAuth redirect, `?token=` → `localStorage.token` | `AUTH-001` OAuth + JWT | [frontend-api-usage.md](../api/frontend-api-usage.md), [mock-policy.md](mock-policy.md) |
 | 공통 응답 | `ApiResponse<T>`에 `status` 필드 포함 | `success`, `data`, `message` 기준 | [domain-types.md](domain-types.md) |
@@ -37,7 +37,7 @@ last_updated: 2026-06-02
 | 카테고리 | `Top`, `Bottom`, `Outer`, `Shoes` | `TOP`, `BOTTOM`, `OUTER`, `SHOES` | [domain-types.md](domain-types.md) |
 | 보유 상태 | `isWishlist` boolean | `ownershipStatus: OWNED/WISHLIST` | [wardrobe.md](../features/wardrobe.md) |
 | 스타일 | `Amekaji`, `Dandy`, `Tech Casual` 등 | BE catalog의 `StyleCode` | [catalog.md](../domain/catalog.md) |
-| mock 데이터 | `HomeTab` static 추천, INITIAL_GARMENTS 등 | 실제 API 응답 우선, mock 경계 표시 | [mock-policy.md](mock-policy.md) |
+| mock 데이터 | `HomeTab` OOTD·스타일·유사·AI MD static/mock. `match` 탭은 BE recommendations API | 실제 API 응답 우선, mock 경계 표시 | [mock-policy.md](mock-policy.md) |
 
 ## Feature ID 연결표
 
@@ -53,9 +53,9 @@ last_updated: 2026-06-02
 | `CLOTH-007` | 옷 상세/옷장 전환 | `ClosetTab.tsx` | [frontend-api-usage.md](../api/frontend-api-usage.md), [wardrobe.md](../features/wardrobe.md) | BE API 연동 완료. `PATCH /api/clothes/{clothesId}/convert-to-owned` 사용 |
 | `REG-001` | 사진 기반 등록 modal | `PhotoGarmentRegisterModal.tsx`, `photoRegistration.ts`, `usePhotoGarmentRegister.ts` | [garment-registration.md](../features/garment-registration.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | **BE API 연동 완료**. `POST/GET /api/v1/users/{userId}/clothes/photos/**` 사용 |
 | `REG-002` | 구매내역 등록 modal | `PurchaseGarmentRegisterModal.tsx`, `usePurchaseGarmentRegister.ts`, `purchaseCaptureRegistration.ts` | [garment-registration.md](../features/garment-registration.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | **BE 공식 경로 연동 완료**. 복수 상품 skip/save 시 `pendingItemCount`·`captureCompleted`·`items[].status` 서버 동기화 반영 |
-| `RECO-001` | `home` tab | `HomeTab.tsx` | [home-recommendation.md](../features/home-recommendation.md), [recommendation-policy.md](../features/recommendation-policy.md) | **`/api/recommend` 미호출**. `HomeTab` 내부 static/mock 추천. BE 추천 API 미연동 |
+| `RECO-001` | `home` tab | `HomeTab.tsx` | [home-recommendation.md](../features/home-recommendation.md), [recommendation-policy.md](../features/recommendation-policy.md) | OOTD 등 일부 라벨 static/mock. **`/api/recommend` 미호출**. `RECO-004`(`match`)만 BE `recommendations` API 연동 |
 | `RECO-003` | `home` tab, 옷 상세 | `HomeTab.tsx` | [home-recommendation.md](../features/home-recommendation.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | static/mock 추천 |
-| `RECO-004` | `home` tab, 옷 상세 | `HomeTab.tsx` | [home-recommendation.md](../features/home-recommendation.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | static/mock 추천 |
+| `RECO-004` | `home` tab (`match` 라벨) | `HomeTab.tsx`, `fetchClothesRecommendations`, `MatchAnchorWardrobeScroller`, `MatchRecommendationByCategory` | [home-recommendation.md](../features/home-recommendation.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | **BE API 연동 완료**. `GET /api/v1/users/{userId}/clothes/{clothesId}/recommendations` (`limitPerCategory`, FE 기본 10). 추천 후보 `gender`는 프로필 성별 기준 클라이언트 필터 |
 | `FEED-001` | `feed` tab | `App.tsx` 내부 feed section | [feature-index.md](../requirements/feature-index.md), [routing.md](routing.md) | static feed mock |
 
 ## FE 코드와 공식 기준 확인 필요
@@ -90,8 +90,49 @@ src/components/HomeTab.tsx
 
 남은 gap:
 
-- `RECO-002`~`RECO-007` 및 BE `similar-products` / `recommendations` API 미연동
-- 홈 추천을 BE API로 통일할 때 `HomeTab` static 데이터와 계약 정합 필요
+- `RECO-002`, `RECO-003`, `RECO-005`~`RECO-007` 및 BE `similar-products` API 미연동
+- `RECO-004`(`match` 탭)만 `recommendations` API 연동 완료. 나머지 홈 추천 탭은 `HomeTab` static/mock 유지
+- 홈 추천 전체를 BE API로 통일할 때 static 데이터와 계약 정합 필요
+
+### `RECO-004` 옷장 기반 어울리는 옷 추천 — 해소
+
+`HomeTab`의 `match` 라벨(화면 명칭: **어울리는 옷 추천**)은 BE 공식 경로를 사용합니다.
+
+```text
+src/api/recommendations.ts
+- GET /api/v1/users/{userId}/clothes/{clothesId}/recommendations
+- query: limitPerCategory (1~10, FE 기본 10)
+
+src/components/HomeTab.tsx
+- 보유 옷(owned) 썸네일 선택 → API 호출
+- mapClothesRecommendationResponseGrouped() → 카테고리별 표시
+- `matchesClothesGender()`: `RecommendedItem.gender`가 있으면 enum 기준, **없으면 상품명 휴리스틱**으로 프로필 성별 필터
+
+src/utils/recommendationMapper.ts
+- ClothesRecommendationResponse → RecommendCategoryGroup
+```
+
+남은 gap:
+
+- 추천 후보는 BE 기준 **외부 쇼핑 DB**만 반환 (옷장 보유품 후보 아님)
+- BE 추천 API는 사용자 프로필 성별 서버 필터 없음 → FE 클라이언트 필터 유지 (`gender` 결측 시 상품명 fallback)
+- 동점 후보 랜덤 순서는 BE 미구현 → [recommendation-policy.md](../features/recommendation-policy.md) 기준 허용
+
+### `REG-001`/`REG-002` 대상 성별(`gender`) — BE 계약 정합
+
+FE 등록·수정 UI는 `gender`(`MALE`/`FEMALE`/`UNISEX`)를 draft 확인 단계에서 표시하고, 저장·수정 payload에 포함합니다.
+
+BE API 계약 원본(`AIBE5_FinalProject_Team4_BE/docs/api/api-contract.md`) 기준:
+
+- `PhotoClothesSaveRequest`, `PurchaseCaptureSaveRequest`, `ClothesUpdateRequest`에 `gender` 필수
+- `ClothesResponse`, draft/analyze 응답, `ClothesRecommendationResponse.RecommendedItem`에 `gender` 포함
+
+FE 코드: `PhotoGarmentRegisterModal`, `PurchaseGarmentRegisterModal`, `GarmentEditModal`, `photoDraftMapper`, `clothesMapper`, `purchaseCaptureDraftMapper`.
+
+남은 gap:
+
+- 배포 중인 BE가 위 계약보다 오래된 브랜치이면 저장·재조회 시 `gender`가 무시될 수 있음 → BE 배포 버전과 `api-contract.md`를 먼저 맞춘 뒤 FE UI 유지
+- 공통 문서 `garment-registration.md`는 BE 원본과 동일본으로 `gender` 예시·설명을 유지해야 함 ([docs/README.md](../README.md))
 
 ### `WARD-002` 옷장 통계
 
@@ -121,8 +162,9 @@ BE API 계약이 확정되면 [frontend-api-usage.md](../api/frontend-api-usage.
 
 | 이전 FE 기록 | 현재 코드 |
 | --- | --- |
-| `/api/recommend` 직접 `fetch` (`useAiRecommendation`) | **제거**. 홈은 `HomeTab` static/mock ([mock-policy.md](mock-policy.md)) |
+| `/api/recommend` 직접 `fetch` (`useAiRecommendation`) | **제거**. 홈 OOTD·스타일·유사·AI MD는 `HomeTab` static/mock. **`match` 탭만 BE `recommendations` API** ([mock-policy.md](mock-policy.md)) |
 | `REG-001` 사진 등록 → `/api/analyze-garment` | **해소**. `src/api/photoRegistration.ts`가 `/api/v1/users/{userId}/clothes/photos/**` 공식 경로 사용 (`PhotoGarmentRegisterModal.tsx`) |
+| `RECO-004` 홈 `match` 탭 static/mock | **해소**. `src/api/recommendations.ts` → `GET .../clothes/{clothesId}/recommendations` (`HomeTab.tsx`) |
 
 #### 아직 남아 있는 mock 성격 경로
 
@@ -168,9 +210,12 @@ BE API 계약 기준으로 `500`은 서버 내부 오류이고, `502`는 외부 
 현재 FE 코드에는 아래 값이 남아 있습니다.
 
 ```text
-src/types.ts
+src/types/index.ts
 - category: Top | Bottom | Outer | Shoes
 - isWishlist: boolean
+
+src/types/be.ts, src/data/garmentGender.ts
+- ClothesGender: MALE | FEMALE | UNISEX (등록·수정·추천 payload/응답)
 
 src/components/HomeTab.tsx
 - RecommendationLabel: ootd | style | similar | match | aimd

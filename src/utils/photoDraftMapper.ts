@@ -1,3 +1,4 @@
+import { resolveClothesGender } from '@/data/garmentGender'
 import {
   resolveItemTypeForCategory,
   resolveUiCategory,
@@ -33,6 +34,7 @@ export function mapPhotoDraftToRegisterDraft(
     mainStyle,
     secondaryStyles,
     brandName: (beDraft?.brandName ?? fallback?.brandName ?? '').trim(),
+    gender: resolveClothesGender(beDraft?.gender ?? fallback?.gender),
     size: (beDraft?.size ?? fallback?.size ?? '').trim(),
     season: (beDraft?.season ?? fallback?.season ?? '').trim(),
   }
@@ -57,6 +59,7 @@ export function buildPhotoSavePayload(
     productCode: productCode ?? `PHOTO-${Date.now()}`,
     category: UI_CATEGORY_TO_BE[draft.category],
     itemType: draft.itemType,
+    gender: draft.gender,
     primaryColor: draft.mainColor,
     secondaryColors: draft.secondaryColors,
     styles,

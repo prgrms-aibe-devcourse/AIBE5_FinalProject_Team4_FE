@@ -1,4 +1,4 @@
-import type { ClothesResponse, OwnershipStatus } from '@/types/be'
+import type { ClothesGender, ClothesResponse, OwnershipStatus } from '@/types/be'
 
 /** BE 사진 기반 등록 DTO (garment-registration.md 기준) */
 export interface PhotoUploadResponse {
@@ -25,6 +25,7 @@ export interface PhotoGarmentDraftResponse {
   productCode?: string | null
   category?: string | null
   itemType?: string | null
+  gender?: ClothesGender | string | null
   primaryColor?: string | null
   secondaryColors?: string[] | null
   styles?: string[] | null
@@ -45,6 +46,7 @@ export interface PhotoGarmentSaveRequest {
   productCode: string
   category: string
   itemType: string
+  gender: ClothesGender
   primaryColor: string
   secondaryColors: string[]
   styles: string[]

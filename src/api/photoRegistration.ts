@@ -168,7 +168,7 @@ export function mapPhotoSaveResponseToClothesResponse(
     ...clothes,
     wardrobeClothesId: raw.wardrobeClothesId ?? clothes.wardrobeClothesId ?? null,
     wardrobeId: raw.wardrobeId ?? clothes.wardrobeId ?? null,
-    userImageUrl: raw.userImageUrl ?? clothes.userImageUrl ?? clothes.imageUrl ?? null,
+    userImageUrl: raw.userImageUrl ?? clothes.userImageUrl ?? null,
     isFavorite: raw.favorite ?? clothes.isFavorite ?? false,
     size: raw.size ?? clothes.size ?? null,
     season: raw.season ?? clothes.season ?? null,

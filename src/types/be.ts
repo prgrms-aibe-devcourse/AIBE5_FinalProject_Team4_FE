@@ -30,6 +30,9 @@ export type OwnershipStatus = 'OWNED' | 'WISHLIST'
 /** CLOTHES.clothes_info_source ENUM */
 export type ClothesInfoSource = 'PHOTO' | 'PURCHASE_HISTORY' | 'EXTERNAL_SHOPPING'
 
+/** CLOTHES.target_gender ENUM */
+export type ClothesGender = 'MALE' | 'FEMALE' | 'UNISEX'
+
 export interface ClothesResponse {
   clothesId: number
   wardrobeClothesId: number | null
@@ -41,6 +44,7 @@ export interface ClothesResponse {
   imageUrl: string
   category: string
   itemType: string
+  gender?: ClothesGender
   primaryColor: string | null
   primaryColorDisplay: ColorDisplay | null
   secondaryColors: SecondaryColorResponse[]
