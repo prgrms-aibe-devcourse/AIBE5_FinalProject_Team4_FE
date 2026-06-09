@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { Camera, Info, Sparkle, Upload, X } from './icons'
-import { usePhotoGarmentRegister } from '@/hooks/usePhotoGarmentRegister'
+import { FileText, Info, Sparkle, Upload, X } from './icons'
+import AuthenticatedImage from '@/components/common/AuthenticatedImage'
+import { EXTERNAL_SOURCES, getExternalSourceLogoUrl } from '@/data/externalSources'
+import { usePurchaseGarmentRegister } from '@/hooks/usePurchaseGarmentRegister'
 import {
   CATEGORY_ITEM_TYPES,
   resolveItemTypeForCategory,
@@ -16,30 +18,31 @@ import { GARMENT_STYLES } from '@/data/garmentStyles'
 import {
   GARMENT_NAME_MAX_LENGTH,
   BRAND_NAME_MAX_LENGTH,
-  GARMENT_SIZE_MAX_LENGTH,
   getSizeOptionsByCategory,
   GARMENT_SEASON_OPTIONS,
 } from '@/utils/garmentRegisterValidation'
+import { PRODUCT_CODE_MAX_LENGTH } from '@/utils/purchaseRegisterValidation'
 import type { Garment } from '@/types'
+import type { ExternalSourceCode } from '@/data/externalSources'
 import { isDuplicateRegisterError } from '@/utils/garmentDuplicateCheck'
 
-interface PhotoGarmentRegisterModalProps {
+interface PurchaseGarmentRegisterModalProps {
   open: boolean
   userId: number | null
   existingGarments?: Garment[]
   onClose: () => void
   onBackToMethodSelect?: () => void
-  onSaved: (garment: Garment) => void
+  onSaved: (garment: Garment, options?: { finished: boolean }) => void
 }
 
-export default function PhotoGarmentRegisterModal({
+export default function PurchaseGarmentRegisterModal({
   open,
   userId,
   existingGarments = [],
   onClose,
   onBackToMethodSelect,
   onSaved,
-}: PhotoGarmentRegisterModalProps) {
+}: PurchaseGarmentRegisterModalProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [subCategoryOpen, setSubCategoryOpen] = useState(false)
   const [mainColorOpen, setMainColorOpen] = useState(false)
@@ -51,6 +54,12 @@ export default function PhotoGarmentRegisterModal({
     step,
     selectedFile,
     displayImageUrl,
+    activeItemImageUrl,
+    resolveItemImageUrl,
+    pendingItems,
+    activeItemIndex,
+    hasMultipleItems,
+    remainingPendingCount,
     draft,
     setDraft,
     fieldErrors,
@@ -59,11 +68,15 @@ export default function PhotoGarmentRegisterModal({
     duplicateError,
     aiFailed,
     successMessage,
+    isSubmitting,
     selectFile,
     runAnalyze,
+    selectPendingItem,
+    skipPendingItem,
+    backToItemSelect,
     saveToCloset,
     reset,
-  } = usePhotoGarmentRegister(userId, existingGarments)
+  } = usePurchaseGarmentRegister(userId, existingGarments)
 
   useEffect(() => {
     if (!open) reset()
@@ -75,7 +88,7 @@ export default function PhotoGarmentRegisterModal({
     setSecondaryColorOpen(false)
     setMainStyleOpen(false)
     setSecondaryStyleOpen(false)
-  }, [step, draft.category])
+  }, [step, draft.category, activeItemIndex])
 
   if (!open) return null
 
@@ -83,8 +96,8 @@ export default function PhotoGarmentRegisterModal({
   const analyzeHint = !userId
     ? '로그인 후 AI 분석을 시작할 수 있습니다.'
     : !selectedFile
-      ? '사진을 선택하면 AI 분석을 시작할 수 있습니다.'
-      : '사진이 준비되었습니다. 아래 버튼을 눌러 분석을 시작하세요.'
+      ? '구매내역 캡처를 선택하거나 붙여넣으세요.'
+      : '캡처가 준비되었습니다. 아래 버튼을 눌러 분석을 시작하세요.'
 
   const handleClose = () => {
     reset()
@@ -93,26 +106,37 @@ export default function PhotoGarmentRegisterModal({
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
-    const saved = await saveToCloset()
-    if (saved) {
-      onSaved(saved)
-      handleClose()
+    const result = await saveToCloset()
+    if (result) {
+      onSaved(result.garment, { finished: !result.hasMorePending })
+      if (!result.hasMorePending) {
+        handleClose()
+      }
+    }
+  }
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const file = e.clipboardData.files[0]
+    if (file?.type.startsWith('image/')) {
+      e.preventDefault()
+      selectFile(file)
     }
   }
 
   return (
     <div
-      id="modal-photo-register"
+      id="modal-purchase-register"
       className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center z-[45] animate-fade-in p-4"
       role="dialog"
       aria-modal="true"
+      onPaste={handlePaste}
     >
       <div className="w-full max-w-xl bg-white rounded-[28px] min-h-[720px] max-h-[95vh] flex flex-col shadow-2xl relative overflow-hidden">
         <div className="flex justify-between items-center px-7 pt-6 pb-4 border-b border-slate-100 shrink-0">
           <div className="space-y-0 text-left leading-tight">
-            <h3 className="text-lg font-bold text-[#1E3A8A]">사진 기반 등록</h3>
+            <h3 className="text-lg font-bold text-[#1E3A8A]">구매내역 기반 등록</h3>
             <p className="text-sm text-slate-400 mt-1">
-              옷 사진을 업로드하면 AI가 분석하고, 확인 후 옷장에 저장합니다.
+              쇼핑몰 구매내역 캡처를 분석해 옷장에 보유 옷으로 저장합니다.
             </p>
           </div>
           <button
@@ -128,7 +152,8 @@ export default function PhotoGarmentRegisterModal({
         <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain px-7 py-4 space-y-4">
           {globalError &&
             !isDuplicateRegisterError(globalError) &&
-            !(aiFailed && (step === 'form' || step === 'saving')) && (
+            !(aiFailed && (step === 'upload' || step === 'form' || step === 'saving')) &&
+            step !== 'item-select' && (
             <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
               {globalError}
             </div>
@@ -139,86 +164,99 @@ export default function PhotoGarmentRegisterModal({
             </div>
           )}
 
-          {/* 업로드 + 미리보기 */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-500 block">
-                의류 사진 업로드 <span className="text-red-500">*</span>
-              </label>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
-                className="sr-only"
-                onChange={(e) => selectFile(e.target.files?.[0] ?? null)}
-              />
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={step === 'analyzing' || step === 'saving'}
-                className={`w-full min-h-[140px] rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition disabled:opacity-60 ${
-                  selectedFile
-                    ? 'border-[#1E3A8A]/50 bg-indigo-50/70 hover:border-[#1E3A8A]'
-                    : 'border-slate-200 bg-slate-50/60 hover:border-[#1E3A8A]/40'
-                }`}
-              >
-                <Upload
-                  className={`w-8 h-8 ${
-                    selectedFile ? 'text-[#1E3A8A]' : 'text-slate-400'
-                  }`}
+          {(step === 'upload' || step === 'analyzing') && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-500 block">
+                  구매내역 캡처 업로드 <span className="text-red-500">*</span>
+                </label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+                  className="sr-only"
+                  onChange={(e) => selectFile(e.target.files?.[0] ?? null)}
                 />
-                <span
-                  className={`text-sm font-bold ${
-                    selectedFile ? 'text-[#1E3A8A]' : 'text-slate-500'
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={step === 'analyzing'}
+                  className={`w-full min-h-[140px] rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition disabled:opacity-60 ${
+                    selectedFile
+                      ? 'border-[#1E3A8A]/50 bg-indigo-50/70 hover:border-[#1E3A8A]'
+                      : 'border-slate-200 bg-slate-50/60 hover:border-[#1E3A8A]/40'
                   }`}
                 >
-                  {selectedFile ? '다른 사진 선택' : '사진 선택'}
-                </span>
-                <span className="text-xs text-slate-400">jpg · png · webp (최대 10MB)</span>
-              </button>
-              {uploadError && (
-                <p className="text-xs text-red-600 font-medium">{uploadError}</p>
-              )}
-              {selectedFile && (
-                <p className="text-xs font-semibold text-[#1E3A8A] truncate">
-                  선택됨 · {selectedFile.name}
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-500 block">미리보기</label>
-              <div className="min-h-[140px] rounded-2xl border border-slate-200 bg-slate-50 overflow-hidden flex items-center justify-center">
-                {displayImageUrl ? (
-                  <img
-                    src={displayImageUrl}
-                    alt="업로드한 옷 사진 미리보기"
-                    className="w-full h-full max-h-[200px] object-contain"
+                  <Upload
+                    className={`w-8 h-8 ${
+                      selectedFile ? 'text-[#1E3A8A]' : 'text-slate-400'
+                    }`}
                   />
-                ) : (
-                  <div className="text-center text-slate-400 text-xs space-y-1">
-                    <Camera className="w-8 h-8 mx-auto opacity-40" />
-                    <p>선택한 사진이 여기에 표시됩니다</p>
-                  </div>
+                  <span
+                    className={`text-sm font-bold ${
+                      selectedFile ? 'text-[#1E3A8A]' : 'text-slate-500'
+                    }`}
+                  >
+                    {selectedFile ? '다른 캡처 선택' : '캡처 선택'}
+                  </span>
+                  <span className="text-xs text-slate-400">
+                    jpg · png · webp (최대 10MB) · Ctrl+V 붙여넣기
+                  </span>
+                </button>
+                {uploadError && (
+                  <p className="text-xs text-red-600 font-medium">{uploadError}</p>
+                )}
+                {selectedFile && (
+                  <p className="text-xs font-semibold text-[#1E3A8A] truncate">
+                    선택됨 · {selectedFile.name}
+                  </p>
                 )}
               </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-500 block">미리보기</label>
+                <div className="min-h-[140px] rounded-2xl border border-slate-200 bg-slate-50 overflow-hidden flex items-center justify-center">
+                  {displayImageUrl ? (
+                    <AuthenticatedImage
+                      src={displayImageUrl}
+                      alt="구매내역 캡처 미리보기"
+                      className="w-full h-full max-h-[200px] object-contain"
+                    />
+                  ) : (
+                    <div className="text-center text-slate-400 text-xs space-y-1">
+                      <FileText className="w-8 h-8 mx-auto opacity-40" />
+                      <p>선택한 캡처가 여기에 표시됩니다</p>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
+          )}
 
           {step === 'upload' && (
             <>
+              {aiFailed && (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 space-y-1">
+                  <p>
+                    AI 분석에 실패했습니다. 다른 캡처를 선택하거나 아래에서 분석을 다시 시도해
+                    주세요.
+                  </p>
+                  {globalError && <p className="text-xs text-amber-800/90">{globalError}</p>}
+                </div>
+              )}
               <p
                 className={`text-xs text-center font-medium ${
                   canAnalyze ? 'text-emerald-600' : 'text-slate-400'
                 }`}
               >
-                {analyzeHint}
+                {aiFailed
+                  ? '캡처를 바꾸거나 같은 캡처로 분석을 다시 시도할 수 있습니다.'
+                  : analyzeHint}
               </p>
               <button
                 type="button"
                 onClick={() => void runAnalyze()}
                 disabled={!canAnalyze}
-                aria-disabled={!canAnalyze}
                 className={`w-full h-12 rounded-xl font-bold text-sm transition flex items-center justify-center gap-2 ${
                   canAnalyze
                     ? 'bg-[#1E3A8A] text-white shadow-lg shadow-[#1E3A8A]/25 hover:bg-[#172e6e] active:scale-[0.99] cursor-pointer'
@@ -228,7 +266,7 @@ export default function PhotoGarmentRegisterModal({
                 <Sparkle
                   className={`w-4 h-4 ${canAnalyze ? 'text-[#BBF7D0]' : 'text-slate-300'}`}
                 />
-                AI 분석 시작
+                {aiFailed ? 'AI 분석 다시 시도' : 'AI 분석 시작'}
               </button>
               {onBackToMethodSelect && (
                 <button
@@ -248,19 +286,139 @@ export default function PhotoGarmentRegisterModal({
           {step === 'analyzing' && (
             <div className="py-8 flex flex-col items-center justify-center space-y-3">
               <div className="w-16 h-16 rounded-full border-4 border-slate-100 border-t-[#1E3A8A] animate-spin" />
-              <p className="text-sm font-bold text-[#1E3A8A]">AI가 옷 사진을 분석하는 중…</p>
-              <p className="text-xs text-slate-400">카테고리, 색상, 스타일을 판별하고 있습니다</p>
+              <p className="text-sm font-bold text-[#1E3A8A]">AI가 구매내역을 분석하는 중…</p>
+              <p className="text-xs text-slate-400">상품명, 브랜드, 품번, 옵션을 추출하고 있습니다</p>
+            </div>
+          )}
+
+          {step === 'item-select' && (
+            <div className="space-y-3">
+              <div className="p-3 bg-indigo-50/50 rounded-xl border border-indigo-100 flex items-start gap-2">
+                <Info className="w-4 h-4 text-indigo-700 shrink-0 mt-0.5" />
+                <p className="text-xs text-indigo-800">
+                  AI가 구매내역에서 {pendingItems.length}개 상품을 찾았습니다. 등록할 상품을
+                  선택하세요. 각 상품은 개별로 확인·저장됩니다.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                {pendingItems.map((item, index) => {
+                  const label = item.draft.name.trim() || `상품 ${index + 1}`
+                  const meta = [
+                    item.draft.brandName,
+                    item.draft.productCode,
+                    item.draft.optionText,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')
+                  const itemImageUrl = resolveItemImageUrl(item)
+
+                  return (
+                    <div
+                      key={item.itemIndex}
+                      className="rounded-xl border border-slate-200 bg-slate-50/60 p-3 space-y-2"
+                    >
+                      <div className="flex items-start gap-2.5">
+                        {itemImageUrl && (
+                          <div className="shrink-0 w-12 h-12 rounded-lg border border-slate-200 bg-white overflow-hidden">
+                            <AuthenticatedImage
+                              src={itemImageUrl}
+                              alt={label}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1 flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="text-sm font-bold text-slate-800 truncate">{label}</p>
+                            {meta && (
+                              <p className="text-xs text-slate-500 truncate mt-0.5">{meta}</p>
+                            )}
+                          </div>
+                          <span
+                            className={`shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                              item.status === 'saved'
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : item.status === 'skipped'
+                                  ? 'bg-slate-200 text-slate-600'
+                                  : 'bg-[#BBF7D0]/50 text-[#1E3A8A]'
+                            }`}
+                          >
+                            {item.status === 'saved'
+                              ? '저장됨'
+                              : item.status === 'skipped'
+                                ? '건너뜀'
+                                : '대기'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {item.status === 'pending' && (
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            disabled={isSubmitting}
+                            onClick={() => selectPendingItem(item.itemIndex)}
+                            className="flex-1 h-9 rounded-lg bg-[#1E3A8A] text-[#BBF7D0] text-xs font-bold disabled:opacity-50"
+                          >
+                            확인·저장
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isSubmitting}
+                            onClick={() => void skipPendingItem(item.itemIndex)}
+                            className="h-9 px-3 rounded-lg border border-slate-200 text-xs font-bold text-slate-500 hover:bg-white disabled:opacity-50"
+                          >
+                            {isSubmitting ? '처리 중…' : '건너뛰기'}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+
+              {remainingPendingCount === 0 && (
+                <button
+                  type="button"
+                  onClick={handleClose}
+                  className="w-full h-11 bg-[#1E3A8A] text-[#BBF7D0] rounded-xl font-bold text-sm"
+                >
+                  등록 완료
+                </button>
+              )}
+
+              {onBackToMethodSelect && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    reset()
+                    onBackToMethodSelect()
+                  }}
+                  className="w-full h-10 text-slate-500 hover:text-[#1E3A8A] hover:bg-slate-50 rounded-xl text-sm font-bold transition"
+                >
+                  뒤로가기 · 등록 방식 다시 선택
+                </button>
+              )}
             </div>
           )}
 
           {(step === 'form' || step === 'saving') && (
             <>
-              {aiFailed && (
-                <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 space-y-1">
-                  <p>AI 분석에 실패했습니다. 아래 항목을 직접 입력한 뒤 저장해 주세요.</p>
-                  {globalError && (
-                    <p className="text-xs text-amber-800/90">{globalError}</p>
-                  )}
+              {hasMultipleItems && (
+                <div className="flex items-center justify-between gap-2 text-xs">
+                  <p className="text-slate-500 font-medium">
+                    상품 {activeItemIndex != null ? activeItemIndex + 1 : '-'} /{' '}
+                    {pendingItems.length}
+                    {remainingPendingCount > 0 && ` · 남은 ${remainingPendingCount}개`}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={backToItemSelect}
+                    className="text-[#1E3A8A] font-bold hover:underline"
+                  >
+                    상품 목록
+                  </button>
                 </div>
               )}
 
@@ -292,6 +450,100 @@ export default function PhotoGarmentRegisterModal({
                     <p className="text-xs text-red-600">{fieldErrors.name}</p>
                   )}
                 </div>
+
+                <div className="space-y-0.5">
+                  <label className="text-xs font-bold text-slate-500">
+                    품번 <span className="text-slate-400 font-normal">(선택)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={draft.productCode}
+                    maxLength={PRODUCT_CODE_MAX_LENGTH}
+                    onChange={(e) => setDraft({ productCode: e.target.value })}
+                    placeholder="구매내역의 상품코드"
+                    className={`w-full h-11 px-3 rounded-lg border text-sm bg-white ${
+                      fieldErrors.productCode ? 'border-red-400' : 'border-slate-200'
+                    }`}
+                  />
+                  {fieldErrors.productCode && (
+                    <p className="text-xs text-red-600">{fieldErrors.productCode}</p>
+                  )}
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-500">
+                    쇼핑몰 <span className="text-slate-400 font-normal">(선택)</span>
+                  </label>
+                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                    {EXTERNAL_SOURCES.filter((s) => s.code !== 'CUSTOM').map(({ code, label }) => {
+                      const active = draft.externalSource === code
+                      const logoUrl = getExternalSourceLogoUrl(code)
+                      return (
+                        <button
+                          key={code}
+                          type="button"
+                          onClick={() =>
+                            setDraft({
+                              externalSource: active ? '' : (code as ExternalSourceCode),
+                            })
+                          }
+                          className={`flex flex-col items-center gap-1 p-2 rounded-xl border transition ${
+                            active
+                              ? 'bg-[#1E3A8A] text-white border-transparent'
+                              : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
+                          }`}
+                        >
+                          {logoUrl ? (
+                            <img
+                              src={logoUrl}
+                              alt=""
+                              className="w-7 h-7 object-contain rounded"
+                            />
+                          ) : (
+                            <span className="w-7 h-7 flex items-center justify-center text-xs font-bold rounded bg-slate-100">
+                              {label.charAt(0)}
+                            </span>
+                          )}
+                          <span className="text-[10px] font-bold leading-tight text-center line-clamp-2">
+                            {label}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                  {fieldErrors.externalSource && (
+                    <p className="text-xs text-red-600">{fieldErrors.externalSource}</p>
+                  )}
+                </div>
+
+                {activeItemImageUrl && (
+                  <div className="flex items-center gap-3 bg-slate-50 rounded-2xl border border-slate-100 p-3">
+                    <div className="shrink-0 w-16 h-16 rounded-xl border border-slate-200 bg-white overflow-hidden flex items-center justify-center">
+                      <AuthenticatedImage
+                        src={activeItemImageUrl}
+                        alt={draft.name || '상품 이미지'}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="min-w-0">
+                      {draft.name && (
+                        <p className="text-sm font-bold text-slate-800 truncate">{draft.name}</p>
+                      )}
+                      {draft.brandName && (
+                        <p className="text-xs text-slate-500 truncate">{draft.brandName}</p>
+                      )}
+                      {draft.optionText && (
+                        <p className="text-xs text-slate-400 truncate">{draft.optionText}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {draft.optionText && (
+                  <p className="text-xs text-slate-500 bg-slate-50 rounded-lg px-3 py-2 border border-slate-100">
+                    AI 추출 옵션: {draft.optionText}
+                  </p>
+                )}
 
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-slate-500">
@@ -362,7 +614,6 @@ export default function PhotoGarmentRegisterModal({
                   )}
                 </div>
 
-                {/* 메인 컬러 */}
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-slate-500">
                     메인 컬러 <span className="text-red-500">*</span>
@@ -421,7 +672,6 @@ export default function PhotoGarmentRegisterModal({
                   )}
                 </div>
 
-                {/* 보조 컬러 */}
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-slate-500">
                     보조 컬러 <span className="text-slate-400 font-normal">(선택)</span>
@@ -515,9 +765,7 @@ export default function PhotoGarmentRegisterModal({
                             onClick={() => {
                               setDraft({
                                 mainStyle: code,
-                                secondaryStyles: draft.secondaryStyles.filter(
-                                  (s) => s !== code,
-                                ),
+                                secondaryStyles: draft.secondaryStyles.filter((s) => s !== code),
                               })
                               setMainStyleOpen(false)
                             }}
@@ -595,15 +843,14 @@ export default function PhotoGarmentRegisterModal({
 
                 <div className="space-y-0.5">
                   <label className="text-xs font-bold text-slate-500">
-                    브랜드{' '}
-                    <span className="text-slate-400 font-normal">(선택)</span>
+                    브랜드 <span className="text-slate-400 font-normal">(선택)</span>
                   </label>
                   <input
                     type="text"
                     value={draft.brandName}
                     maxLength={BRAND_NAME_MAX_LENGTH}
                     onChange={(e) => setDraft({ brandName: e.target.value })}
-                    placeholder="예: 무신사 스탠다드 (모를 경우 비워두세요)"
+                    placeholder="예: 무신사 스탠다드"
                     className={`w-full h-11 px-3 rounded-lg border text-sm bg-white ${
                       fieldErrors.brandName ? 'border-red-400' : 'border-slate-200'
                     }`}
@@ -615,8 +862,7 @@ export default function PhotoGarmentRegisterModal({
 
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-slate-500">
-                    사이즈{' '}
-                    <span className="text-slate-400 font-normal">(선택)</span>
+                    사이즈 <span className="text-slate-400 font-normal">(선택)</span>
                   </label>
                   <div className="flex flex-wrap gap-1.5">
                     {getSizeOptionsByCategory(draft.category).map(({ code, label }) => {
@@ -640,7 +886,7 @@ export default function PhotoGarmentRegisterModal({
                   <input
                     type="text"
                     value={draft.size}
-                    maxLength={GARMENT_SIZE_MAX_LENGTH}
+                    maxLength={50}
                     onChange={(e) => setDraft({ size: e.target.value })}
                     placeholder="직접 입력"
                     className={`w-full h-9 px-3 rounded-lg border text-sm bg-white ${
@@ -654,8 +900,7 @@ export default function PhotoGarmentRegisterModal({
 
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-slate-500">
-                    시즌{' '}
-                    <span className="text-slate-400 font-normal">(선택)</span>
+                    시즌 <span className="text-slate-400 font-normal">(선택)</span>
                   </label>
                   <div className="flex flex-wrap gap-1.5">
                     {GARMENT_SEASON_OPTIONS.map(({ code, label }) => {
@@ -692,19 +937,34 @@ export default function PhotoGarmentRegisterModal({
                   disabled={step === 'saving'}
                   className="w-full h-11 bg-[#1E3A8A] text-[#BBF7D0] disabled:opacity-60 rounded-xl font-bold text-sm transition"
                 >
-                  {step === 'saving' ? '저장 중…' : '옷장에 저장하기'}
+                  {step === 'saving'
+                    ? '저장 중…'
+                    : hasMultipleItems && remainingPendingCount > 1
+                      ? '저장하고 다음 상품'
+                      : '옷장에 저장하기'}
                 </button>
-                {onBackToMethodSelect && (
+
+                {hasMultipleItems ? (
                   <button
                     type="button"
-                    onClick={() => {
-                      reset()
-                      onBackToMethodSelect()
-                    }}
+                    onClick={backToItemSelect}
                     className="w-full h-10 text-slate-500 hover:text-[#1E3A8A] hover:bg-slate-50 rounded-xl text-sm font-bold transition"
                   >
-                    뒤로가기 · 등록 방식 다시 선택
+                    상품 목록으로
                   </button>
+                ) : (
+                  onBackToMethodSelect && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        reset()
+                        onBackToMethodSelect()
+                      }}
+                      className="w-full h-10 text-slate-500 hover:text-[#1E3A8A] hover:bg-slate-50 rounded-xl text-sm font-bold transition"
+                    >
+                      뒤로가기 · 등록 방식 다시 선택
+                    </button>
+                  )
                 )}
               </form>
             </>

@@ -69,3 +69,43 @@ export interface MockTokenData {
   accessToken: string
   headerValue: string
 }
+
+/** GET /api/v1/wardrobes/users/{userId}/statistics (WARD-002) */
+export interface WardrobeItemTypeCount {
+  itemType: string
+  itemTypeLabel: string
+  category: string | null
+  count: number
+}
+
+export interface WardrobeUserStylePayload {
+  styleId: number
+  styleCode: string
+  styleName: string
+  weightedScore: number
+  wardrobeWeight: number
+}
+
+export interface WardrobeStatisticsResponse {
+  userId: number
+  wardrobeId: number
+  totalOwnedCount: number
+  itemTypes: WardrobeItemTypeCount[]
+  userStylePayloads: WardrobeUserStylePayload[]
+}
+
+/**
+ * 구매내역 캡처 등록(REG-002, BE #77) 타입은 `src/types/purchaseCaptureRegistration.ts`에 정의합니다.
+ * - PurchaseCaptureDraftResponse: analyze/draft/skip 응답 (`items`, `pendingItemCount`, `captureCompleted`)
+ * - PurchaseCaptureSaveRequest: save 요청 (`itemIndex?`, `imageUrl?`)
+ * - PurchaseCaptureRegistrationResponse: save 응답
+ */
+export type {
+  PurchaseCaptureAnalysisStatus,
+  PurchaseCaptureDraftResponse,
+  PurchaseCaptureItemDraft,
+  PurchaseCaptureItemStatus,
+  PurchaseCaptureRegistrationResponse,
+  PurchaseCaptureSaveRequest,
+  PurchaseCaptureUploadResponse,
+} from '@/types/purchaseCaptureRegistration'
