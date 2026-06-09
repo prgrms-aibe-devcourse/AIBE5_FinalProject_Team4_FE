@@ -15,6 +15,7 @@ import {
   needsLightColorBorder,
 } from '@/data/garmentColors'
 import { GARMENT_STYLES } from '@/data/garmentStyles'
+import { CLOTHES_GENDER_OPTIONS } from '@/data/garmentGender'
 import {
   GARMENT_NAME_MAX_LENGTH,
   BRAND_NAME_MAX_LENGTH,
@@ -895,6 +896,32 @@ export default function PurchaseGarmentRegisterModal({
                   />
                   {fieldErrors.size && (
                     <p className="text-xs text-red-600">{fieldErrors.size}</p>
+                  )}
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-500">대상 성별</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {CLOTHES_GENDER_OPTIONS.map(({ code, label }) => {
+                      const active = draft.gender === code
+                      return (
+                        <button
+                          key={code}
+                          type="button"
+                          onClick={() => setDraft({ gender: code })}
+                          className={`h-8 px-3 rounded-lg text-xs font-bold border transition ${
+                            active
+                              ? 'bg-[#1E3A8A] text-white border-transparent'
+                              : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  {fieldErrors.gender && (
+                    <p className="text-xs text-red-600">{fieldErrors.gender}</p>
                   )}
                 </div>
 

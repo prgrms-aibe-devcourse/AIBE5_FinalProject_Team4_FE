@@ -1,3 +1,4 @@
+import { resolveClothesGender } from '@/data/garmentGender'
 import {
   resolveItemTypeForCategory,
   resolveUiCategory,
@@ -84,6 +85,7 @@ function mapItemFieldsToRegisterDraft(
     mainStyle,
     secondaryStyles,
     brandName: (item?.brandName ?? fallback?.brandName ?? '').trim(),
+    gender: resolveClothesGender(item?.gender ?? fallback?.gender),
     size: fallback?.size ?? '',
     season: fallback?.season ?? '',
     productCode: fallback?.productCode ?? '',
@@ -136,6 +138,7 @@ export function extractPurchaseCaptureItems(
       primaryColor: raw.primaryColor,
       secondaryColors: raw.secondaryColors ?? [],
       styles: raw.styles ?? [],
+      gender: raw.gender ?? 'UNISEX',
       optionText: raw.optionText,
       suggestedExternalSource: raw.suggestedExternalSource,
       imageUrl: captureImageUrl,
@@ -190,6 +193,7 @@ export function buildPurchaseSavePayload(
     productCode,
     category: UI_CATEGORY_TO_BE[draft.category as UiCategory],
     itemType: draft.itemType,
+    gender: draft.gender,
     primaryColor: draft.mainColor,
     secondaryColors: draft.secondaryColors,
     styles,

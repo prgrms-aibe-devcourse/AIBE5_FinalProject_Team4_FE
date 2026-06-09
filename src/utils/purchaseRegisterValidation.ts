@@ -30,6 +30,7 @@ export function createEmptyPurchaseRegisterDraft(): PurchaseRegisterDraft {
     name: '',
     category: 'Top',
     itemType: '',
+    gender: 'UNISEX',
     mainColor: '',
     secondaryColors: [],
     mainStyle: '',

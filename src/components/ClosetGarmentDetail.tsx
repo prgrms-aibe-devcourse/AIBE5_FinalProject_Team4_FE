@@ -16,6 +16,7 @@ import {
   validateGarmentRegisterDraft,
   type GarmentFormFieldErrors,
 } from '@/utils/garmentRegisterValidation'
+import { resolveClothesDisplayImageUrl } from '@/utils/clothesImageUrl'
 
 interface ClosetGarmentDetailProps {
   garment: Garment | null
@@ -27,7 +28,14 @@ interface ClosetGarmentDetailProps {
 }
 
 function resolveGarmentImageUrl(g: Garment): string {
-  return g.userImageUrl ?? g.be?.imageUrl ?? g.thumbnailUrl ?? ''
+  return (
+    resolveClothesDisplayImageUrl({
+      userImageUrl: g.userImageUrl,
+      imageUrl: g.be?.imageUrl,
+    }) ??
+    g.thumbnailUrl ??
+    ''
+  )
 }
 
 function garmentToEditDraft(g: Garment): GarmentEditDraft {
@@ -40,6 +48,7 @@ function garmentToEditDraft(g: Garment): GarmentEditDraft {
     imageUrl: resolveGarmentImageUrl(g),
     category: g.category,
     itemType: be.itemTypeCode,
+    gender: be.genderCode,
     mainColor: be.primaryColorCode,
     secondaryColors: [...be.secondaryColorCodes],
     mainStyle: styleCodes[0] ?? '',
@@ -170,6 +179,7 @@ export default function ClosetGarmentDetail({
           name: 'name',
           category: 'category',
           itemType: 'itemType',
+          gender: 'gender',
           mainColor: 'mainColor',
           mainStyle: 'mainStyle',
           brandName: 'brandName',
@@ -225,6 +235,7 @@ export default function ClosetGarmentDetail({
         productCode: editDraft.productCode.trim() || detail.productCode || 'UNKNOWN',
         category: UI_CATEGORY_TO_BE[editDraft.category],
         itemType: editDraft.itemType,
+        gender: editDraft.gender,
         primaryColor: editDraft.mainColor,
         secondaryColors: editDraft.secondaryColors,
         styles,
@@ -270,10 +281,10 @@ export default function ClosetGarmentDetail({
 
   if (!garment) {
     return (
-      <div className="bg-slate-50/50 rounded-2xl border border-dashed border-slate-200 p-8 text-center text-slate-400 flex flex-col justify-center items-center h-72 select-none">
-        <span className="text-3xl block mb-2">👚</span>
+      <div className="bg-slate-50/50 rounded-2xl border border-dashed border-slate-200 p-8 text-center text-slate-400 flex flex-col justify-center items-center min-h-[17rem] select-none">
+        <span className="text-4xl block mb-2">👚</span>
         <h4 className="text-xs font-bold text-slate-700">의상 분석 상세 정보</h4>
-        <p className="text-[10px] text-slate-400 mt-1 max-w-xs leading-normal">
+        <p className="text-[11px] text-slate-500 mt-1 max-w-xs leading-relaxed">
           좌측 컬렉션에서 의상을 선택하면 상세 정보가 표시됩니다.
         </p>
       </div>
@@ -282,7 +293,7 @@ export default function ClosetGarmentDetail({
 
   if (loading && !detail) {
     return (
-      <div className="bg-slate-50 rounded-2xl border border-slate-200 p-8 text-center text-slate-500 text-xs font-bold">
+      <div className="bg-slate-50 rounded-2xl border border-slate-200 p-8 text-center text-slate-500 text-xs font-bold min-h-[17rem] flex items-center justify-center">
         상세 정보 불러오는 중...
       </div>
     )
@@ -311,11 +322,11 @@ export default function ClosetGarmentDetail({
       <div className="space-y-4">
         <div className="bg-white rounded-[24px] border border-slate-100 p-5 shadow-2xs text-left space-y-3.5">
           {g.thumbnailUrl && (
-            <div className="w-full rounded-xl border border-slate-100 bg-slate-50 flex items-center justify-center overflow-hidden min-h-[12rem] max-h-[28rem]">
+            <div className="w-full aspect-square rounded-xl border border-slate-100 bg-slate-50 flex items-center justify-center overflow-hidden">
               <AuthenticatedImage
                 src={g.thumbnailUrl}
                 alt={g.name}
-                className="w-full h-full max-h-[28rem] object-contain"
+                className="w-full h-full object-contain p-2"
               />
             </div>
           )}

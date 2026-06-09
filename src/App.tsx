@@ -30,6 +30,11 @@ import LoginPage from "@/pages/LoginPage";
 import OnboardingPage from "@/pages/OnboardingPage";
 import { useChat } from "@/hooks/useChat";
 import { useCloset } from "@/hooks/useCloset";
+import {
+  clearUserProfile,
+  loadUserProfile,
+  saveUserProfile,
+} from "@/utils/userProfileStorage";
 // 기존 상수 data ( TRIGGER_PRODUCTS 는 사용을 하지않아 우선 주석처리함 )
 // import { TRIGGER_PRODUCTS } from "@/data/triggerProducts";
 
@@ -46,13 +51,25 @@ export default function App() {
   const [authTokenError, setAuthTokenError] = useState<string | null>(null);
   
   // User Profile Setup State
-  const [profile, setProfile] = useState<UserProfile>({
-    nickname: "",
-    gender: "None",
-    styles: [],
-    onboarded: false,
-    birthday: "",
+  const [profile, setProfile] = useState<UserProfile>(() => {
+    const stored = loadUserProfile();
+    return (
+      stored ?? {
+        nickname: "",
+        gender: "None",
+        styles: [],
+        onboarded: false,
+        birthday: "",
+      }
+    );
   });
+
+  const persistProfile = (next: UserProfile) => {
+    setProfile(next);
+    if (next.onboarded) {
+      saveUserProfile(next);
+    }
+  };
 
   const { gamyagiChatOpen, setGamyagiChatOpen, chatMessages, pendingMsg, setPendingMsg, chatSending, handleSendChatToMD } = useChat();
 
@@ -166,7 +183,7 @@ export default function App() {
       {/* ========================================================= */}
       {isLoggedIn && !profile.onboarded && (
           <OnboardingPage onComplete={(nickname, birthday, gender, styles, openModal) => {
-            setProfile({ nickname, birthday, gender, styles, onboarded: true });
+            persistProfile({ nickname, birthday, gender, styles, onboarded: true });
             if (openModal) openGarmentRegister();
           }} />
       )}
@@ -249,6 +266,8 @@ export default function App() {
               {currentTab === "home" && (
                 <HomeTab
                   clothes={clothes}
+                  userId={authUserId}
+                  gender={profile.gender}
                   onAddWishlistItem={handleAddWishlistItem}
                   nickname={profile.nickname}
                   resetSignal={homeResetSignal}
@@ -393,7 +412,14 @@ export default function App() {
                       onClick={() => {
                         if (confirm("초기 온보딩으로 되돌아가시겠습니까?")) {
                           setIsLoggedIn(false);
-                          setProfile({ nickname: "", gender: "None", styles: [], onboarded: false, birthday: "" });
+                          clearUserProfile();
+                          setProfile({
+                            nickname: "",
+                            gender: "None",
+                            styles: [],
+                            onboarded: false,
+                            birthday: "",
+                          });
                         }
                       }}
                       className="text-[11px] font-bold text-red-500 hover:underline block"

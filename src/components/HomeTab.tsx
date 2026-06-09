@@ -1,9 +1,23 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import AuthenticatedImage from "@/components/common/AuthenticatedImage";
+import { fetchClothesRecommendations } from "@/api/recommendations";
 import { AlertCircle, Shirt } from "./icons";
 import { Garment } from "@/types/index";
+import { extractApiErrorMessage } from "@/utils/apiError";
+import { resolveClothesDisplayImageUrl } from "@/utils/clothesImageUrl";
+import {
+  mapClothesRecommendationResponseGrouped,
+  type RecommendCardItem,
+  type RecommendCategoryGroup,
+} from "@/utils/recommendationMapper";
+import { matchesUserGender, type UserGender } from "@/utils/genderClothesFilter";
+import MatchAnchorWardrobeScroller from "@/components/MatchAnchorWardrobeScroller";
+import MatchRecommendationByCategory from "@/components/MatchRecommendationByCategory";
 
 interface HomeTabProps {
   clothes: Garment[];
+  userId: number | null;
+  gender: UserGender;
   onAddWishlistItem: (item: {
     name: string;
     category: "Top" | "Bottom" | "Outer" | "Shoes";
@@ -18,17 +32,7 @@ interface HomeTabProps {
 
 type RecommendationLabel = "ootd" | "style" | "similar" | "match" | "aimd";
 
-type RecommendItem = {
-  id: string;
-  title: string;
-  category: "Top" | "Bottom" | "Outer" | "Shoes";
-  style: string;
-  color: string;
-  price: string;
-  matchRate: number;
-  imageUrl: string;
-  reason: string;
-};
+type RecommendItem = RecommendCardItem;
 
 const labelConfig: Record<
   RecommendationLabel,
@@ -55,7 +59,7 @@ const labelConfig: Record<
   },
   match: {
     title: "어울리는 옷 추천",
-    subtitle: "상의에는 하의, 하의에는 상의",
+    subtitle: "",
     icon: "👕",
   },
   aimd: {
@@ -348,14 +352,69 @@ const baseRecommendations: Record<RecommendationLabel, RecommendItem[]> = {
 
 export default function HomeTab({
   clothes,
+  userId,
+  gender,
   insightGlow = false,
   resetSignal = 0,
 }: HomeTabProps) {
   const [activeLabel, setActiveLabel] = useState<RecommendationLabel>("ootd");
   const [showStickyLabels, setShowStickyLabels] = useState(false);
+  const [anchorClothesId, setAnchorClothesId] = useState<string | null>(null);
+  const [matchRecommendationGroups, setMatchRecommendationGroups] = useState<
+    RecommendCategoryGroup[]
+  >([]);
+  const [matchLoading, setMatchLoading] = useState(false);
+  const [matchError, setMatchError] = useState<string | null>(null);
   const labelSectionRef = useRef<HTMLElement | null>(null);
-  const registeredCount = clothes.length;
+  const ownedClothes = useMemo(
+    () => clothes.filter((item) => !item.isWishlist),
+    [clothes],
+  );
+  const registeredCount = ownedClothes.length;
   const hasRecommendationData = registeredCount > 0;
+
+  useEffect(() => {
+    if (!anchorClothesId) return;
+    if (!ownedClothes.some((item) => item.id === anchorClothesId)) {
+      setAnchorClothesId(null);
+    }
+  }, [ownedClothes, anchorClothesId]);
+
+  useEffect(() => {
+    if (activeLabel !== "match" || !userId || !anchorClothesId) {
+      setMatchRecommendationGroups([]);
+      setMatchError(null);
+      setMatchLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setMatchLoading(true);
+    setMatchError(null);
+
+    void (async () => {
+      try {
+        const response = await fetchClothesRecommendations(
+          userId,
+          Number(anchorClothesId),
+        );
+        if (cancelled) return;
+        setMatchRecommendationGroups(
+          mapClothesRecommendationResponseGrouped(response, gender),
+        );
+      } catch (error) {
+        if (cancelled) return;
+        setMatchRecommendationGroups([]);
+        setMatchError(extractApiErrorMessage(error, "어울리는 옷 추천을 불러오지 못했습니다."));
+      } finally {
+        if (!cancelled) setMatchLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeLabel, anchorClothesId, gender, userId]);
 
   const buildRecommendations = (label: RecommendationLabel) => {
     const baseList = baseRecommendations[label];
@@ -412,7 +471,11 @@ export default function HomeTab({
         color: source.color,
         price: `${69 + index * 20},000원`,
         matchRate: 88 + index * 4,
-        imageUrl: source.thumbnailUrl || fallbackImages[category],
+        imageUrl:
+          resolveClothesDisplayImageUrl({
+            userImageUrl: source.userImageUrl,
+            imageUrl: source.be?.imageUrl ?? source.thumbnailUrl,
+          }) || fallbackImages[category],
         reason:
           label === "aimd"
             ? `감각이 MD가 "${source.name}"의 무드와 현재 옷장 구성을 기준으로 추천 이유를 구성했습니다.`
@@ -420,10 +483,25 @@ export default function HomeTab({
       };
     });
 
-    return [...enriched, ...closetBasedItems];
+    return [...enriched, ...closetBasedItems].filter((item) =>
+      matchesUserGender(item.title, gender),
+    );
   };
 
-  const selectedRecommendations = useMemo(() => buildRecommendations(activeLabel), [activeLabel, clothes]);
+  const selectedRecommendations = useMemo(() => {
+    if (activeLabel === "match") return [];
+    return buildRecommendations(activeLabel);
+  }, [activeLabel, clothes, gender]);
+
+  const matchRecommendationCount = useMemo(
+    () => matchRecommendationGroups.reduce((sum, group) => sum + group.items.length, 0),
+    [matchRecommendationGroups],
+  );
+
+  const selectedAnchorGarment = useMemo(
+    () => ownedClothes.find((item) => item.id === anchorClothesId) ?? null,
+    [ownedClothes, anchorClothesId],
+  );
   const activeConfig = labelConfig[activeLabel];
   const labelKeys = Object.keys(labelConfig) as RecommendationLabel[];
 
@@ -532,9 +610,11 @@ export default function HomeTab({
               >
                 <span className="text-xl block mb-2">{config.icon}</span>
                 <strong className="text-xs font-black block leading-tight">{config.title}</strong>
-                <span className={`text-[10px] font-bold block mt-1 ${isActive ? "text-white/75" : "text-slate-400"}`}>
-                  {config.subtitle}
-                </span>
+                {config.subtitle ? (
+                  <span className={`text-[10px] font-bold block mt-1 ${isActive ? "text-white/75" : "text-slate-400"}`}>
+                    {config.subtitle}
+                  </span>
+                ) : null}
               </button>
             );
           })}
@@ -548,11 +628,63 @@ export default function HomeTab({
               {activeConfig.icon} Recommendation
             </span>
             <h2 className="text-xl md:text-2xl font-black text-slate-950 mt-1">{activeConfig.title}</h2>
-            <p className="text-xs text-slate-400 font-bold mt-1">{activeConfig.subtitle}</p>
+            {activeConfig.subtitle ? (
+              <p className="text-xs text-slate-400 font-bold mt-1">{activeConfig.subtitle}</p>
+            ) : null}
           </div>
-          <span className="text-xs font-black text-slate-400 shrink-0">{selectedRecommendations.length}개</span>
+          {activeLabel !== "match" && (
+          <span className="text-xs font-black text-slate-400 shrink-0">
+            {`${selectedRecommendations.length}개`}
+          </span>
+          )}
         </div>
 
+        {activeLabel === "match" && ownedClothes.length > 0 && (
+          <div className="mb-5 space-y-3">
+            <MatchAnchorWardrobeScroller
+              items={ownedClothes}
+              selectedId={anchorClothesId}
+              onSelect={setAnchorClothesId}
+              fallbackImages={fallbackImages}
+            />
+
+            {selectedAnchorGarment && (
+              <p className="text-xs font-bold text-slate-600">
+                <span className="text-[#1E3A8A]">{selectedAnchorGarment.name}</span>
+                {" "}기준 어울리는 옷
+              </p>
+            )}
+
+            {matchLoading && (
+              <p className="text-xs text-slate-400 font-bold">어울리는 옷 추천을 불러오는 중…</p>
+            )}
+            {matchError && (
+              <p className="text-xs text-red-600 font-bold">{matchError}</p>
+            )}
+          </div>
+        )}
+
+        {activeLabel === "match" && !anchorClothesId ? (
+          <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center">
+            <p className="text-sm font-black text-slate-600">위에서 옷을 선택해 주세요</p>
+            <p className="text-xs text-slate-400 font-bold mt-2">
+              선택한 옷과 어울리는 코디가 아래에 표시됩니다.
+            </p>
+          </div>
+        ) : activeLabel === "match" && matchLoading ? (
+          <div className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-10 text-center">
+            <p className="text-sm font-black text-slate-500">추천 코디를 불러오는 중…</p>
+          </div>
+        ) : activeLabel === "match" && matchRecommendationCount === 0 ? (
+          <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center">
+            <p className="text-sm font-black text-slate-600">어울리는 옷을 찾지 못했어요</p>
+            <p className="text-xs text-slate-400 font-bold mt-2">
+              다른 옷을 선택하거나 옷장에 아이템을 더 등록해 보세요.
+            </p>
+          </div>
+        ) : activeLabel === "match" ? (
+          <MatchRecommendationByCategory groups={matchRecommendationGroups} />
+        ) : (
         <div
           className={`grid gap-4 ${
             activeLabel === "ootd" || activeLabel === "aimd"
@@ -563,14 +695,22 @@ export default function HomeTab({
           {selectedRecommendations.map((item) => (
             <article
               key={item.id}
-              className="group rounded-[24px] border border-slate-100 bg-slate-50 overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:rotate-[0.5deg] hover:shadow-xl active:scale-[0.99]"
+              className={`group rounded-[24px] border overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:rotate-[0.5deg] hover:shadow-xl active:scale-[0.99] ${
+                item.isAnchor
+                  ? "border-[#1E3A8A]/30 bg-indigo-50/40 ring-1 ring-[#1E3A8A]/20"
+                  : "border-slate-100 bg-slate-50"
+              }`}
             >
               <div className="h-44 sm:h-52 lg:h-72 bg-slate-100 relative overflow-hidden">
-                <img
+                <AuthenticatedImage
                   src={item.imageUrl}
                   alt={item.title}
                   className="w-full h-full object-cover object-top transition-transform duration-300 group-hover:scale-105"
-                  referrerPolicy="no-referrer"
+                  fallback={
+                    <div className="w-full h-full flex items-center justify-center bg-slate-200 text-slate-400 text-xs font-bold">
+                      이미지 없음
+                    </div>
+                  }
                 />
                 <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/80 via-black/45 to-transparent text-white">
                   <h3 className="text-sm font-black truncate">{item.title}</h3>
@@ -582,6 +722,7 @@ export default function HomeTab({
             </article>
           ))}
         </div>
+        )}
       </section>
     </div>
   );
