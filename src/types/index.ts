@@ -1,3 +1,5 @@
+import type { ClothesGender } from '@/types/be'
+
 // 공통 API 응답 타입
 export interface ApiResponse<T> {
   data: T
@@ -36,6 +38,7 @@ export interface AnatomicalFitGuide {
 export interface GarmentBeMeta {
   categoryCode: string;
   itemTypeCode: string;
+  genderCode: ClothesGender;
   primaryColorCode: string;
   secondaryColorCodes: string[];
   styleCodes: string[];

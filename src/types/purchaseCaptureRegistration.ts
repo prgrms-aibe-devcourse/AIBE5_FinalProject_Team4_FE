@@ -1,4 +1,4 @@
-import type { ClothesInfoSource, ClothesResponse, OwnershipStatus } from '@/types/be'
+import type { ClothesGender, ClothesInfoSource, ClothesResponse, OwnershipStatus } from '@/types/be'
 
 export interface PurchaseCaptureUploadResponse {
   captureId: number
@@ -28,6 +28,7 @@ export interface PurchaseCaptureItemDraft {
   primaryColor: string | null
   secondaryColors: string[]
   styles: string[]
+  gender: ClothesGender | string | null
   optionText: string | null
   suggestedExternalSource: string | null
   imageUrl: string | null
@@ -47,6 +48,7 @@ export interface PurchaseCaptureDraftResponse {
   primaryColor: string | null
   secondaryColors: string[]
   styles: string[]
+  gender?: ClothesGender | string | null
   optionText: string | null
   suggestedExternalSource: string | null
   items: PurchaseCaptureItemDraft[]
@@ -60,6 +62,7 @@ export interface PurchaseCaptureSaveRequest {
   productCode: string
   category: string
   itemType: string
+  gender: ClothesGender
   primaryColor: string
   secondaryColors: string[]
   styles: string[]

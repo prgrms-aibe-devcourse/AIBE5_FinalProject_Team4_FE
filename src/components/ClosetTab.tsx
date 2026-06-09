@@ -23,6 +23,8 @@ import {
 } from "./icons";
 import { Garment } from "@/types/index";
 
+type ClosetTabView = "owned" | "wishlist" | "favorites";
+
 interface ClosetTabProps {
   clothes: Garment[];
   setClothes: React.Dispatch<React.SetStateAction<Garment[]>>;
@@ -41,13 +43,12 @@ export default function ClosetTab({
   userId,
   onOpenRegister,
 }: ClosetTabProps) {
-  const [closetTab, setClosetTab] = useState<"owned" | "wishlist">("owned");
+  const [closetTab, setClosetTab] = useState<ClosetTabView>("owned");
   const [closetFilter, setClosetFilter] = useState<string>("All");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [wardrobeStats, setWardrobeStats] = useState<WardrobeStatisticsResponse | null>(null);
-  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const selectedRef = useRef<Garment | null>(null);
 
   useEffect(() => {
@@ -72,7 +73,7 @@ export default function ClosetTab({
 
   useEffect(() => {
     skipStatsRefreshRef.current = true;
-  }, [userId, showFavoritesOnly]);
+  }, [userId]);
 
   const loadWardrobe = useCallback(async () => {
     setLoading(true);
@@ -80,7 +81,7 @@ export default function ClosetTab({
     try {
       const [stats, garmentsResult] = await Promise.all([
         fetchWardrobeStatistics(userId),
-        fetchWardrobeGarments(userId, { favoritesOnly: showFavoritesOnly }),
+        fetchWardrobeGarments(userId),
       ]);
       setWardrobeStats(stats);
 
@@ -112,7 +113,7 @@ export default function ClosetTab({
     } finally {
       setLoading(false);
     }
-  }, [userId, setClothes, setSelectedGarment, showFavoritesOnly, triggerToast]);
+  }, [userId, setClothes, setSelectedGarment, triggerToast]);
 
   useEffect(() => {
     loadWardrobe();
@@ -154,14 +155,20 @@ export default function ClosetTab({
   // Helper values
   const ownedList = useMemo(() => clothes.filter(c => !c.isWishlist), [clothes]);
   const wishlistList = useMemo(() => clothes.filter(c => c.isWishlist), [clothes]);
-  const favoritesCount = useMemo(() => clothes.filter(c => c.isFavorite).length, [clothes]);
+  const favoritesList = useMemo(() => clothes.filter(c => c.isFavorite), [clothes]);
+  const favoritesCount = favoritesList.length;
 
   // Filtered list
   const filteredClothes = useMemo(() => {
-    const list = closetTab === "owned" ? ownedList : wishlistList;
+    const list =
+      closetTab === "owned"
+        ? ownedList
+        : closetTab === "wishlist"
+          ? wishlistList
+          : favoritesList;
     if (closetFilter === "All") return list;
     return list.filter(item => item.category === closetFilter);
-  }, [closetTab, closetFilter, ownedList, wishlistList]);
+  }, [closetTab, closetFilter, ownedList, wishlistList, favoritesList]);
 
   // Categories count for dynamic charts or labels
   const categoriesCount = useMemo(() => {
@@ -282,39 +289,39 @@ export default function ClosetTab({
               <Flame className="w-3.5 h-3.5" />
               <span>SMART fashion collections</span>
             </div>
-            <h1 className="text-2xl md:text-3xl font-black text-slate-910 text-slate-900 tracking-tight leading-none">
+            <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight leading-tight">
               내 스마트 옷장 컬렉션
             </h1>
           </div>
 
           {/* Core Mini Smart Stats counter grid */}
-          <div className="grid grid-cols-3 gap-2 max-w-sm pt-2">
-            <div className="bg-white/80 p-2.5 rounded-2xl border border-white/40 text-left space-y-0.5">
-              <span className="text-[9px] text-slate-400 font-extrabold block uppercase leading-none">보유중</span>
-              <span className="text-sm font-black text-[#1E3A8A] block">{ownedList.length}벌</span>
+          <div className="grid grid-cols-3 gap-2.5 max-w-md pt-1">
+            <div className="bg-white/85 p-3 rounded-2xl border border-white/40 text-left space-y-0.5">
+              <span className="text-[10px] md:text-[11px] text-slate-500 font-extrabold block leading-none">보유 옷</span>
+              <span className="text-lg md:text-xl font-black text-[#1E3A8A] block tabular-nums">{ownedList.length}벌</span>
             </div>
-            <div className="bg-white/80 p-2.5 rounded-2xl border border-white/40 text-left space-y-0.5">
-              <span className="text-[9px] text-slate-400 font-extrabold block uppercase leading-none">위시리스트</span>
-              <span className="text-sm font-black text-orange-650 block">{wishlistList.length}벌</span>
+            <div className="bg-white/85 p-3 rounded-2xl border border-white/40 text-left space-y-0.5">
+              <span className="text-[10px] md:text-[11px] text-slate-500 font-extrabold block leading-none">미보유 옷</span>
+              <span className="text-lg md:text-xl font-black text-orange-600 block tabular-nums">{wishlistList.length}벌</span>
             </div>
-            <div className="bg-white/80 p-2.5 rounded-2xl border border-white/40 text-left space-y-0.5">
-              <span className="text-[9px] text-slate-400 font-extrabold block uppercase leading-none">즐겨찾기</span>
-              <span className="text-sm font-black text-rose-600 block">{favoritesCount}벌</span>
+            <div className="bg-white/85 p-3 rounded-2xl border border-white/40 text-left space-y-0.5">
+              <span className="text-[10px] md:text-[11px] text-slate-500 font-extrabold block leading-none">즐겨찾기</span>
+              <span className="text-lg md:text-xl font-black text-rose-600 block tabular-nums">{favoritesCount}벌</span>
             </div>
           </div>
         </div>
 
         {/* Right Mascot column: Cute animated sliding wardrobe or cabinet illustration */}
-        <div className="relative shrink-0 w-32 h-36 flex items-center justify-center select-none">
+        <div className="relative shrink-0 w-36 h-40 md:w-40 md:h-44 flex items-center justify-center select-none">
           {/* Animated hanging star sticker above wardrobe */}
-          <div className="absolute -top-3 right-0 w-10 h-10 animate-bounce">
+          <div className="absolute -top-2 right-0 w-10 h-10 animate-bounce">
             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full text-amber-300">
               <path d="M12 2 L15 9 L22 10 L17 15 L18 22 L12 18 L6 22 L7 15 L2 10 L9 9 Z" fill="#FFF3A5" stroke="#334155" strokeWidth="1.5" strokeLinejoin="round"/>
             </svg>
           </div>
 
           {/* Cute Wardrobe Mascot */}
-          <svg className="w-24 h-28 drop-shadow-md" viewBox="0 0 100 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <svg className="w-28 h-32 md:w-32 md:h-36 drop-shadow-md" viewBox="0 0 100 120" fill="none" xmlns="http://www.w3.org/2000/svg">
             {/* Wardrobe frame/body */}
             <rect x="15" y="10" width="70" height="100" rx="10" fill="#FFF" stroke="#334155" strokeWidth="2.5" />
             <line x1="50" y1="10" x2="50" y2="100" stroke="#334155" strokeWidth="2" strokeDasharray="3 3" />
@@ -340,78 +347,79 @@ export default function ClosetTab({
       {/* ========================================================================= */}
       {/* 2–4. 컬렉션 + 오른쪽(스타일 통계 · 상세) */}
       {/* ========================================================================= */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-x-6 gap-y-4 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-x-6 gap-y-4 items-start">
         {/* Left: 탭 · 필터 · 컬렉션 */}
-        <div className="lg:col-span-2 space-y-4 text-left order-2 lg:order-1">
-      {/* TAB TOGGLER (OWNED vs WISHLIST) */}
-      <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1.5 rounded-2xl select-none max-w-md mx-auto md:mx-0">
+        <div className="lg:col-span-3 space-y-4 text-left order-2 lg:order-1">
+      {/* TAB + 즐겨찾기 (한 줄) */}
+      <div className="grid grid-cols-3 gap-2 bg-slate-100 p-1.5 rounded-2xl select-none w-full">
         <button
           onClick={() => {
             setClosetTab("owned");
             setSelectedGarment(null);
           }}
-          className={`py-3 rounded-xl text-xs font-black tracking-tight transition-all duration-300 flex items-center justify-center space-x-2 cursor-pointer ${
+          className={`py-2.5 px-2 rounded-xl text-xs font-black tracking-tight transition-all duration-300 flex items-center justify-center gap-1.5 cursor-pointer min-w-0 ${
             closetTab === "owned"
-              ? "bg-white text-[#1E3A8A] shadow-sm scale-101 border border-slate-200/50"
+              ? "bg-white text-[#1E3A8A] shadow-sm border border-slate-200/50"
               : "text-slate-500 hover:text-slate-850"
           }`}
         >
-          <Award className={`w-4 h-4 ${closetTab === "owned" ? "text-emerald-500" : "text-slate-400"}`} />
-          <span>보유 의상 ({ownedList.length})</span>
+          <Award className={`w-4 h-4 shrink-0 ${closetTab === "owned" ? "text-emerald-500" : "text-slate-400"}`} />
+          <span className="truncate">보유 의상 ({ownedList.length})</span>
         </button>
-        
+
         <button
           onClick={() => {
             setClosetTab("wishlist");
             setSelectedGarment(null);
           }}
-          className={`py-3 rounded-xl text-xs font-black tracking-tight transition-all duration-300 flex items-center justify-center space-x-2 cursor-pointer ${
+          className={`py-2.5 px-2 rounded-xl text-xs font-black tracking-tight transition-all duration-300 flex items-center justify-center gap-1.5 cursor-pointer min-w-0 ${
             closetTab === "wishlist"
-              ? "bg-white text-[#1E3A8A] shadow-sm scale-101 border border-slate-200/50"
+              ? "bg-white text-[#1E3A8A] shadow-sm border border-slate-200/50"
               : "text-slate-500 hover:text-slate-850"
           }`}
         >
-          <ShoppingBag className={`w-4 h-4 ${closetTab === "wishlist" ? "text-orange-500 font-black animate-pulse" : "text-slate-400"}`} />
-          <span>위시리스트 ({wishlistList.length})</span>
+          <ShoppingBag className={`w-4 h-4 shrink-0 ${closetTab === "wishlist" ? "text-orange-500" : "text-slate-400"}`} />
+          <span className="truncate">위시리스트 ({wishlistList.length})</span>
         </button>
-      </div>
 
-      {/* FILTER: FAVORITES + CATEGORIES */}
-      <div className="flex flex-wrap gap-2 items-center">
         <button
           type="button"
-          onClick={() => setShowFavoritesOnly((v) => !v)}
-          className={`px-4 py-2 rounded-full text-xs font-black border cursor-pointer ${
-            showFavoritesOnly
-              ? "bg-rose-500 text-white border-rose-500"
-              : "bg-white text-slate-500 border-slate-200"
+          onClick={() => {
+            setClosetTab("favorites");
+            setSelectedGarment(null);
+          }}
+          className={`py-2.5 px-2 rounded-xl text-xs font-black tracking-tight transition-all duration-300 flex items-center justify-center gap-1.5 cursor-pointer min-w-0 ${
+            closetTab === "favorites"
+              ? "bg-white text-[#1E3A8A] shadow-sm border border-slate-200/50"
+              : "text-slate-500 hover:text-slate-850"
           }`}
         >
-          ❤️ 즐겨찾기만
+          <Heart className={`w-4 h-4 shrink-0 ${closetTab === "favorites" ? "fill-rose-500 text-rose-500" : "text-slate-400"}`} />
+          <span className="truncate">즐겨찾기 ({favoritesCount})</span>
         </button>
       </div>
 
-      <div className="flex space-x-2 overflow-x-auto pb-1.5 scrollbar-none select-none text-left">
+      <div className="grid grid-cols-5 gap-2 w-full select-none text-left">
         {["All", "Top", "Bottom", "Outer", "Shoes"].map((cat) => {
           const isSelected = closetFilter === cat;
           return (
             <button
               key={cat}
               onClick={() => setClosetFilter(cat)}
-              className={`px-4.5 py-2.5 rounded-full text-xs font-bold whitespace-nowrap transition-all duration-200 border cursor-pointer flex items-center space-x-1.5 ${
+              className={`w-full min-w-0 px-2 py-2.5 rounded-full text-[11px] sm:text-xs font-bold transition-all duration-200 border cursor-pointer flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 ${
                 isSelected
-                  ? "bg-[#1E3A8A] text-white border-transparent shadow-xs scale-102"
+                  ? "bg-[#1E3A8A] text-white border-transparent shadow-xs"
                   : "bg-white text-slate-500 border-slate-200 hover:border-slate-350"
               }`}
             >
-              <span className="text-[14px]">
+              <span className="text-sm leading-none">
                 {cat === "All" && "📂"}
                 {cat === "Top" && "👕"}
                 {cat === "Bottom" && "👖"}
                 {cat === "Outer" && "🧥"}
                 {cat === "Shoes" && "👟"}
               </span>
-              <span>
+              <span className="truncate max-w-full text-center">
                 {cat === "All" && "전체"}
                 {cat === "Top" && `상의 (${categoriesCount.Top})`}
                 {cat === "Bottom" && `하의 (${categoriesCount.Bottom})`}
@@ -425,7 +433,13 @@ export default function ClosetTab({
 
           <div className="flex justify-between items-center select-none pb-1.5">
             <h2 className="text-lg font-black text-slate-900 tracking-tight flex items-center space-x-2">
-              <span>{closetTab === "owned" ? "보유 컬렉션 목록" : "스마트 위시 보드"}</span>
+              <span>
+                {closetTab === "owned"
+                  ? "보유 컬렉션 목록"
+                  : closetTab === "wishlist"
+                    ? "스마트 위시 보드"
+                    : "즐겨찾기 컬렉션"}
+              </span>
               <span className="text-slate-400 font-normal text-xs">({filteredClothes.length}개 발견됨)</span>
             </h2>
           </div>
@@ -445,7 +459,7 @@ export default function ClosetTab({
                 <div
                   key={item.id}
                   onClick={() => setSelectedGarment(item)}
-                  className={`bg-gradient-to-tr ${cardBg} rounded-[24px] border-2 transition-all duration-300 relative p-4 text-left cursor-pointer group hover:scale-101 ${
+                  className={`aspect-square bg-gradient-to-tr ${cardBg} rounded-[24px] border-2 transition-all duration-300 relative p-3 text-left cursor-pointer group hover:scale-101 flex flex-col overflow-hidden ${
                     isSelected 
                       ? "border-[#1E3A8A] ring-4 ring-[#1E3A8A]/10 shadow-md" 
                       : "border-slate-100 hover:border-slate-300 shadow-3xs"
@@ -453,7 +467,7 @@ export default function ClosetTab({
                 >
                   
                   {/* Absolute category badge hanger icon floating left */}
-                  <div className="absolute top-3 left-3 bg-white/95 px-2 py-1 rounded-lg border border-slate-150/40 text-[9px] font-extrabold text-slate-500 font-mono tracking-tight shadow-3xs z-5 flex items-center gap-1">
+                  <div className="absolute top-2 left-2 bg-white/95 px-2 py-1 rounded-lg border border-slate-150/40 text-[9px] font-extrabold text-slate-500 font-mono tracking-tight shadow-3xs z-5 flex items-center gap-1">
                     <span>
                       {item.category === "Top" && "👕"}
                       {item.category === "Bottom" && "👖"}
@@ -466,19 +480,19 @@ export default function ClosetTab({
                   {/* Top Heart favorite picker button */}
                   <button
                     onClick={(e) => toggleFavorite(item.id, e)}
-                    className="absolute top-3 right-3 p-1.5 rounded-full bg-white/95 hover:bg-white text-rose-500 border border-slate-100 shadow-3xs transition-transform duration-200 active:scale-90 cursor-pointer z-5 hover:rotate-3"
+                    className="absolute top-2 right-2 p-1.5 rounded-full bg-white/95 hover:bg-white text-rose-500 border border-slate-100 shadow-3xs transition-transform duration-200 active:scale-90 cursor-pointer z-5 hover:rotate-3"
                     title="즐겨찾기"
                   >
                     <Heart className={`w-3.5 h-3.5 transition-colors ${item.isFavorite ? "fill-rose-500 text-rose-500" : "text-slate-350"}`} />
                   </button>
 
                   {/* Apparel Display visual slot */}
-                  <div className="w-full h-32 bg-[#F8FAFC]/55 rounded-2xl mb-3 mt-4 flex items-center justify-center overflow-hidden border border-slate-50 relative select-none">
+                  <div className="flex-1 min-h-0 mt-5 bg-[#F8FAFC]/55 rounded-2xl flex items-center justify-center overflow-hidden border border-slate-50 relative select-none">
                     {item.thumbnailUrl ? (
                       <AuthenticatedImage
                         src={item.thumbnailUrl}
                         alt={item.name}
-                        className="w-full h-full object-contain p-1 transition-transform duration-500 group-hover:scale-103"
+                        className="w-full h-full object-contain p-2 transition-transform duration-500 group-hover:scale-105"
                         fallback={
                           <span className="text-4xl filter drop-shadow-sm select-none">👚</span>
                         }
@@ -496,12 +510,12 @@ export default function ClosetTab({
                   </div>
 
                   {/* Descriptions texts */}
-                  <div className="space-y-1">
-                    <h4 className="text-[12px] font-black text-slate-800 tracking-tight leading-snug line-clamp-1 group-hover:text-[#1E3A8A] transition">{item.name}</h4>
+                  <div className="shrink-0 pt-2 space-y-1">
+                    <h4 className="text-[12px] sm:text-[13px] font-black text-slate-800 tracking-tight leading-snug line-clamp-1 group-hover:text-[#1E3A8A] transition">{item.name}</h4>
                     
-                    <div className="flex items-center gap-1 flex-wrap text-[10px] text-slate-400 font-bold select-none pt-0.5">
+                    <div className="flex items-center gap-1 flex-wrap text-[9px] text-slate-400 font-bold select-none">
                       <span className="bg-slate-100 hover:bg-slate-200/60 px-1.5 py-0.5 rounded-md text-slate-500 transition">{item.color}</span>
-                      <span className="bg-slate-100 hover:bg-slate-200/60 px-1.5 py-0.5 rounded-md text-slate-500 transition line-clamp-1 truncate max-w-[80px]">{item.fitType}</span>
+                      <span className="bg-slate-100 hover:bg-slate-200/60 px-1.5 py-0.5 rounded-md text-slate-500 transition line-clamp-1 truncate max-w-[72px]">{item.fitType}</span>
                     </div>
 
                     {/* Specialized wishlist Promotion button */}
@@ -511,10 +525,10 @@ export default function ClosetTab({
                           e.stopPropagation();
                           handlePromoteToOwned(item);
                         }}
-                        className="w-full mt-3 h-8.5 text-[10.5px] font-black rounded-xl bg-orange-100 text-orange-900 border border-orange-250 hover:bg-orange-200 transition-all duration-200 flex items-center justify-center space-x-1 shadow-3xs cursor-pointer focus:ring-2 focus:ring-orange-300 active:scale-95"
+                        className="w-full mt-1 h-7 text-[9px] font-black rounded-lg bg-orange-100 text-orange-900 border border-orange-250 hover:bg-orange-200 transition-all duration-200 flex items-center justify-center space-x-1 shadow-3xs cursor-pointer focus:ring-2 focus:ring-orange-300 active:scale-95"
                       >
-                        <HeartHandshake className="w-3.5 h-3.5 text-orange-700 animate-pulse" />
-                        <span>장만완료 ➔ 옷장입고!</span>
+                        <HeartHandshake className="w-3 h-3 text-orange-700 animate-pulse" />
+                        <span>옷장입고</span>
                       </button>
                     )}
                   </div>
@@ -537,31 +551,31 @@ export default function ClosetTab({
         </div>
 
         {/* Right: 스타일 통계(상단) + 의상 상세 */}
-        <aside className="lg:col-span-1 space-y-4 order-1 lg:order-2 lg:sticky lg:top-4 self-start">
+        <aside className="lg:col-span-2 space-y-4 order-1 lg:order-2 lg:sticky lg:top-4 self-start">
           <div className="bg-white rounded-[24px] border border-slate-100 p-5 shadow-2xs text-left space-y-3">
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-2 min-w-0">
-                <h3 className="text-base font-black text-slate-800 tracking-tight">
+                <h3 className="text-lg font-black text-slate-800 tracking-tight">
                   옷 스타일 통계
                 </h3>
-                <span className="shrink-0 text-[10px] font-black px-2.5 py-0.5 rounded-full bg-[#1E3A8A] text-[#BBF7D0]">
+                <span className="shrink-0 text-xs font-black px-2.5 py-0.5 rounded-full bg-[#1E3A8A] text-[#BBF7D0]">
                   TOP {STYLE_STATS_TOP_N}
                 </span>
               </div>
-              <span className="text-[11px] text-slate-400 font-bold shrink-0">
+              <span className="text-sm text-slate-500 font-bold shrink-0">
                 보유 {ownedList.length}벌 기준
               </span>
             </div>
 
             {topStyleStats.length > 0 ? (
-              <div className="space-y-2.5">
+              <div className="space-y-3">
                 {topStyleStats.map((style) => (
-                  <div key={style.code} className="space-y-1">
-                    <div className="flex items-center justify-between text-xs font-bold gap-2">
+                  <div key={style.code} className="space-y-1.5">
+                    <div className="flex items-center justify-between text-sm font-bold gap-2">
                       <span className="text-slate-600 truncate">{style.label}</span>
                       <span className="text-emerald-600 tabular-nums shrink-0">{style.weight}%</span>
                     </div>
-                    <div className="h-2 rounded-full bg-slate-200 overflow-hidden">
+                    <div className="h-2.5 rounded-full bg-slate-200 overflow-hidden">
                       <div
                         className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-[#BBF7D0] transition-all duration-500"
                         style={{ width: `${Math.min(style.weight, 100)}%` }}
@@ -571,7 +585,7 @@ export default function ClosetTab({
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-slate-400 leading-relaxed py-2">
+              <p className="text-sm text-slate-500 leading-relaxed py-2">
                 보유 옷을 등록하면 내 옷장 스타일 비율이 여기에 표시됩니다.
               </p>
             )}

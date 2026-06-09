@@ -1,4 +1,5 @@
-import type { ClothesResponse, ClothesInfoSource } from '@/types/be'
+import { resolveClothesGender } from '@/data/garmentGender'
+import type { ClothesGender, ClothesInfoSource, ClothesResponse } from '@/types/be'
 import type { Garment, GarmentBeMeta } from '@/types'
 import {
   BE_CATEGORY_TO_UI,
@@ -6,16 +7,18 @@ import {
 } from '@/data/categoryItemTypes'
 import { getGarmentColorLabel } from '@/data/garmentColors'
 import { getGarmentStyleLabel } from '@/data/garmentStyles'
+import { resolveClothesDisplayImageUrl } from '@/utils/clothesImageUrl'
 
 function extractBeMeta(item: ClothesResponse): GarmentBeMeta {
   return {
     categoryCode: item.category,
     itemTypeCode: item.itemType,
+    genderCode: resolveClothesGender(item.gender),
     primaryColorCode: item.primaryColor ?? item.primaryColorDisplay?.code ?? 'WHITE',
     secondaryColorCodes: (item.secondaryColors ?? []).map((c) => c.code),
     styleCodes: (item.styles ?? []).map((s) => s.code),
     brandName: item.brandName,
-    imageUrl: item.userImageUrl ?? item.imageUrl,
+    imageUrl: item.imageUrl,
     isVerified: item.isVerified ?? false,
     clothesInfoSource: item.clothesInfoSource,
     registrationSource: item.registrationSource ?? null,
@@ -38,7 +41,7 @@ export function mapClothesToGarment(item: ClothesResponse): Garment {
       getGarmentStyleLabel(primaryStyle?.code ?? ''),
     fitType: getItemTypeLabel(category, item.itemType),
     fabricMaterial: item.brandName || '—',
-    thumbnailUrl: (item.userImageUrl ?? item.imageUrl) || undefined,
+    thumbnailUrl: resolveClothesDisplayImageUrl(item),
     isFavorite: item.isFavorite ?? false,
     isWishlist: item.ownershipStatus === 'WISHLIST',
     productCode: item.productCode,
@@ -60,6 +63,7 @@ export interface ClothesUpdatePayload {
   imageUrl: string
   category: string
   itemType: string
+  gender: ClothesGender
   primaryColor: string
   secondaryColors: string[]
   styles: string[]
@@ -86,6 +90,7 @@ export function buildClothesUpdatePayload(
     productCode?: string
     category?: string
     itemType?: string
+    gender?: ClothesGender
     primaryColor?: string
     secondaryColors?: string[]
     styles?: string[]
@@ -109,9 +114,13 @@ export function buildClothesUpdatePayload(
     name: edits.name ?? garment.name,
     brandName: (edits.brandName ?? be.brandName).trim() || '미입력',
     productCode: edits.productCode ?? garment.productCode ?? 'UNKNOWN',
-    imageUrl: edits.imageUrl ?? garment.userImageUrl ?? be.imageUrl,
+    imageUrl: edits.imageUrl ?? resolveClothesDisplayImageUrl({
+      userImageUrl: garment.userImageUrl,
+      imageUrl: be.imageUrl,
+    }) ?? be.imageUrl,
     category: edits.category ?? be.categoryCode,
     itemType: edits.itemType ?? be.itemTypeCode,
+    gender: edits.gender ?? be.genderCode,
     primaryColor: edits.primaryColor ?? be.primaryColorCode,
     secondaryColors,
     styles,
