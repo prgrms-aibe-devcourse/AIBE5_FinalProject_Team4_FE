@@ -3,6 +3,24 @@
 
 @theme {
   --font-sans: 'Nunito', 'Gowun Dodum', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --animate-fade-in: fade-in 0.2s ease-out;
+  --animate-modal-in: modal-in 0.25s ease-out;
+
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  @keyframes modal-in {
+    from {
+      opacity: 0;
+      transform: translateY(-16px) scale(0.97);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
 }
 
 @layer base {
