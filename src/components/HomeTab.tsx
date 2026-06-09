@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import AuthenticatedImage from "@/components/common/AuthenticatedImage";
-import { fetchClothesRecommendations } from "@/api/recommendations";
+import { fetchClothesRecommendations, DEFAULT_RECOMMENDATIONS_PER_CATEGORY } from "@/api/recommendations";
 import { AlertCircle, Shirt } from "./icons";
 import { Garment } from "@/types/index";
 import { extractApiErrorMessage } from "@/utils/apiError";
@@ -397,6 +397,7 @@ export default function HomeTab({
         const response = await fetchClothesRecommendations(
           userId,
           Number(anchorClothesId),
+          { limitPerCategory: DEFAULT_RECOMMENDATIONS_PER_CATEGORY },
         );
         if (cancelled) return;
         setMatchRecommendationGroups(

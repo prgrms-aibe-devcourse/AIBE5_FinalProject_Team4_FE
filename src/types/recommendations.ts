@@ -18,7 +18,7 @@ export interface RecommendationAnchorItem {
   primaryColorDisplay: RecommendationColorInfo | null
 }
 
-/** GET .../recommendations — recommendations 맵 값 (옷장·외부 후보 모두) */
+/** GET .../recommendations — recommendations 맵 값 (외부 쇼핑 상품 후보) */
 export interface RecommendedClothesItem {
   clothesId: number
   wardrobeClothesId: number | null

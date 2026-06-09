@@ -177,7 +177,7 @@ API를 호출하는 화면은 아래 상태를 구분합니다.
 | 외부 상품 | GET | `/api/naver/search` | 네이버쇼핑 상품 검색 |
 | 외부 상품 | POST | `/api/v1/external/clothes/naver` | 외부 상품을 옷 정보로 저장 |
 | 추천 | GET | `/api/v1/users/{userId}/clothes/{clothesId}/similar-products` | 유사 상품 추천 표시 |
-| 추천 | GET | `/api/v1/users/{userId}/clothes/{clothesId}/recommendations` | 보유 옷 기준 추천 표시 |
+| 추천 | GET | `/api/v1/users/{userId}/clothes/{clothesId}/recommendations` | 옷장 기반 어울리는 옷 추천 표시 |
 | 날씨 | GET | `/api/weather` | 날씨 기반 안내 또는 추천 보조 정보 표시 |
 | 코디북 | GET | `/api/v1/outfit-books` | 코디북 목록 표시 |
 | 코디북 | POST | `/api/v1/outfit-books` | 코디북 생성 |

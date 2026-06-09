@@ -95,7 +95,7 @@ function mapAnchorToCard(anchor: RecommendationAnchorItem): RecommendCardItem | 
   }
 }
 
-/** anchor + recommendations 맵 전체를 카드 목록으로 변환 (wardrobeClothesId로 필터하지 않음) */
+/** anchor + recommendations 맵을 카드 목록으로 변환 (외부 상품 후보) */
 export function mapClothesRecommendationResponse(
   response: ClothesRecommendationResponse,
   gender: UserGender = 'None',
