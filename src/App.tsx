@@ -30,6 +30,7 @@ import LoginPage from "@/pages/LoginPage";
 import OnboardingPage from "@/pages/OnboardingPage";
 import { useChat } from "@/hooks/useChat";
 import { useCloset } from "@/hooks/useCloset";
+import { useWardrobeLoader } from "@/hooks/useWardrobeLoader";
 import {
   clearUserProfile,
   loadUserProfile,
@@ -95,6 +96,14 @@ export default function App() {
     openGarmentRegister,
     closeGarmentRegisterMethod,
   } = useCloset();
+
+  const { wardrobeLoading } = useWardrobeLoader({
+    userId: authUserId,
+    enabled: authReady && authUserId != null && profile.onboarded,
+    selectedGarment,
+    setClothes,
+    setSelectedGarment,
+  });
 
   // Navigation state: 'home' | 'closet' | 'feed' | 'profile'
   const [currentTab, setCurrentTab] = useState<"home" | "closet" | "feed" | "profile">("home");
@@ -283,6 +292,7 @@ export default function App() {
                   clothes={clothes}
                   userId={authUserId}
                   gender={profile.gender}
+                  wardrobeLoading={wardrobeLoading}
                   onAddWishlistItem={handleAddWishlistItem}
                   nickname={profile.nickname}
                   resetSignal={homeResetSignal}

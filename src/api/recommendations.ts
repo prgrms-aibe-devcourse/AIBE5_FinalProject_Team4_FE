@@ -30,6 +30,10 @@ export async function fetchClothesRecommendations(
   clothesId: number,
   options?: FetchClothesRecommendationsOptions,
 ): Promise<ClothesRecommendationResponse> {
+  if (!Number.isSafeInteger(clothesId) || clothesId <= 0) {
+    throw new Error('유효하지 않은 clothesId입니다.')
+  }
+
   const limitPerCategory = clampLimitPerCategory(
     options?.limitPerCategory ?? DEFAULT_RECOMMENDATIONS_PER_CATEGORY,
   )

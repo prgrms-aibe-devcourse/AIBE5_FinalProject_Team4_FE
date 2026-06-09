@@ -11,6 +11,7 @@ import {
   type RecommendCategoryGroup,
 } from "@/utils/recommendationMapper";
 import { matchesUserGender, type UserGender } from "@/utils/genderClothesFilter";
+import { parseBeClothesId } from "@/utils/beClothesId";
 import MatchAnchorWardrobeScroller from "@/components/MatchAnchorWardrobeScroller";
 import MatchRecommendationByCategory from "@/components/MatchRecommendationByCategory";
 
@@ -18,6 +19,7 @@ interface HomeTabProps {
   clothes: Garment[];
   userId: number | null;
   gender: UserGender;
+  wardrobeLoading?: boolean;
   onAddWishlistItem: (item: {
     name: string;
     category: "Top" | "Bottom" | "Outer" | "Shoes";
@@ -354,6 +356,7 @@ export default function HomeTab({
   clothes,
   userId,
   gender,
+  wardrobeLoading = false,
   insightGlow = false,
   resetSignal = 0,
 }: HomeTabProps) {
@@ -370,18 +373,26 @@ export default function HomeTab({
     () => clothes.filter((item) => !item.isWishlist),
     [clothes],
   );
+  const matchEligibleOwnedClothes = useMemo(
+    () => ownedClothes.filter((item) => parseBeClothesId(item.id) != null),
+    [ownedClothes],
+  );
+  const anchorClothesIdNumeric = useMemo(
+    () => (anchorClothesId ? parseBeClothesId(anchorClothesId) : null),
+    [anchorClothesId],
+  );
   const registeredCount = ownedClothes.length;
   const hasRecommendationData = registeredCount > 0;
 
   useEffect(() => {
     if (!anchorClothesId) return;
-    if (!ownedClothes.some((item) => item.id === anchorClothesId)) {
+    if (!matchEligibleOwnedClothes.some((item) => item.id === anchorClothesId)) {
       setAnchorClothesId(null);
     }
-  }, [ownedClothes, anchorClothesId]);
+  }, [matchEligibleOwnedClothes, anchorClothesId]);
 
   useEffect(() => {
-    if (activeLabel !== "match" || !userId || !anchorClothesId) {
+    if (activeLabel !== "match" || !userId || anchorClothesIdNumeric == null) {
       setMatchRecommendationGroups([]);
       setMatchError(null);
       setMatchLoading(false);
@@ -396,7 +407,7 @@ export default function HomeTab({
       try {
         const response = await fetchClothesRecommendations(
           userId,
-          Number(anchorClothesId),
+          anchorClothesIdNumeric,
           { limitPerCategory: DEFAULT_RECOMMENDATIONS_PER_CATEGORY },
         );
         if (cancelled) return;
@@ -415,7 +426,7 @@ export default function HomeTab({
     return () => {
       cancelled = true;
     };
-  }, [activeLabel, anchorClothesId, gender, userId]);
+  }, [activeLabel, anchorClothesIdNumeric, gender, userId]);
 
   const buildRecommendations = (label: RecommendationLabel) => {
     const baseList = baseRecommendations[label];
@@ -500,8 +511,8 @@ export default function HomeTab({
   );
 
   const selectedAnchorGarment = useMemo(
-    () => ownedClothes.find((item) => item.id === anchorClothesId) ?? null,
-    [ownedClothes, anchorClothesId],
+    () => matchEligibleOwnedClothes.find((item) => item.id === anchorClothesId) ?? null,
+    [matchEligibleOwnedClothes, anchorClothesId],
   );
   const activeConfig = labelConfig[activeLabel];
   const labelKeys = Object.keys(labelConfig) as RecommendationLabel[];
@@ -640,10 +651,25 @@ export default function HomeTab({
           )}
         </div>
 
-        {activeLabel === "match" && ownedClothes.length > 0 && (
+        {activeLabel === "match" && wardrobeLoading && matchEligibleOwnedClothes.length === 0 && (
+          <div className="mb-5 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-10 text-center">
+            <p className="text-sm font-black text-slate-500">옷장 데이터를 불러오는 중…</p>
+          </div>
+        )}
+
+        {activeLabel === "match" && !wardrobeLoading && matchEligibleOwnedClothes.length === 0 && (
+          <div className="mb-5 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center">
+            <p className="text-sm font-black text-slate-600">보유 옷을 등록하면 어울리는 옷 추천을 받을 수 있어요</p>
+            <p className="text-xs text-slate-400 font-bold mt-2">
+              옷장 탭에서 사진·구매내역 등록 후 다시 시도해 주세요.
+            </p>
+          </div>
+        )}
+
+        {activeLabel === "match" && matchEligibleOwnedClothes.length > 0 && (
           <div className="mb-5 space-y-3">
             <MatchAnchorWardrobeScroller
-              items={ownedClothes}
+              items={matchEligibleOwnedClothes}
               selectedId={anchorClothesId}
               onSelect={setAnchorClothesId}
               fallbackImages={fallbackImages}
@@ -665,25 +691,25 @@ export default function HomeTab({
           </div>
         )}
 
-        {activeLabel === "match" && !anchorClothesId ? (
+        {activeLabel === "match" && matchEligibleOwnedClothes.length > 0 && !anchorClothesId ? (
           <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center">
             <p className="text-sm font-black text-slate-600">위에서 옷을 선택해 주세요</p>
             <p className="text-xs text-slate-400 font-bold mt-2">
               선택한 옷과 어울리는 코디가 아래에 표시됩니다.
             </p>
           </div>
-        ) : activeLabel === "match" && matchLoading ? (
+        ) : activeLabel === "match" && matchEligibleOwnedClothes.length > 0 && matchLoading ? (
           <div className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-10 text-center">
             <p className="text-sm font-black text-slate-500">추천 코디를 불러오는 중…</p>
           </div>
-        ) : activeLabel === "match" && matchRecommendationCount === 0 ? (
+        ) : activeLabel === "match" && matchEligibleOwnedClothes.length > 0 && matchRecommendationCount === 0 ? (
           <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center">
             <p className="text-sm font-black text-slate-600">어울리는 옷을 찾지 못했어요</p>
             <p className="text-xs text-slate-400 font-bold mt-2">
               다른 옷을 선택하거나 옷장에 아이템을 더 등록해 보세요.
             </p>
           </div>
-        ) : activeLabel === "match" ? (
+        ) : activeLabel === "match" && matchEligibleOwnedClothes.length > 0 ? (
           <MatchRecommendationByCategory groups={matchRecommendationGroups} />
         ) : (
         <div
