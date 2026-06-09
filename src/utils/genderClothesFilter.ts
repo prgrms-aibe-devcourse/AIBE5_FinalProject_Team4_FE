@@ -1,4 +1,4 @@
-import { resolveClothesGender, type ClothesGender } from '@/data/garmentGender'
+import { isClothesGender, type ClothesGender } from '@/data/garmentGender'
 import type { UserProfile } from '@/types'
 
 export type UserGender = UserProfile['gender']
@@ -112,7 +112,7 @@ export function matchesUserGender(name: string, gender: UserGender): boolean {
   return true
 }
 
-/** CLOTHES.gender(enum) 기준 필터. 값이 없으면 상품명 휴리스틱으로 fallback. */
+/** CLOTHES.gender(enum) 기준 필터. enum이 없으면 상품명 휴리스틱으로 fallback. */
 export function matchesClothesGender(
   clothesGender: ClothesGender | string | null | undefined,
   userGender: UserGender,
@@ -120,10 +120,12 @@ export function matchesClothesGender(
 ): boolean {
   if (userGender === 'None') return true
 
-  const resolved = resolveClothesGender(clothesGender ?? undefined)
-  if (resolved === 'UNISEX') return true
-  if (userGender === 'Male') return resolved === 'MALE'
-  if (userGender === 'Female') return resolved === 'FEMALE'
+  if (isClothesGender(clothesGender)) {
+    if (clothesGender === 'UNISEX') return true
+    if (userGender === 'Male') return clothesGender === 'MALE'
+    if (userGender === 'Female') return clothesGender === 'FEMALE'
+    return true
+  }
 
   if (fallbackName) return matchesUserGender(fallbackName, userGender)
   return true

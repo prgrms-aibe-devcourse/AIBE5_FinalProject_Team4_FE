@@ -2,7 +2,7 @@
 doc_type: fe_api_usage
 source_of_truth: AIBE5_FinalProject_Team4_FE
 api_contract_source_of_truth: AIBE5_FinalProject_Team4_BE/docs/api/api-contract.md
-last_updated: 2026-06-02
+last_updated: 2026-06-08
 ---
 
 # API 사용 기준
@@ -79,7 +79,7 @@ fetch('/api/chat-gamyagi') // mock 경로 — 공통 api client·BE 계약 경�
 api.get('api/v1/categories')
 ```
 
-홈 추천(`RECO-001`)은 현재 `HomeTab.tsx` 내부 static/mock 데이터만 사용하며 `/api/recommend`를 호출하지 않습니다. ([implementation-gaps.md](../frontend/implementation-gaps.md))
+홈 추천은 라벨별로 다릅니다. OOTD·스타일·유사·AI MD(`RECO-001`~`003`, `RECO-005`~`007`)는 `HomeTab.tsx` static/mock이며 `/api/recommend`를 호출하지 않습니다. **`match` 탭(`RECO-004`, 어울리는 옷 추천)** 은 `src/api/recommendations.ts` → `GET /api/v1/users/{userId}/clothes/{clothesId}/recommendations`를 사용합니다. ([implementation-gaps.md](../frontend/implementation-gaps.md))
 
 직접 `fetch`를 사용하는 경우에도 인증, 에러 처리, base URL 기준이 동일하게 적용되어야 하므로 공통 API 클라이언트로 옮기는 것을 우선합니다.
 
