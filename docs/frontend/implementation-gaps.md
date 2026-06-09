@@ -70,7 +70,7 @@ last_updated: 2026-06-05
 
 `onLogin={() => setIsLoggedIn(true)}`만 호출하는 경로는 **사용하지 않습니다**.
 
-> `DEV` 환경이어도 `.env.local`에 `VITE_USE_REAL_AUTH=true`를 설정하면, 
+> `DEV` 환경이어도 `.env.local`에 `VITE_USE_REAL_AUTH=true`를 설정하면,
 > `ensureDevToken` 대신 실제 OAuth 경로(`redirectToOAuthLogin`)를 사용합니다.
 
 옷장 탭은 `authReady` 후 `authUserId`로 `ClosetTab`에 전달합니다. dev mock-token 실패 시 `authTokenError` 안내를 표시합니다.
