@@ -61,6 +61,8 @@ src/api/index.ts
 
 옷장·보유/미보유 API path의 `{userId}`는 하드코딩 `1`이 아니라 **JWT `sub`** 를 사용합니다. dev의 `userId=1`은 mock-token 발급 파라미터에만 쓰입니다.
 
+`DEV`이어도 `.env.local` 파일에 `VITE_USE_REAL_AUTH`가 `true`라면 실제 OAuth 경로를 타게 됩니다.
+
 ## 경로 작성 기준
 
 권장:
