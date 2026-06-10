@@ -1,7 +1,7 @@
 ---
 doc_type: fe_mock_policy
 source_of_truth: AIBE5_FinalProject_Team4_FE
-last_updated: 2026-06-08
+last_updated: 2026-06-09
 ---
 
 # Mock 데이터 사용 정책
@@ -38,9 +38,9 @@ last_updated: 2026-06-08
 
 ### 홈 추천
 
-- 현재 구현: `HomeTab.tsx`의 OOTD·스타일·유사·AI MD 라벨은 static/mock. **`/api/recommend` HTTP 호출 없음** (`useAiRecommendation` 제거).
-- **`match` 라벨(어울리는 옷 추천, `RECO-004`)** 은 `GET /api/v1/users/{userId}/clothes/{clothesId}/recommendations`를 호출하며 mock이 아닙니다.
-- 나머지 홈 추천 라벨(`RECO-001`~`003`, `RECO-005`~`007`)은 BE API 연동 전까지 static/mock을 사용할 수 있습니다.
+- 현재 구현: `HomeTab.tsx`의 OOTD(`RECO-001`)·취향 기반(`RECO-002`)·유사 상품(`RECO-003`)·AI MD(`RECO-006`) 라벨은 static/mock. **`/api/recommend` HTTP 호출 없음** (`useAiRecommendation` 제거).
+- **`match` 라벨(어울리는 옷 추천, `RECO-005`)** 은 `GET /api/v1/users/{userId}/clothes/{clothesId}/recommendations`를 호출하며 mock이 아닙니다.
+- `RECO-001`, `RECO-002`, `RECO-003`, `RECO-006`, `RECO-013`~`RECO-014`는 BE API 계약이 있으므로 FE 연동 시 static/mock을 해당 API 호출로 대체해야 합니다.
 - API 실패 시 fallback 데이터는 가능하지만, 실패 상태가 사용자에게 숨겨지지 않아야 합니다.
 
 ### 옷장
@@ -79,9 +79,9 @@ mock을 사용하는 화면은 관련 기능 문서에 아래를 적습니다.
 | 경로 / 데이터 | 기준 |
 | --- | --- |
 | `HomeTab.tsx` OOTD·스타일·유사·AI MD static 추천 | 해당 라벨용 **로컬 mock**. 네트워크 호출 없음. BE 추천 API 연동 시 대체 대상입니다. |
-| `HomeTab.tsx` `match` 탭 (`RECO-004`) | **BE `recommendations` API 연동**. mock/static이 아닙니다. |
-| `/api/chat-gamyagi` | BE API 계약에 없는 AI 채팅 mock 또는 개발용 경로입니다. 실제 AI MD 연동 기준은 BE 계약 확정 후 사용합니다. |
-| `/api/analyze-garment` | BE API 계약에 없는 분석 mock 또는 개발용 경로입니다. 실제 옷 등록 분석은 photo/purchase-capture API 기준으로 사용합니다. |
+| `HomeTab.tsx` `match` 탭 (`RECO-005`) | **BE `recommendations` API 연동**. mock/static이 아닙니다. |
+| `/api/chat-gamyagi` | BE API 계약에 없는 AI 채팅 mock 또는 개발용 경로입니다. 실제 AI MD 연동은 `/api/v1/users/{userId}/recommendations/ai-md/**` 기준입니다. |
+| `/api/analyze-garment` | BE API 계약에 없는 legacy 분석 mock 또는 개발용 경로입니다. 실제 옷 등록 분석은 photo/purchase-capture API 기준으로 사용합니다. |
 
 위 경로가 실제 서비스 API로 유지되어야 한다면 BE API 계약과 FE API 사용 문서를 먼저 갱신합니다.
 

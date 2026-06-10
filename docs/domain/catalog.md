@@ -1,12 +1,12 @@
 ---
 doc_type: shared
 source_of_truth: AIBE5_FinalProject_Team4_BE
-last_updated: 2026-06-03
+last_updated: 2026-06-09
 ---
 
 # 카탈로그 사용 가이드
 
-이 문서는 옷 등록, 옷 수정, 추천, 필터, 색상 표시에서 사용하는 공용 카탈로그 기준입니다. FE/BE 모두 이 문서의 `code` 값을 기준으로 연동합니다.
+이 문서는 옷 등록, 옷 수정, 추천, 필터, 색상 표시에서 사용하는 공용 카탈로그 기준입니다. FE/BE 모두 이 문서의 `code` 값을 기준으로 연동합니다. 단, 옷 대상 성별(`gender`)은 사용자 화면 표시/필터 대상이 아니라 내부 분류/추천용 code입니다.
 
 ## 문서 위치 기준
 
@@ -20,6 +20,7 @@ last_updated: 2026-06-03
 | --- | --- | --- |
 | `category` | `CLOTHES.category` | 대분류: 상의, 하의, 아우터, 신발 |
 | `itemType` | `CLOTHES.item_type` | 소분류: 반팔, 데님, 패딩 등 |
+| `gender` | `CLOTHES.gender` | 옷 분류/추천용 대상 성별 code |
 | `primaryColor` | `CLOTHING_COLORS.color_code` | 대표 색상 1개 |
 | `secondaryColors` | `CLOTHING_COLORS.color_code` | 보조 색상 목록 |
 | `styles` | `STYLES`, `CLOTHING_STYLES` | 스타일 코드 목록 |
@@ -28,6 +29,7 @@ last_updated: 2026-06-03
 
 - DB/API 저장값은 영문 `code`를 사용합니다.
 - 화면 표시에는 한글 `name` 또는 `label`을 사용합니다.
+- `gender`는 사용자 화면 표시 대상이 아니며, 내부 분류/추천과 저장 요청에 사용하는 code입니다.
 - 색상 HEX 값은 UI 표시용이며 DB 저장값으로 사용하지 않습니다.
 - `itemType`은 선택한 `category` 하위 코드만 사용할 수 있습니다.
 - 대표 색상과 보조 색상은 중복될 수 없습니다.
@@ -42,8 +44,8 @@ last_updated: 2026-06-03
 | 구분 | 기준 |
 | --- | --- |
 | DB 컬럼 | `category`, `item_type`, `color_code`, `style_code`처럼 snake_case를 사용합니다. |
-| API 요청/응답 DTO | `itemType`, `primaryColor`, `secondaryColors`처럼 camelCase를 사용합니다. |
-| AI 응답 JSON | 실제 저장 요청과 동일하게 `itemType`, `primaryColor`, `secondaryColors`, `styles`를 사용합니다. |
+| API 요청/응답 DTO | `itemType`, `gender`, `primaryColor`, `secondaryColors`처럼 camelCase를 사용합니다. |
+| AI 응답 JSON | 실제 저장 요청과 동일하게 `itemType`, `gender`, `primaryColor`, `secondaryColors`, `styles`를 사용합니다. |
 
 `GET /api/v1/categories`의 `guide.example` 안에는 현재 구현상 `item_type`이 포함될 수 있습니다. 실제 옷 등록 저장 요청과 AI 응답 기준은 `itemType`입니다.
 
@@ -84,6 +86,7 @@ last_updated: 2026-06-03
         "clothesRegistration": {
           "category": "TOP",
           "item_type": "SHORT_SLEEVE",
+          "gender": "UNISEX",
           "primaryColor": "WHITE",
           "secondaryColors": ["NAVY"],
           "styles": ["CASUAL", "MINIMAL"]
@@ -134,6 +137,7 @@ last_updated: 2026-06-03
 {
   "category": "TOP",
   "itemType": "SHORT_SLEEVE",
+  "gender": "UNISEX",
   "primaryColor": "WHITE",
   "secondaryColors": ["NAVY"],
   "styles": ["CASUAL", "MINIMAL"]
@@ -219,6 +223,9 @@ categoryCatalogService.validateClothesColors(
         aiResult.secondaryColors()
 );
 categoryCatalogService.validateStyleCodes(aiResult.styles());
+categoryCatalogService.validateGenderCode(
+        categoryCatalogService.resolveGenderOrDefault(aiResult.gender()).name()
+);
 ```
 
 사진 기반 옷 분류 응답:
@@ -229,6 +236,7 @@ categoryCatalogService.validateStyleCodes(aiResult.styles());
   "brandName": "UNKNOWN",
   "category": "TOP",
   "itemType": "SHORT_SLEEVE",
+  "gender": "UNISEX",
   "primaryColor": "WHITE",
   "secondaryColors": ["NAVY"],
   "styles": ["CASUAL"]
@@ -243,6 +251,7 @@ categoryCatalogService.validateStyleCodes(aiResult.styles());
   "brandName": "브랜드명",
   "category": "TOP",
   "itemType": "SHORT_SLEEVE",
+  "gender": "UNISEX",
   "primaryColor": "WHITE",
   "secondaryColors": [],
   "styles": ["CASUAL"],
@@ -253,7 +262,9 @@ categoryCatalogService.validateStyleCodes(aiResult.styles());
 
 AI 응답 규칙:
 
-- `category`, `itemType`, `primaryColor`, `secondaryColors`, `styles`는 이 문서의 code 목록만 사용합니다.
+- `category`, `itemType`, `gender`, `primaryColor`, `secondaryColors`, `styles`는 이 문서의 code 목록만 사용합니다.
+- `gender`는 `MALE`, `FEMALE`, `UNISEX` 중 하나입니다. 사용자 화면에 표시하지 않고, 모델·상품명·옷 종류 기반 내부 분류/추천용 code로 사용합니다. 불확실하면 `UNISEX`를 사용합니다.
+- 사진·구매내역 등록 draft의 `gender` 기본값은 AI 추정이 아니라 **로그인 사용자 프로필 성별**(`MALE`/`FEMALE`, `OTHER`→`UNISEX`)입니다. FE는 사용자 화면에 표시하지 않더라도 저장 요청에는 해당 code를 포함합니다.
 - `itemType`은 선택한 `category` 하위 코드여야 합니다.
 - `secondaryColors`가 없으면 빈 배열 `[]`을 사용합니다.
 - `suggestedExternalSource`가 불확실하면 `null`을 사용합니다.
@@ -267,6 +278,14 @@ AI 응답 규칙:
 | `BOTTOM` | 하의 |
 | `OUTER` | 아우터 |
 | `SHOES` | 신발 |
+
+## 대상 성별
+
+| code | meaning |
+| --- | --- |
+| `MALE` | 남성 대상 옷 |
+| `FEMALE` | 여성 대상 옷 |
+| `UNISEX` | 남녀 공용 또는 대상 성별을 특정하기 어려운 옷 |
 
 ## 소분류
 

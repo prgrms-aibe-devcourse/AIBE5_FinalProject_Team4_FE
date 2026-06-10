@@ -2,7 +2,7 @@
 doc_type: fe_api_usage
 source_of_truth: AIBE5_FinalProject_Team4_FE
 api_contract_source_of_truth: AIBE5_FinalProject_Team4_BE/docs/api/api-contract.md
-last_updated: 2026-06-08
+last_updated: 2026-06-09
 ---
 
 # API 사용 기준
@@ -79,7 +79,7 @@ fetch('/api/chat-gamyagi') // mock 경로 — 공통 api client·BE 계약 경�
 api.get('api/v1/categories')
 ```
 
-홈 추천은 라벨별로 다릅니다. OOTD·스타일·유사·AI MD(`RECO-001`~`003`, `RECO-005`~`007`)는 `HomeTab.tsx` static/mock이며 `/api/recommend`를 호출하지 않습니다. **`match` 탭(`RECO-004`, 어울리는 옷 추천)** 은 `src/api/recommendations.ts` → `GET /api/v1/users/{userId}/clothes/{clothesId}/recommendations`를 사용합니다. ([implementation-gaps.md](../frontend/implementation-gaps.md))
+홈 추천은 라벨별로 다릅니다. 현재 `HomeTab.tsx`에서 OOTD(`RECO-001`), 취향 기반 추천(`RECO-002`), 유사 상품(`RECO-003`), AI MD(`RECO-006`) 라벨은 static/mock이며 `/api/recommend`를 호출하지 않습니다. **`match` 탭(어울리는 옷 추천, `RECO-005`)** 은 `src/api/recommendations.ts` → `GET /api/v1/users/{userId}/clothes/{clothesId}/recommendations`를 사용합니다. ([implementation-gaps.md](../frontend/implementation-gaps.md))
 
 직접 `fetch`를 사용하는 경우에도 인증, 에러 처리, base URL 기준이 동일하게 적용되어야 하므로 공통 API 클라이언트로 옮기는 것을 우선합니다.
 
@@ -176,17 +176,54 @@ API를 호출하는 화면은 아래 상태를 구분합니다.
 | 구매내역 기반 등록 | POST | `/api/v1/users/{userId}/clothes/purchase-captures/{captureId}/items/{itemIndex}/skip` | 복수 상품 캡처에서 특정 상품 건너뛰기 |
 | 외부 상품 | GET | `/api/naver/search` | 네이버쇼핑 상품 검색 |
 | 외부 상품 | POST | `/api/v1/external/clothes/naver` | 외부 상품을 옷 정보로 저장 |
-| 추천 | GET | `/api/v1/users/{userId}/clothes/{clothesId}/similar-products` | 유사 상품 추천 표시 |
-| 추천 | GET | `/api/v1/users/{userId}/clothes/{clothesId}/recommendations` | 옷장 기반 어울리는 옷 추천 표시 |
-| 날씨 | GET | `/api/weather` | 날씨 기반 안내 또는 추천 보조 정보 표시 |
+| 추천 | GET | `/api/v1/recommendations/{wardrobeId}?currentTemp={temp}` | 취향 기반 상품 추천 표시. 현재 FE 홈 `style` 라벨은 static/mock |
+| 추천 | GET | `/api/v1/users/{userId}/clothes/{clothesId}/similar-products` | 유사 상품 추천 표시. 현재 FE 홈 `similar` 라벨은 static/mock |
+| 추천 | GET | `/api/v1/users/{userId}/clothes/{clothesId}/recommendations` | 옷장 기반 어울리는 옷 추천 표시. 현재 FE `match` 라벨 연동 완료 |
+| 추천 | GET | `/api/v1/ootd/{wardrobeId}?currentTemp={temp}` | OOTD 추천 표시. 현재 FE 홈 `ootd` 라벨은 static/mock |
+| 추천 | POST | `/api/v1/users/{userId}/recommendations/feedback` | 추천 저장/싫어요/추천 제외 피드백 제출 |
+| AI MD | GET | `/api/v1/users/{userId}/recommendations/ai-md/personas` | 사용자 성별에 맞는 AI MD 목록 표시 |
+| AI MD | GET | `/api/v1/users/{userId}/recommendations/ai-md/{mdId}/products` | AI MD 외부 상품 추천 표시 |
+| AI MD | POST | `/api/v1/users/{userId}/recommendations/ai-md/{mdId}/outfits` | AI MD 코디 후보 생성 |
+| AI MD | POST | `/api/v1/users/{userId}/recommendations/ai-md/{mdId}/outfits/save` | 사용자가 선택한 AI MD 코디 후보 저장 |
+| 날씨 | GET | `/api/weather` | 추천 보조 정보 표시. 독립 추천 기능으로 보지 않음 |
 | 코디북 | GET | `/api/v1/outfit-books` | 코디북 목록 표시 |
 | 코디북 | POST | `/api/v1/outfit-books` | 코디북 생성 |
 | 코디북 | GET | `/api/v1/outfit-books/{bookId}` | 코디북 상세 표시 |
 | 코디 | POST | `/api/v1/outfit-books/{bookId}/outfits` | 코디 저장 |
+| 코디 | PUT | `/api/v1/outfit-books/{bookId}/outfits/{outfitId}` | 코디 수정 |
+| 코디 | DELETE | `/api/v1/outfit-books/{bookId}/outfits/{outfitId}` | 코디 삭제 |
 | 이미지 | GET | `/api/v1/images/clothes/{userId}/{filename}` | 옷 이미지 표시 |
 | 이미지 | GET | `/api/v1/images/purchase-captures/{userId}/{filename}` | 구매내역 캡처 이미지 표시 |
 
-## 구매내역 복수 상품 등록 (`REG-002`, BE #77)
+## 추천 API 동기화 기준
+
+BE 추천 API 중 현재 FE에서 실제 호출하는 API와 아직 mock/static 상태인 API를 구분합니다.
+
+| 세부기능 ID | BE API | 현재 FE 상태 |
+| --- | --- | --- |
+| `RECO-001` | `GET /api/v1/ootd/{wardrobeId}?currentTemp={temp}` | `HomeTab` `ootd` 라벨 static/mock |
+| `RECO-002` | `GET /api/v1/recommendations/{wardrobeId}?currentTemp={temp}` | `HomeTab` `style` 라벨 static/mock |
+| `RECO-003` | `GET /api/v1/users/{userId}/clothes/{clothesId}/similar-products` | `HomeTab` `similar` 라벨 static/mock |
+| `RECO-005` | `GET /api/v1/users/{userId}/clothes/{clothesId}/recommendations` | `HomeTab` `match` 라벨 연동 완료 |
+| `RECO-006` | `/api/v1/users/{userId}/recommendations/ai-md/**` | `HomeTab` `aimd` 라벨 static/mock |
+| `RECO-013`~`RECO-014` | `POST /api/v1/users/{userId}/recommendations/feedback` | 저장/싫어요/추천 제외 액션 연동 필요 |
+
+날씨, 지역, 체감온도 정보(`EXT-004`~`EXT-006`)는 독립 추천 기능이 아니라 `RECO-001`, `RECO-002` 등 추천 기능의 보조 조건입니다. `/api/weather`는 추천 보조 정보 API로 설명합니다.
+
+옷 대상 성별(`gender`)은 응답 또는 저장 요청 payload에 포함될 수 있지만 사용자 화면에 표시하거나 필터 UI로 노출하지 않습니다. FE는 필요 시 내부 분류/추천 제외 기준으로만 사용합니다.
+
+## 인증 유지 API 확인 대상 (`AUTH-005`)
+
+인증 유지 API는 `AUTH-005` 로그인 상태 유지 기준에 포함됩니다. FE는 아래 계약을 기준으로 API 클라이언트와 타입을 확인합니다.
+
+| 기능 | Method | API 기준 | FE 확인 대상 |
+| --- | --- | --- | --- |
+| access token 재발급 | POST | `/api/v1/auth/refresh` | 401 처리, access token 갱신, 쿠키 전달 |
+| 로그아웃 | POST | `/api/v1/auth/logout` | local token 제거, 세션 종료, 로그인 화면 이동 |
+
+`refresh_token`은 HttpOnly 쿠키 기준이므로 FE에서 값을 직접 읽지 않습니다. 실제 FE 구현 반영 전까지는 [implementation-gaps.md](../frontend/implementation-gaps.md)에 미연동 항목으로 둡니다.
+
+## 구매내역 복수 상품 등록 (`REG-002`)
 
 analyze/draft 응답(`PurchaseCaptureDraftResponse`)과 save 응답(`PurchaseCaptureRegistrationResponse`)은 아래 필드를 공통으로 사용합니다.
 
@@ -206,7 +243,7 @@ analyze/draft 응답(`PurchaseCaptureDraftResponse`)과 save 응답(`PurchaseCap
 분석 실패 (`analysisStatus=FAILED`):
 
 - AI가 카탈로그 code가 아닌 값을 반환하면 BE가 `analysisStatus=FAILED`로 내립니다. 유효한 code만 `SUCCESS` 초안이 됩니다.
-- BE #77 저장 API는 `analysisStatus=SUCCESS` 캡처만 허용합니다. FAILED 캡처는 수동 입력 저장 경로가 없습니다.
+- 저장 API는 `analysisStatus=SUCCESS` 캡처만 허용합니다. FAILED 캡처는 수동 입력 저장 경로가 없습니다.
 - FE는 FAILED·분석 API 오류 시 업로드 단계로 되돌리고 저장 버튼을 제공하지 않으며, 다른 캡처 선택 또는 **AI 분석 다시 시도**로 유도합니다.
 
 건너뛰기:

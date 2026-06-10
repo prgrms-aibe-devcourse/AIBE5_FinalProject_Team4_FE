@@ -2,7 +2,7 @@
 doc_type: fe_domain_types
 source_of_truth: AIBE5_FinalProject_Team4_FE
 be_domain_source_of_truth: AIBE5_FinalProject_Team4_BE/docs/domain
-last_updated: 2026-06-03
+last_updated: 2026-06-09
 ---
 
 # FE 도메인 타입 기준
@@ -42,6 +42,22 @@ FE 화면에서 `Top`, `Bottom`, `Outer`, `Shoes` 같은 PascalCase 표시값을
 | `EXTERNAL_SHOPPING` | 외부 쇼핑몰 등록 | 외부 쇼핑몰 상품 정보 기반 등록 |
 
 옷 등록 흐름에서 사용자가 어떤 등록 방식을 선택했는지와 실제 저장 source 값이 충돌하지 않아야 합니다.
+
+### ClothesGender
+
+| Code | 설명 |
+| --- | --- |
+| `MALE` | 남성 대상 옷 |
+| `FEMALE` | 여성 대상 옷 |
+| `UNISEX` | 남녀 공용 또는 대상 성별을 특정하기 어려운 옷 |
+
+`ClothesGender`는 `CLOTHES.gender`의 code입니다. 사용자 프로필 성별(`USERS.gender`)과 다른 값이며, FE 화면에 표시하거나 사용자가 직접 수정하는 값으로 취급하지 않습니다.
+
+FE는 이 값을 아래 목적으로만 사용합니다.
+
+- 옷 등록/수정 저장 요청 payload에 포함
+- 사진·구매내역 draft/analyze 응답의 내부 상태 유지
+- 추천 응답에서 내부 필터 또는 제외 기준으로 사용
 
 ### StyleCode
 
@@ -102,12 +118,14 @@ API DTO 타입과 UI view model 타입은 구분합니다.
 type CategoryCode = 'TOP' | 'BOTTOM' | 'OUTER' | 'SHOES';
 type OwnershipStatus = 'OWNED' | 'WISHLIST';
 type ClothesInfoSource = 'PHOTO' | 'PURCHASE_HISTORY' | 'EXTERNAL_SHOPPING';
+type ClothesGender = 'MALE' | 'FEMALE' | 'UNISEX';
 
 type ApiClothes = {
   clothesId: number;
   name: string;
   category: CategoryCode;
   itemType: string;
+  gender: ClothesGender;
   ownershipStatus: OwnershipStatus;
   imageUrl: string | null;
 };
@@ -130,6 +148,7 @@ API 응답 타입은 BE DTO 필드명과 code를 유지합니다. 화면 컴포�
 | 카테고리 | `Top`, `Bottom`, `Outer`, `Shoes` | `TOP`, `BOTTOM`, `OUTER`, `SHOES` |
 | 보유 상태 | `isWishlist: boolean` | `ownershipStatus: OWNED/WISHLIST` |
 | 스타일 | `Casual`, `Amekaji`, `Dandy`, `Tech Casual` 등 | BE catalog의 `StyleCode` |
+| 옷 대상 성별 | 등록/수정 화면에서 `MALE`, `FEMALE`, `UNISEX` 직접 선택 UI | 화면 비노출, 내부 저장 요청/추천 분류 code |
 | 응답 타입 | `{ data, message, status }` | `{ success, data, message }` |
 | 사용자 ID | `/users/1` 또는 고정 ID | 인증 사용자 ID |
 
