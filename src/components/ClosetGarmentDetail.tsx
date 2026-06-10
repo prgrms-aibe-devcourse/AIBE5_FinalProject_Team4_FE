@@ -201,7 +201,7 @@ export default function ClosetGarmentDetail({
     const sizeOnly = isExternalProductGarment(detail)
     const errors = sizeOnly
       ? validateGarmentSizeOnlyEdit(editDraft.size)
-      : validateGarmentRegisterDraft(editDraft, { skipGender: true })
+      : validateGarmentRegisterDraft(editDraft, { skipGender: true, skipSeason: true })
     setFieldErrors(errors)
     if (hasFormErrors(errors)) {
       onToast('입력값을 확인해 주세요.')
@@ -256,7 +256,6 @@ export default function ClosetGarmentDetail({
         secondaryColors: editDraft.secondaryColors,
         styles,
         size: editDraft.size.trim() || 'FREE',
-        season: editDraft.season.trim() || undefined,
         imageUrl,
       })
       setDetail(updated)

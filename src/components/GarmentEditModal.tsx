@@ -18,7 +18,7 @@ import {
   BRAND_NAME_MAX_LENGTH,
   GARMENT_SIZE_MAX_LENGTH,
   getSizeOptionsByCategory,
-  GARMENT_SEASON_OPTIONS,
+  getGarmentSeasonLabel,
   type GarmentFormFieldErrors,
   type GarmentRegisterDraft,
 } from '@/utils/garmentRegisterValidation'
@@ -557,33 +557,17 @@ export default function GarmentEditModal({
             )}
           </div>
 
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-slate-500">
-              시즌 <span className="text-slate-400 font-normal">(선택)</span>
-            </label>
-            <div className="flex flex-wrap gap-1.5">
-              {GARMENT_SEASON_OPTIONS.map(({ code, label }) => {
-                const active = draft.season === code
-                return (
-                  <button
-                    key={code}
-                    type="button"
-                    onClick={() => onDraftChange({ season: active ? '' : code })}
-                    className={`h-8 px-3 rounded-lg text-xs font-bold border transition ${
-                      active
-                        ? 'bg-[#1E3A8A] text-white border-transparent'
-                        : 'bg-white text-slate-500 border-slate-200'
-                    }`}
-                  >
-                    {label}
-                  </button>
-                )
-              })}
+          {draft.season.trim() && (
+            <div className="space-y-0.5">
+              <label className="text-xs font-bold text-slate-500">시즌</label>
+              <p className="text-sm text-slate-600">
+                {getGarmentSeasonLabel(draft.season)}
+                <span className="ml-1.5 text-xs text-slate-400">
+                  (등록 시에만 설정 가능)
+                </span>
+              </p>
             </div>
-            {fieldErrors.season && (
-              <p className="text-xs text-red-600">{fieldErrors.season}</p>
-            )}
-          </div>
+          )}
             </>
           )}
       </ModalBody>

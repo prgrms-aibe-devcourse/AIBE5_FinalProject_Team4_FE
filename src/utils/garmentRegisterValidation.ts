@@ -74,6 +74,12 @@ export function getSizeOptionsByCategory(category: string) {
   return GARMENT_SIZE_OPTIONS_BY_CATEGORY[category as GarmentSizeCategory] ?? TOP_SIZES
 }
 
+export function getGarmentSeasonLabel(code: string | null | undefined): string {
+  const trimmed = code?.trim()
+  if (!trimmed) return '—'
+  return GARMENT_SEASON_OPTIONS.find((option) => option.code === trimmed)?.label ?? trimmed
+}
+
 export type GarmentRegisterDraft = {
   name: string
   category: UiCategory
@@ -103,7 +109,7 @@ export type GarmentFormFieldErrors = Partial<Record<GarmentFormField, string>>
 
 export function validateGarmentRegisterDraft(
   draft: GarmentRegisterDraft,
-  options?: { skipGender?: boolean },
+  options?: { skipGender?: boolean; skipSeason?: boolean },
 ): GarmentFormFieldErrors {
   const errors: GarmentFormFieldErrors = {}
 
@@ -148,9 +154,11 @@ export function validateGarmentRegisterDraft(
     errors.size = `사이즈는 ${GARMENT_SIZE_MAX_LENGTH}자 이하로 입력해 주세요.`
   }
 
-  const season = draft.season.trim()
-  if (season.length > GARMENT_SEASON_MAX_LENGTH) {
-    errors.season = `시즌은 ${GARMENT_SEASON_MAX_LENGTH}자 이하로 입력해 주세요.`
+  if (!options?.skipSeason) {
+    const season = draft.season.trim()
+    if (season.length > GARMENT_SEASON_MAX_LENGTH) {
+      errors.season = `시즌은 ${GARMENT_SEASON_MAX_LENGTH}자 이하로 입력해 주세요.`
+    }
   }
 
   return errors
