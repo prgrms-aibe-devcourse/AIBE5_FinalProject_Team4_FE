@@ -188,3 +188,16 @@ export async function convertWishlistToOwned(
   )
   return mapClothesToGarment(updated)
 }
+
+/** 추천 상품 등 기존 CLOTHES 마스터를 위시리스트에 연결 */
+export async function addExistingClothesToWishlist(
+  userId: number,
+  clothesId: number,
+): Promise<Garment> {
+  const data = await unwrap(
+    api.post<BeApiResponse<ClothesResponse>>(
+      `${wishlistClothesPath(userId)}/${clothesId}`,
+    ),
+  )
+  return mapClothesToGarment(data)
+}

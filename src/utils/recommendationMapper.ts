@@ -1,4 +1,6 @@
-import { BE_CATEGORY_TO_UI, type BeCategoryCode } from '@/data/categoryItemTypes'
+import { BE_CATEGORY_TO_UI, getItemTypeLabel, type BeCategoryCode } from '@/data/categoryItemTypes'
+import { formatRecommendBrandLabel, getBrandLogoUrl } from '@/data/brandLogos'
+import { getGarmentColor, getGarmentColorLabel } from '@/data/garmentColors'
 import { getGarmentStyleLabel } from '@/data/garmentStyles'
 import type {
   ClothesRecommendationResponse,
@@ -11,6 +13,10 @@ import {
   isWearableClothesItem,
 } from '@/utils/wearableClothesFilter'
 import { matchesClothesGender, type UserGender } from '@/utils/genderClothesFilter'
+import {
+  isDirectNaverProductUrl,
+  resolveNaverShoppingPurchaseUrl,
+} from '@/utils/naverShoppingUrl'
 
 const BE_CATEGORY_LABEL: Record<string, string> = {
   TOP: '상의',
@@ -19,17 +25,34 @@ const BE_CATEGORY_LABEL: Record<string, string> = {
   SHOES: '신발',
 }
 
+export type RecommendColorChip = {
+  label: string
+  hex?: string
+}
+
+export { formatRecommendBrandLabel } from '@/data/brandLogos'
+
 export type RecommendCardItem = {
   id: string
+  clothesId: number | null
   title: string
+  brandLabel: string
+  brandLogoUrl: string | null
   category: 'Top' | 'Bottom' | 'Outer' | 'Shoes'
+  categoryLabel: string
+  itemTypeLabel: string
   style: string
+  styles: string[]
   color: string
+  colorHex?: string
+  secondaryColors: RecommendColorChip[]
   price: string
   matchRate: number
   imageUrl: string
   reason: string
   isAnchor?: boolean
+  purchaseUrl: string
+  hasDirectPurchaseUrl: boolean
 }
 
 export type RecommendCategoryGroup = {
@@ -40,6 +63,20 @@ export type RecommendCategoryGroup = {
 }
 
 const CATEGORY_ORDER: BeCategoryCode[] = ['TOP', 'BOTTOM', 'OUTER', 'SHOES']
+
+function mapColorChip(code: string, display?: { label: string; hex: string } | null): RecommendColorChip {
+  const garmentColor = getGarmentColor(code)
+  return {
+    label: display?.label ?? garmentColor?.name ?? getGarmentColorLabel(code),
+    hex: display?.hex ?? garmentColor?.hex,
+  }
+}
+
+function mapStyleLabels(styleCodes: string[]): string[] {
+  return styleCodes
+    .map((code) => getGarmentStyleLabel(code))
+    .filter((label) => label.trim().length > 0)
+}
 
 function toUiCategory(
   categoryCode: string,
@@ -63,17 +100,28 @@ function mapRecommendedItemToCard(
   const uiCategory = toUiCategory(item.category)
   if (!uiCategory) return null
   const categoryLabel = BE_CATEGORY_LABEL[categoryCode] ?? categoryCode
-  const styleCode = item.styleCodes[0]
+  const styleLabels = mapStyleLabels(item.styleCodes)
+  const primaryColor = mapColorChip(item.primaryColor, item.primaryColorDisplay)
   return {
     id: `rec-${categoryCode}-${item.clothesId}`,
+    clothesId: item.clothesId,
     title: item.name,
+    brandLabel: formatRecommendBrandLabel(item.brandName),
+    brandLogoUrl: getBrandLogoUrl(item.brandName),
     category: uiCategory,
-    style: styleCode ? getGarmentStyleLabel(styleCode) : '—',
-    color: item.primaryColorDisplay?.label ?? item.primaryColor,
+    categoryLabel,
+    itemTypeLabel: getItemTypeLabel(uiCategory, item.itemType),
+    style: styleLabels[0] ?? '—',
+    styles: styleLabels,
+    color: primaryColor.label,
+    colorHex: primaryColor.hex,
+    secondaryColors: item.secondaryColors.map((code) => mapColorChip(code)),
     price: `${item.compatibilityScore}% 어울림`,
     matchRate: item.compatibilityScore,
     imageUrl: resolveClothesDisplayImageUrl(item) ?? '',
     reason: `"${anchorName}"와 ${categoryLabel} 조합`,
+    purchaseUrl: resolveNaverShoppingPurchaseUrl(item.name, item.externalProductUrl),
+    hasDirectPurchaseUrl: isDirectNaverProductUrl(item.externalProductUrl),
   }
 }
 
@@ -81,17 +129,28 @@ function mapAnchorToCard(anchor: RecommendationAnchorItem): RecommendCardItem | 
   if (!isWearableClothesItem(anchor)) return null
   const uiCategory = toUiCategory(anchor.category)
   if (!uiCategory) return null
+  const primaryColor = mapColorChip(anchor.primaryColor, anchor.primaryColorDisplay)
   return {
     id: `anchor-${anchor.clothesId}`,
+    clothesId: anchor.clothesId,
     title: anchor.name,
+    brandLabel: '보세',
+    brandLogoUrl: null,
     category: uiCategory,
+    categoryLabel: BE_CATEGORY_LABEL[anchor.category] ?? anchor.category,
+    itemTypeLabel: getItemTypeLabel(uiCategory, anchor.itemType),
     style: '—',
-    color: anchor.primaryColorDisplay?.label ?? anchor.primaryColor,
+    styles: [],
+    color: primaryColor.label,
+    colorHex: primaryColor.hex,
+    secondaryColors: [],
     price: '기준 옷',
     matchRate: 100,
     imageUrl: resolveClothesDisplayImageUrl(anchor) ?? '',
     reason: '내 옷장 보유 옷 · 이 아이템을 기준으로 어울리는 후보를 추천합니다.',
     isAnchor: true,
+    purchaseUrl: '',
+    hasDirectPurchaseUrl: false,
   }
 }
 

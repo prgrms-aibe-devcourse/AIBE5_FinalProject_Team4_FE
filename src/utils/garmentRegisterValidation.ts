@@ -103,6 +103,7 @@ export type GarmentFormFieldErrors = Partial<Record<GarmentFormField, string>>
 
 export function validateGarmentRegisterDraft(
   draft: GarmentRegisterDraft,
+  options?: { skipGender?: boolean },
 ): GarmentFormFieldErrors {
   const errors: GarmentFormFieldErrors = {}
 
@@ -133,7 +134,7 @@ export function validateGarmentRegisterDraft(
     errors.mainStyle = '메인 스타일을 선택해 주세요.'
   }
 
-  if (!isClothesGender(draft.gender)) {
+  if (!options?.skipGender && !isClothesGender(draft.gender)) {
     errors.gender = '대상 성별을 선택해 주세요.'
   }
 
@@ -152,6 +153,15 @@ export function validateGarmentRegisterDraft(
     errors.season = `시즌은 ${GARMENT_SEASON_MAX_LENGTH}자 이하로 입력해 주세요.`
   }
 
+  return errors
+}
+
+export function validateGarmentSizeOnlyEdit(size: string): GarmentFormFieldErrors {
+  const errors: GarmentFormFieldErrors = {}
+  const trimmed = size.trim()
+  if (trimmed.length > GARMENT_SIZE_MAX_LENGTH) {
+    errors.size = `사이즈는 ${GARMENT_SIZE_MAX_LENGTH}자 이하로 입력해 주세요.`
+  }
   return errors
 }
 
