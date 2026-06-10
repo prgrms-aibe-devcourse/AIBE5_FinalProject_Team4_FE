@@ -53,6 +53,8 @@ export type RecommendCardItem = {
   isAnchor?: boolean
   purchaseUrl: string
   hasDirectPurchaseUrl: boolean
+  /** POST /api/users/{userId}/wishlist-clothes body 구성용 원본 추천 데이터 */
+  source?: RecommendedClothesItem
 }
 
 export type RecommendCategoryGroup = {
@@ -122,6 +124,7 @@ function mapRecommendedItemToCard(
     reason: `"${anchorName}"와 ${categoryLabel} 조합`,
     purchaseUrl: resolveNaverShoppingPurchaseUrl(item.name, item.externalProductUrl),
     hasDirectPurchaseUrl: isDirectNaverProductUrl(item.externalProductUrl),
+    source: item,
   }
 }
 

@@ -244,8 +244,8 @@ export default function MatchRecommendationByCategory({
 
   const handleWishlistClick = useCallback(
     (item: RecommendCardItem) => {
-      if (item.clothesId == null || item.isAnchor) return;
-      void toggleWishlist(item.clothesId);
+      if (item.clothesId == null || item.isAnchor) return
+      void toggleWishlist(item)
     },
     [toggleWishlist],
   );
@@ -284,7 +284,7 @@ export default function MatchRecommendationByCategory({
         wishlistSubmitting={selectedItem ? isSubmitting(selectedItem.clothesId) : false}
         onWishlistToggle={
           selectedItem?.clothesId != null && !selectedItem.isAnchor
-            ? () => void toggleWishlist(selectedItem.clothesId!)
+            ? () => void toggleWishlist(selectedItem)
             : undefined
         }
       />

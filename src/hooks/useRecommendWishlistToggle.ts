@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useState } from 'react'
-import {
-  addExistingClothesToWishlist,
-  deleteClothes,
-} from '@/api/wardrobe'
+import { createWishlistClothes, deleteClothes } from '@/api/wardrobe'
 import type { Garment } from '@/types'
 import { extractApiErrorMessage } from '@/utils/apiError'
 import {
   DUPLICATE_WISHLIST_MESSAGE,
   normalizeDuplicateRegisterError,
 } from '@/utils/garmentDuplicateCheck'
+import type { RecommendCardItem } from '@/utils/recommendationMapper'
+import {
+  buildWishlistPayloadFromRecommendedItem,
+  findWishlistGarmentForRecommendation,
+} from '@/utils/recommendWishlistPayload'
 
 interface UseRecommendWishlistToggleOptions {
   userId: number | null
@@ -39,9 +41,7 @@ export function useRecommendWishlistToggle({
     (clothesId: number | null | undefined) => {
       if (clothesId == null) return false
       if (overrides.has(clothesId)) return overrides.get(clothesId)!
-      return existingGarments.some(
-        (garment) => garment.isWishlist && garment.id === String(clothesId),
-      )
+      return findWishlistGarmentForRecommendation(clothesId, existingGarments) != null
     },
     [existingGarments, overrides],
   )
@@ -53,7 +53,10 @@ export function useRecommendWishlistToggle({
   )
 
   const toggleWishlist = useCallback(
-    async (clothesId: number) => {
+    async (item: RecommendCardItem) => {
+      const clothesId = item.clothesId
+      if (clothesId == null || item.isAnchor) return
+
       if (userId == null) {
         setToastMessage('로그인 후 위시리스트에 추가할 수 있어요')
         return
@@ -65,11 +68,21 @@ export function useRecommendWishlistToggle({
 
       try {
         if (currentlyWishlisted) {
-          await deleteClothes(clothesId)
+          const linked = findWishlistGarmentForRecommendation(
+            clothesId,
+            existingGarments,
+          )
+          await deleteClothes(Number(linked?.id ?? clothesId))
           setOverrides((prev) => new Map(prev).set(clothesId, false))
           setToastMessage('위시리스트에서 제거했어요')
         } else {
-          await addExistingClothesToWishlist(userId, clothesId)
+          if (!item.source) {
+            throw new Error('위시리스트 저장에 필요한 상품 정보가 없습니다.')
+          }
+          await createWishlistClothes(
+            userId,
+            buildWishlistPayloadFromRecommendedItem(item.source),
+          )
           setOverrides((prev) => new Map(prev).set(clothesId, true))
           setToastMessage('위시리스트에 추가했어요')
         }
@@ -86,7 +99,7 @@ export function useRecommendWishlistToggle({
         setSubmittingClothesId(null)
       }
     },
-    [isWishlisted, onWishlistChanged, submittingClothesId, userId],
+    [existingGarments, isWishlisted, onWishlistChanged, submittingClothesId, userId],
   )
 
   return {
