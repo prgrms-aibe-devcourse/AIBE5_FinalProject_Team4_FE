@@ -1,7 +1,7 @@
 ---
 doc_type: shared_with_be_details
 source_of_truth: AIBE5_FinalProject_Team4_BE
-last_updated: 2026-06-08
+last_updated: 2026-06-09
 ---
 
 # 옷 등록 플로우 가이드
@@ -27,7 +27,7 @@ last_updated: 2026-06-08
 
 | 데이터 | 저장 위치 | 설명 |
 | --- | --- | --- |
-| 상품명, 브랜드, 품번, 이미지, 카테고리, 타입, 대상 성별 | `CLOTHES` | 옷 자체의 공통 정보 (`gender`: `MALE`/`FEMALE`/`UNISEX`) |
+| 상품명, 브랜드, 품번, 이미지, 카테고리, 타입, 대상 성별 code | `CLOTHES` | 옷 자체의 공통 정보. 대상 성별 code는 사용자 화면에 노출하지 않음 |
 | 옷 정보 출처 | `CLOTHES.clothes_info_source` | `PHOTO`, `PURCHASE_HISTORY`, `EXTERNAL_SHOPPING` |
 | 보유/미보유 | `WARDROBE_CLOTHES.ownership_status` | `OWNED`, `WISHLIST` |
 | 사용자별 사이즈, 계절, 즐겨찾기 | `WARDROBE_CLOTHES` | 사용자 옷장 기준 정보 |
@@ -121,8 +121,7 @@ last_updated: 2026-06-08
 복수 상품 저장 시 선택 필드:
 
 - `itemIndex` (선택, 기본값 0): 저장할 상품 인덱스
-- `imageUrl` (선택): 상품별 미리보기 URL. 요청 값을 최우선 사용하고, 생략 시 draft `items[].imageUrl` → 캡처 `previewUrl` 순으로 fallback
-- `externalSource` (필수): 카탈로그 code. FE는 쇼핑몰 미선택 시 `CUSTOM`으로 전송
+- `imageUrl` (선택): 상품별 미리보기 URL. draft `items[].imageUrl`, 요청 값, 없으면 캡처 `previewUrl` 순으로 fallback
 
 분석/초안 응답 공통 필드 (단일·복수 모두):
 
@@ -133,13 +132,6 @@ last_updated: 2026-06-08
 | `captureCompleted` | boolean | 모든 상품이 `SAVED` 또는 `SKIPPED`이면 true |
 
 저장 응답(`PurchaseCaptureRegistrationResponse`)도 `itemIndex`, `pendingItemCount`, `captureCompleted`를 포함합니다. 건너뛰기 API는 갱신된 draft 응답을 반환합니다.
-
-## FE 확인 포인트 (복수 상품)
-
-- 상품 선택 화면은 `items[]`와 `pendingItemCount`를 기준으로 남은 상품을 표시합니다.
-- 카드 미리보기는 draft `items[].imageUrl`을 우선 사용하고, 없으면 캡처 `previewUrl` fallback을 표시할 수 있습니다.
-- 저장 시 `itemIndex`를 명시합니다. `imageUrl`은 선택이며, 요청에 포함하면 BE가 요청 값을 최우선 사용하고, 생략하면 draft `items[].imageUrl` → 캡처 `previewUrl` 순으로 fallback합니다.
-- 건너뛰기는 `POST .../items/{itemIndex}/skip`을 호출해 서버 진행 상태와 동기화합니다.
 
 ## 외부 쇼핑몰 상품 저장
 
@@ -190,10 +182,11 @@ last_updated: 2026-06-08
 
 - 업로드 중, 분석 중, 분석 실패, 초안 확인, 저장 완료 상태를 구분합니다.
 - 분석 결과는 사용자가 수정할 수 있어야 합니다.
-- 카테고리, 아이템 타입, 색상, 스타일, 대상 성별(`gender`)은 [카탈로그 사용 가이드](../domain/catalog.md)의 code 값을 사용합니다.
-- 사진·구매내역 등록 draft/analyze의 `gender` 기본값은 사용자 프로필 성별이며, 저장 요청에서 변경할 수 있습니다.
+- 카테고리, 아이템 타입, 색상, 스타일은 화면 입력/표시와 저장 요청에 사용하며 [카탈로그 사용 가이드](../domain/catalog.md)의 code 값을 사용합니다.
+- 대상 성별(`gender`)은 사용자 화면에 표시하거나 사용자가 직접 수정하는 값이 아니라, 내부 분류/추천용 code로 저장 요청에 포함합니다.
+- 사진·구매내역 등록 draft/analyze의 `gender` 기본값은 사용자 프로필 성별이며, FE는 별도 표시 없이 저장 요청에 포함합니다.
 - 구매내역 캡처 분석에서 일부 값이 불확실할 수 있으므로 수동 보정 UI가 필요합니다.
-- AI가 카탈로그 code가 아닌 값을 반환하면 `analysisStatus=FAILED`로 처리하고, 유효한 code만 `SUCCESS` 초안으로 내려갑니다. FAILED 캡처는 BE 저장 API로 저장할 수 없으므로 FE는 재업로드·재분석으로 유도합니다.
+- AI가 카탈로그 code가 아닌 값을 반환하면 `analysisStatus=FAILED`로 처리하고, 유효한 code만 `SUCCESS` 초안으로 내려갑니다.
 - 외부 쇼핑몰 상품 저장은 보유 옷 등록과 미보유 저장을 구분해야 합니다.
 
 ## BE 확인 포인트

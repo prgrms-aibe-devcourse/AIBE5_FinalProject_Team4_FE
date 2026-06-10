@@ -1,7 +1,7 @@
 ---
 doc_type: fe_doc_index
 source_of_truth: AIBE5_FinalProject_Team4_FE
-last_updated: 2026-06-04
+last_updated: 2026-06-09
 ---
 
 # 프로젝트 문서
@@ -12,6 +12,7 @@ last_updated: 2026-06-04
 
 - 공통 기획/기능/도메인 문서는 BE 레포를 source of truth로 봅니다.
 - FE 레포에는 공통 문서의 동일본을 두고, 요약본으로 대체하지 않습니다.
+- 기능 요구사항과 세부기능 ID의 공식 기준은 [requirements/requirements-definition.md](./requirements/requirements-definition.md)입니다.
 - API 계약, DB, ERD 상세는 BE 문서를 원본으로 봅니다.
 - FE 화면 흐름, 라우팅, FE API 사용 방식, mock 정책, 로딩/에러/빈 상태는 FE 문서에서 상세화합니다.
 - 코드와 문서가 다르면 PR에서 코드가 문서를 따를지, 문서 기준을 수정할지 명시합니다.
@@ -23,7 +24,8 @@ last_updated: 2026-06-04
 | 문서 | 성격 | 역할 |
 | --- | --- | --- |
 | [planning/project-plan.md](./planning/project-plan.md) | 공통 | 서비스 기획, 문제 정의, MVP 범위, 주요 화면 구조 |
-| [requirements/feature-index.md](./requirements/feature-index.md) | 공통 | 기능 ID, 기능 범위, API/화면/도메인 연결 기준 |
+| [requirements/requirements-definition.md](./requirements/requirements-definition.md) | 공통 | 요구사항 ID, 세부기능 ID, 기능 요구, 정책/제약 기준 |
+| [requirements/feature-index.md](./requirements/feature-index.md) | 공통 | 요구사항 정의서의 세부기능 ID와 API/화면/도메인 연결 기준 |
 | [domain/glossary.md](./domain/glossary.md) | 공통 | 프로젝트에서 사용하는 도메인 용어와 enum 기준 |
 | [domain/catalog.md](./domain/catalog.md) | 공통 | 카테고리, 타입, 색상, 스타일, 외부 출처 code 사용 기준 |
 | [domain/invariants.md](./domain/invariants.md) | 공통 | 구현 중 유지해야 하는 핵심 도메인 규칙 |
@@ -44,16 +46,17 @@ last_updated: 2026-06-04
 처음 문서를 읽거나 FE 기능을 작성, 수정, 삭제, 검토할 때는 아래 순서를 따릅니다.
 
 1. [기획서](./planning/project-plan.md)에서 서비스 목표와 MVP 범위를 확인합니다.
-2. [기능 인덱스](./requirements/feature-index.md)에서 기능 ID, 구현 범위, FE 화면 연결 기준을 확인합니다.
-3. [도메인 용어집](./domain/glossary.md), [카탈로그 사용 가이드](./domain/catalog.md), [도메인 규칙](./domain/invariants.md)에서 데이터 의미와 불변 규칙을 확인합니다.
-4. [추천 정책](./features/recommendation-policy.md)과 [옷 등록 플로우](./features/garment-registration.md)에서 주요 기능 정책을 확인합니다.
+2. [요구사항 정의서](./requirements/requirements-definition.md)에서 요구사항 ID, 세부기능 ID, 기능 요구, 정책/제약을 확인합니다.
+3. [기능 인덱스](./requirements/feature-index.md)에서 세부기능 ID와 API, 데이터, FE 화면 연결 기준을 확인합니다.
+4. [도메인 용어집](./domain/glossary.md), [카탈로그 사용 가이드](./domain/catalog.md), [도메인 규칙](./domain/invariants.md)에서 데이터 의미와 불변 규칙을 확인합니다.
 5. [FE 구현 정합성 현황](./frontend/implementation-gaps.md)에서 현재 코드와 공식 기준의 차이, mock/static/local state 경계를 확인합니다.
-6. [FE 도메인 타입 기준](./frontend/domain-types.md)에서 API code, UI label, view model 변환 기준을 확인합니다.
-7. [FE API 사용 기준](./api/frontend-api-usage.md)에서 API 호출, 응답 parsing, 인증 사용자 ID, 오류 처리 기준을 확인합니다.
-8. [폴더 구조](./frontend/folder-structure.md), [라우팅 기준](./frontend/routing.md), [mock 정책](./frontend/mock-policy.md)에서 FE 코드 구조와 임시 구현 경계를 확인합니다.
-9. [홈 추천 화면](./features/home-recommendation.md), [옷장 화면](./features/wardrobe.md), [공통 로딩/에러/빈 상태](./features/common-loading-error.md)에서 화면별 구현 기준을 확인합니다.
-10. 문서 기준과 코드가 다르면 코드가 문서를 따를지, 문서 기준을 수정할지 PR 안에서 명시합니다.
-11. 현재 코드와 공식 기준의 차이가 생기거나 해소되면 [FE 구현 정합성 현황](./frontend/implementation-gaps.md)을 같은 PR에서 수정합니다.
+6. [추천 정책](./features/recommendation-policy.md)과 [옷 등록 플로우](./features/garment-registration.md)에서 주요 기능 정책을 확인합니다.
+7. [FE 도메인 타입 기준](./frontend/domain-types.md)에서 API code, UI label, view model 변환 기준을 확인합니다.
+8. [FE API 사용 기준](./api/frontend-api-usage.md)에서 API 호출, 응답 parsing, 인증 사용자 ID, 오류 처리 기준을 확인합니다.
+9. [폴더 구조](./frontend/folder-structure.md), [라우팅 기준](./frontend/routing.md), [mock 정책](./frontend/mock-policy.md)에서 FE 코드 구조와 임시 구현 경계를 확인합니다.
+10. [홈 추천 화면](./features/home-recommendation.md), [옷장 화면](./features/wardrobe.md), [공통 로딩/에러/빈 상태](./features/common-loading-error.md)에서 화면별 구현 기준을 확인합니다.
+11. 문서 기준과 코드가 다르면 코드가 문서를 따를지, 문서 기준을 수정할지 PR 안에서 명시합니다.
+12. 현재 코드와 공식 기준의 차이가 생기거나 해소되면 [FE 구현 정합성 현황](./frontend/implementation-gaps.md)을 같은 PR에서 수정합니다.
 
 ## 문서와 코드 정합성 기준
 
@@ -61,7 +64,7 @@ last_updated: 2026-06-04
 
 기존 코드가 임시 구현, mock, 하드코딩, 비공식 API 경로를 포함할 수 있더라도 실제 기능 연동 기준은 이 문서를 따릅니다. 코드 변경으로 문서 기준 자체가 바뀌어야 한다면, 코드만 변경하지 않고 해당 기준 문서를 함께 갱신합니다.
 
-현재 코드와 공식 문서 기준의 차이는 [implementation-gaps.md](frontend/implementation-gaps.md)에 기록합니다. 차이가 해소되면 해당 문서도 함께 수정합니다.
+현재 코드와 공식 문서 기준의 차이는 [implementation-gaps.md](./frontend/implementation-gaps.md)에 기록합니다. 차이가 해소되면 해당 문서도 함께 수정합니다.
 
 ## 동기화 기준
 
@@ -77,6 +80,7 @@ FE 레포에는 아래 문서를 BE 원본과 동일하게 둡니다.
 
 ```text
 docs/planning/project-plan.md
+docs/requirements/requirements-definition.md
 docs/requirements/feature-index.md
 docs/domain/glossary.md
 docs/domain/catalog.md
