@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import AuthenticatedImage from '@/components/common/AuthenticatedImage'
+import { Modal, ModalBody, ModalFooter, ModalHeader } from '@/components/common/Modal'
 import {
   CATEGORY_ITEM_TYPES,
   resolveItemTypeForCategory,
@@ -12,13 +13,12 @@ import {
   needsLightColorBorder,
 } from '@/data/garmentColors'
 import { GARMENT_STYLES } from '@/data/garmentStyles'
-import { CLOTHES_GENDER_OPTIONS } from '@/data/garmentGender'
 import {
   GARMENT_NAME_MAX_LENGTH,
   BRAND_NAME_MAX_LENGTH,
   GARMENT_SIZE_MAX_LENGTH,
   getSizeOptionsByCategory,
-  GARMENT_SEASON_OPTIONS,
+  getGarmentSeasonLabel,
   type GarmentFormFieldErrors,
   type GarmentRegisterDraft,
 } from '@/utils/garmentRegisterValidation'
@@ -36,6 +36,7 @@ interface GarmentEditModalProps {
   imagePreviewUrl: string | null
   imageError: string | null
   fieldErrors: GarmentFormFieldErrors
+  sizeOnly?: boolean
   onDraftChange: (patch: Partial<GarmentEditDraft>) => void
   onImageFileSelect: (file: File | null) => void
   onSave: () => void
@@ -49,6 +50,7 @@ export default function GarmentEditModal({
   imagePreviewUrl,
   imageError,
   fieldErrors,
+  sizeOnly = false,
   onDraftChange,
   onImageFileSelect,
   onSave,
@@ -62,15 +64,6 @@ export default function GarmentEditModal({
   const [secondaryStyleOpen, setSecondaryStyleOpen] = useState(false)
 
   useEffect(() => {
-    if (!open) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !saving) onClose()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [open, saving, onClose])
-
-  useEffect(() => {
     if (open) {
       setSubCategoryOpen(true)
       setMainColorOpen(false)
@@ -80,41 +73,73 @@ export default function GarmentEditModal({
     }
   }, [open, draft.category])
 
-  if (!open) return null
-
   return (
-    <div
-      className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-fade-in"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="garment-edit-title"
-      onClick={() => !saving && onClose()}
+    <Modal
+      open={open}
+      onClose={onClose}
+      titleId="garment-edit-title"
+      ariaDescribedBy="garment-edit-description"
+      zIndex={110}
+      closeOnBackdrop
+      preventClose={saving}
+      panelClassName="max-h-[92vh] rounded-[24px] border border-slate-100 shadow-xl"
     >
-      <div
-        className="w-full max-w-xl max-h-[92vh] flex flex-col bg-white rounded-[24px] border border-slate-100 shadow-xl text-left overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-start justify-between gap-3 px-6 pt-6 pb-4 border-b border-slate-100 shrink-0">
-          <div>
-            <h3 id="garment-edit-title" className="text-base font-black text-slate-900">
-              옷 정보 수정
-            </h3>
-            <p className="text-[10px] text-slate-500 mt-0.5">
-              카테고리, 색상, 스타일 등 옷 정보를 수정할 수 있습니다.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={saving}
-            className="text-slate-400 hover:text-slate-600 text-lg leading-none cursor-pointer disabled:opacity-40"
-            aria-label="닫기"
-          >
-            ×
-          </button>
-        </div>
+      <ModalHeader
+        title="옷 정보 수정"
+        titleId="garment-edit-title"
+        subtitle={
+          <span id="garment-edit-description">
+            {sizeOnly
+              ? '외부 상품은 사이즈만 수정할 수 있습니다.'
+              : '카테고리, 색상, 스타일 등 옷 정보를 수정할 수 있습니다.'}
+          </span>
+        }
+        onClose={onClose}
+        closeDisabled={saving}
+        className="px-6"
+      />
 
-        <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4 space-y-3">
+      <ModalBody className="px-6 py-4 space-y-3">
+          {sizeOnly ? (
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-slate-500">
+                사이즈 <span className="text-slate-400 font-normal">(선택)</span>
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                {getSizeOptionsByCategory(draft.category).map(({ code, label }) => {
+                  const active = draft.size === code
+                  return (
+                    <button
+                      key={code}
+                      type="button"
+                      onClick={() => onDraftChange({ size: active ? '' : code })}
+                      className={`h-8 px-3 rounded-lg text-xs font-bold border transition ${
+                        active
+                          ? 'bg-[#1E3A8A] text-white border-transparent'
+                          : 'bg-white text-slate-500 border-slate-200'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  )
+                })}
+              </div>
+              <input
+                type="text"
+                value={draft.size}
+                maxLength={GARMENT_SIZE_MAX_LENGTH}
+                onChange={(e) => onDraftChange({ size: e.target.value })}
+                placeholder="직접 입력"
+                className={`w-full h-9 px-3 rounded-lg border text-sm bg-white ${
+                  fieldErrors.size ? 'border-red-400' : 'border-slate-200'
+                }`}
+              />
+              {fieldErrors.size && (
+                <p className="text-xs text-red-600">{fieldErrors.size}</p>
+              )}
+            </div>
+          ) : (
+            <>
           <div className="space-y-1">
             <label className="text-xs font-bold text-slate-500">옷 사진</label>
             <div className="w-full rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-center overflow-hidden min-h-[10rem] max-h-48">
@@ -532,66 +557,27 @@ export default function GarmentEditModal({
             )}
           </div>
 
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-slate-500">대상 성별</label>
-            <div className="flex flex-wrap gap-1.5">
-              {CLOTHES_GENDER_OPTIONS.map(({ code, label }) => {
-                const active = draft.gender === code
-                return (
-                  <button
-                    key={code}
-                    type="button"
-                    onClick={() => onDraftChange({ gender: code })}
-                    className={`h-8 px-3 rounded-lg text-xs font-bold border transition ${
-                      active
-                        ? 'bg-[#1E3A8A] text-white border-transparent'
-                        : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
-                    }`}
-                  >
-                    {label}
-                  </button>
-                )
-              })}
+          {draft.season.trim() && (
+            <div className="space-y-0.5">
+              <label className="text-xs font-bold text-slate-500">시즌</label>
+              <p className="text-sm text-slate-600">
+                {getGarmentSeasonLabel(draft.season)}
+                <span className="ml-1.5 text-xs text-slate-400">
+                  (등록 시에만 설정 가능)
+                </span>
+              </p>
             </div>
-            {fieldErrors.gender && (
-              <p className="text-xs text-red-600">{fieldErrors.gender}</p>
-            )}
-          </div>
+          )}
+            </>
+          )}
+      </ModalBody>
 
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-slate-500">
-              시즌 <span className="text-slate-400 font-normal">(선택)</span>
-            </label>
-            <div className="flex flex-wrap gap-1.5">
-              {GARMENT_SEASON_OPTIONS.map(({ code, label }) => {
-                const active = draft.season === code
-                return (
-                  <button
-                    key={code}
-                    type="button"
-                    onClick={() => onDraftChange({ season: active ? '' : code })}
-                    className={`h-8 px-3 rounded-lg text-xs font-bold border transition ${
-                      active
-                        ? 'bg-[#1E3A8A] text-white border-transparent'
-                        : 'bg-white text-slate-500 border-slate-200'
-                    }`}
-                  >
-                    {label}
-                  </button>
-                )
-              })}
-            </div>
-            {fieldErrors.season && (
-              <p className="text-xs text-red-600">{fieldErrors.season}</p>
-            )}
-          </div>
-        </div>
-
-        <div className="flex gap-2 px-6 py-4 border-t border-slate-100 shrink-0">
+      <ModalFooter className="px-6 py-4">
+        <div className="flex gap-2">
           <button
             type="button"
             onClick={onSave}
-            disabled={saving || !draft.name.trim()}
+            disabled={saving || (!sizeOnly && !draft.name.trim())}
             className="flex-1 py-2.5 rounded-xl text-xs font-black bg-[#1E3A8A] text-white cursor-pointer disabled:opacity-50"
           >
             {saving ? '저장 중...' : '저장'}
@@ -605,7 +591,7 @@ export default function GarmentEditModal({
             취소
           </button>
         </div>
-      </div>
-    </div>
+      </ModalFooter>
+    </Modal>
   )
 }
