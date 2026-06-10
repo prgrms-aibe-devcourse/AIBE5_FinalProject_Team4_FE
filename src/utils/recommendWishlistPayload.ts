@@ -3,7 +3,7 @@ import type { Garment } from '@/types'
 import type { ClothesGender } from '@/types/be'
 import type { RecommendedClothesItem } from '@/types/recommendations'
 import { resolveClothesDisplayImageUrl } from '@/utils/clothesImageUrl'
-import { isDirectNaverProductUrl } from '@/utils/naverShoppingUrl'
+import { resolveNaverShoppingPurchaseUrl } from '@/utils/naverShoppingUrl'
 
 /** BE `WishlistClothesCreateRequest` — POST /api/users/{userId}/wishlist-clothes */
 export interface WishlistClothesCreatePayload {
@@ -35,11 +35,10 @@ export function buildWishlistPayloadFromRecommendedItem(
     throw new Error('위시리스트 저장에 필요한 이미지 URL이 없습니다.')
   }
 
-  const directUrl = item.externalProductUrl?.trim()
-  const externalProductUrl =
-    directUrl && (isDirectNaverProductUrl(directUrl) || directUrl.startsWith('https://'))
-      ? directUrl
-      : imageUrl
+  const externalProductUrl = resolveNaverShoppingPurchaseUrl(
+    item.name,
+    item.externalProductUrl,
+  )
 
   return {
     name: item.name.trim(),
