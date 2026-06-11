@@ -34,6 +34,7 @@ last_updated: 2026-06-10
 | 홈 추천 API | `HomeTab`의 OOTD, 취향 기반, 유사 상품, AI MD 라벨은 static/mock. AI MD chat은 `/api/chat-gamyagi` 직접 `fetch` | BE API 계약 경로와 공통 API client 사용 | [home-recommendation.md](../features/home-recommendation.md), [mock-policy.md](mock-policy.md) |
 | 추천 피드백 | 추천 저장/싫어요/추천 제외 액션이 `feedback` API와 연결되지 않음 | `RECO-013`~`RECO-014` 피드백 API 호출 | [frontend-api-usage.md](../api/frontend-api-usage.md) |
 | 옷 대상 성별 UI | 사진/구매내역 등록, 옷 수정 화면에서 `gender`를 표시하고 직접 수정 | `CLOTHES.gender`는 사용자 화면 비노출, 내부 분류/추천 및 저장 요청용 code | [garment-registration.md](../features/garment-registration.md), [domain-types.md](domain-types.md) |
+| 옷 계절 수정 UI/검증 주석 | 등록/수정 modal에서 `season`을 생성 후에도 수정 가능한 값처럼 다룰 수 있고, 일부 검증 코드 주석이 `WARDROBE_CLOTHES.season` 기준으로 남아 있음 | `CLOTHES.season`은 옷 등록 시 확정하는 공통 옷 정보이며 생성 후 변경하지 않음 | [garment-registration.md](../features/garment-registration.md), [domain-types.md](domain-types.md) |
 | 옷장 통계 범위 | `ClosetTab` local count와 현재 BE `totalOwnedCount`만으로 전체 요약을 해석할 수 있음 | 옷장 전체 요약은 `OWNED`와 `WISHLIST`를 함께 고려 | [wardrobe.md](../features/wardrobe.md) |
 | 공통 응답 | `src/types/index.ts`의 `ApiResponse<T>`에 `status` 필드 포함 | `success`, `data`, `message` 기준 | [domain-types.md](domain-types.md) |
 | 에러 분기 | `src/api/index.ts`에서 `status >= 500`을 모두 `/error/server`로 이동 | 500 서버 내부 오류와 502 외부 서비스 오류 구분 | [frontend-api-usage.md](../api/frontend-api-usage.md), [common-loading-error.md](../features/common-loading-error.md) |
@@ -48,7 +49,7 @@ last_updated: 2026-06-10
 | `AUTH-005` | 로그인 상태 유지 | `src/api/index.ts`, `App.tsx` | [frontend-api-usage.md](../api/frontend-api-usage.md) | refresh/logout API 미연동. 401 처리와 access token 재발급 흐름 확정 필요 |
 | `ONBOARD-001`~`ONBOARD-010`, `STYLE-001` | 온보딩, 마이페이지 | `OnboardingPage.tsx`, `ProfileEditTab.tsx`, `App.tsx` | [feature-index.md](../requirements/feature-index.md), [catalog.md](../domain/catalog.md) | local state와 일부 하드코딩 스타일 값 사용. 공식 style code 및 사용자 스타일 API 연동 확인 필요 |
 | `WARDROBE-002` | `closet` tab 요약 | `ClosetTab.tsx` | [feature-index.md](../requirements/feature-index.md), [wardrobe.md](../features/wardrobe.md) | 옷장 전체 요약 기준과 현재 BE 통계 API 범위가 다르게 읽힐 수 있음 |
-| `WARDROBE-011`~`WARDROBE-030`, 옷 수정 | 옷 등록/수정 modal | `PhotoGarmentRegisterModal.tsx`, `PurchaseGarmentRegisterModal.tsx`, `GarmentEditModal.tsx` | [garment-registration.md](../features/garment-registration.md), [domain-types.md](domain-types.md) | 등록/수정 API 연동 자체가 아니라, 옷 대상 성별 UI 노출 기준 확인 필요 |
+| `WARDROBE-011`~`WARDROBE-030`, 옷 수정 | 옷 등록/수정 modal | `PhotoGarmentRegisterModal.tsx`, `PurchaseGarmentRegisterModal.tsx`, `GarmentEditModal.tsx` | [garment-registration.md](../features/garment-registration.md), [domain-types.md](domain-types.md) | 등록/수정 API 연동 자체가 아니라, 옷 대상 성별 UI 노출과 생성 후 `season` 수정 가능성 확인 필요 |
 | `RECO-001` | `home` tab `ootd` 라벨 | `HomeTab.tsx` | [home-recommendation.md](../features/home-recommendation.md) | static/mock. BE `GET /api/v1/ootd/{wardrobeId}` 미연동 |
 | `RECO-002` | `home` tab `style` 라벨 | `HomeTab.tsx` | [home-recommendation.md](../features/home-recommendation.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | static/mock. BE `GET /api/v1/recommendations/{wardrobeId}` 미연동 |
 | `RECO-003` | `home` tab `similar` 라벨 | `HomeTab.tsx` | [home-recommendation.md](../features/home-recommendation.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | static/mock. BE `similar-products` API 미연동 |
@@ -107,6 +108,26 @@ BE API 계약 원본(`AIBE5_FinalProject_Team4_BE/docs/api/api-contract.md`) 기
 - FE는 draft/analyze 응답 또는 사용자 프로필 기반 기본값을 내부 상태에 유지하고 저장 요청에 포함해야 함
 - 추천 응답의 `gender`도 화면 표시가 아니라 내부 필터/제외 기준으로만 사용해야 함
 - UI 노출 제거 시 [frontend-api-usage.md](../api/frontend-api-usage.md), [domain-types.md](domain-types.md), 이 문서를 함께 수정해야 함
+
+### 옷 계절(`season`) 수정 기준
+
+공식 기준에서 `CLOTHES.season`은 사용자별 옷장 정보가 아니라 옷 자체의 공통 정보입니다. 옷 등록 시 1개 선택해 저장하고, 생성된 옷의 계절은 옷 수정 플로우에서 변경하지 않습니다.
+
+현재 FE 코드 확인 대상:
+
+- `PhotoGarmentRegisterModal`
+- `PurchaseGarmentRegisterModal`
+- `GarmentEditModal`
+- 관련 draft mapper와 clothes mapper
+- `src/utils/garmentRegisterValidation.ts`
+
+남은 gap:
+
+- 등록 화면에서는 `season` 저장 요청을 유지해야 합니다.
+- 옷 수정 화면에서는 `season`을 생성 후 변경 가능한 필드처럼 노출하거나 payload로 갱신하지 않도록 확인해야 합니다.
+- `garmentRegisterValidation.ts`의 `GARMENT_SEASON_MAX_LENGTH` 주석처럼 `WARDROBE_CLOTHES.season` 기준으로 남은 코드 주석은 `CLOTHES.season` 기준으로 정리해야 합니다.
+- 현재 BE `implementation-gaps.md`에도 옷 수정 요청과 일부 Swagger/OpenAPI 설명의 `season` 기준 차이가 기록되어 있으므로, FE는 BE 계약 확정 전까지 `season`을 사용자별 옷장 정보로 해석하지 않습니다.
+- 계절 code 목록은 `GET /api/v1/categories` 일반 응답의 별도 필드가 아니라 [catalog.md](../domain/catalog.md)의 계절 섹션을 기준으로 사용합니다.
 
 ### `WARDROBE-002` 옷장 통계
 
@@ -181,13 +202,14 @@ BE API 계약 기준으로 `500`은 서버 내부 오류이고, `502`는 외부 
 | --- | --- | --- |
 | 1 | `AUTH-005` refresh/logout 연동 | 로그인 상태 유지와 세션 만료 처리에 직접 영향 |
 | 2 | 옷 대상 성별(`gender`) UI 비노출 전환 | 공통 문서 기준과 현재 등록/수정 UI가 다르게 동작 |
-| 3 | 홈 추천 static/mock API 전환 | 사용자가 보는 추천 화면의 실제 데이터 연동 여부에 영향 |
-| 4 | 추천 피드백 API 연동 | 저장/싫어요/추천 제외 정책과 사용자 스타일 점수에 영향 |
-| 5 | `ApiResponse<T>` 타입과 500/502 에러 분기 | 모든 API parsing과 공통 error handling에 영향 |
-| 6 | BE 신규 API 타입 정리 | 추천/OOTD/AI MD/코디/인증 유지 API 연동 시 타입 안정성에 영향 |
-| 7 | `WARDROBE-002` 옷장 통계 범위 | 옷장 전체 요약과 보유 옷 통계 해석에 영향 |
-| 8 | 온보딩/스타일/피드 local·static 데이터 경계 | 실제 사용자 데이터와 mock/local 데이터 구분에 영향 |
-| 9 | `/api/chat-gamyagi` mock API 경계 | AI MD 실제 API 연동 여부 판단에 영향 |
+| 3 | 옷 계절(`season`) 생성 후 수정 가능성 정리 | ERD v2.3 기준과 등록/수정 화면 payload 해석에 영향 |
+| 4 | 홈 추천 static/mock API 전환 | 사용자가 보는 추천 화면의 실제 데이터 연동 여부에 영향 |
+| 5 | 추천 피드백 API 연동 | 저장/싫어요/추천 제외 정책과 사용자 스타일 점수에 영향 |
+| 6 | `ApiResponse<T>` 타입과 500/502 에러 분기 | 모든 API parsing과 공통 error handling에 영향 |
+| 7 | BE 신규 API 타입 정리 | 추천/OOTD/AI MD/코디/인증 유지 API 연동 시 타입 안정성에 영향 |
+| 8 | `WARDROBE-002` 옷장 통계 범위 | 옷장 전체 요약과 보유 옷 통계 해석에 영향 |
+| 9 | 온보딩/스타일/피드 local·static 데이터 경계 | 실제 사용자 데이터와 mock/local 데이터 구분에 영향 |
+| 10 | `/api/chat-gamyagi` mock API 경계 | AI MD 실제 API 연동 여부 판단에 영향 |
 
 ## 문서 변경 기준
 

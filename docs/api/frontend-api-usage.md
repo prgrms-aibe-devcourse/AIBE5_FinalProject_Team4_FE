@@ -2,7 +2,7 @@
 doc_type: fe_api_usage
 source_of_truth: AIBE5_FinalProject_Team4_FE
 api_contract_source_of_truth: AIBE5_FinalProject_Team4_BE/docs/api/api-contract.md
-last_updated: 2026-06-09
+last_updated: 2026-06-10
 ---
 
 # API 사용 기준
@@ -150,6 +150,7 @@ API를 호출하는 화면은 아래 상태를 구분합니다.
 | OAuth 로그인 | GET | `/oauth2/authorization/{provider}` | 로그인 시작 |
 | 카탈로그 | GET | `/api/v1/categories` | 카테고리, 타입, 색상, 스타일 선택지 렌더링 |
 | 카탈로그 | GET | `/api/v1/categories/guide` | 카테고리 사용 가이드 표시 |
+| 카탈로그 | GET | `/api/v1/categories/ai-guide` | AI 분석용 카탈로그 가이드 확인 |
 | 카탈로그 | GET | `/api/v1/categories/external-sources` | 외부 출처 선택지 렌더링 |
 | 옷장 | GET | `/api/v1/wardrobes/users/{userId}` | 사용자 옷장 정보 표시 |
 | 옷장 | POST | `/api/v1/wardrobes/users/{userId}` | 사용자 옷장 생성 |
@@ -164,7 +165,7 @@ API를 호출하는 화면은 아래 상태를 구분합니다.
 | 미보유 옷 | GET | `/api/users/{userId}/wishlist-clothes` | 미보유 옷 목록 표시 |
 | 미보유 옷 | GET | `/api/users/{userId}/wishlist-clothes/favorites` | 즐겨찾기 미보유 옷 표시 |
 | 미보유 옷 저장 | POST | `/api/users/{userId}/wishlist-clothes` | 추천/외부 상품을 미보유 옷으로 저장 |
-| 미보유 옷 전환 | PATCH | `/api/clothes/{clothesId}/convert-to-owned` | 미보유에서 보유 전환 |
+| 미보유 옷 전환 | PATCH | `/api/v1/clothes/{clothesId}/convert-to-owned` | 미보유에서 보유 전환 |
 | 사진 기반 등록 | POST | `/api/v1/users/{userId}/clothes/photos` | 옷 사진 업로드 |
 | 사진 기반 등록 | POST | `/api/v1/users/{userId}/clothes/photos/{photoId}/analyze` | 사진 분석 요청 |
 | 사진 기반 등록 | GET | `/api/v1/users/{userId}/clothes/photos/{photoId}/draft` | 사진 분석 초안 표시 |
@@ -208,9 +209,20 @@ BE 추천 API 중 현재 FE에서 실제 호출하는 API와 아직 mock/static 
 | `RECO-006` | `/api/v1/users/{userId}/recommendations/ai-md/**` | `HomeTab` `aimd` 라벨 static/mock |
 | `RECO-013`~`RECO-014` | `POST /api/v1/users/{userId}/recommendations/feedback` | 저장/싫어요/추천 제외 액션 연동 필요 |
 
+추천 응답에서 FE가 카드와 저장 액션에 사용하는 주요 필드는 아래 기준을 따릅니다.
+
+| 필드 | FE 처리 기준 |
+| --- | --- |
+| `brandName` | 추천 카드 브랜드명과 브랜드 로고 매칭에 사용합니다. 값이 비어 있으면 `UNKNOWN` 또는 대체 문구로 처리합니다. |
+| `season` | `CLOTHES.season` code입니다. 추천 카드 저장 payload에 전달할 수 있지만 사용자별 옷장 정보로 해석하지 않습니다. |
+| `externalProductUrl` | 구매 이동 URL 또는 네이버쇼핑 URL 생성의 우선 입력값입니다. 값이 없으면 상품명 기반 검색 URL로 대체할 수 있습니다. |
+| `gender` | 옷 대상 성별 code입니다. 사용자 화면에 표시하지 않고 내부 필터/추천 제외 기준으로만 사용합니다. |
+
 날씨, 지역, 체감온도 정보(`EXT-004`~`EXT-006`)는 독립 추천 기능이 아니라 `RECO-001`, `RECO-002` 등 추천 기능의 보조 조건입니다. `/api/weather`는 추천 보조 정보 API로 설명합니다.
 
 옷 대상 성별(`gender`)은 응답 또는 저장 요청 payload에 포함될 수 있지만 사용자 화면에 표시하거나 필터 UI로 노출하지 않습니다. FE는 필요 시 내부 분류/추천 제외 기준으로만 사용합니다.
+
+옷 계절(`season`)은 `CLOTHES.season` 기준의 공통 옷 정보입니다. FE는 옷 등록 저장 요청에 `season` code를 포함할 수 있으며, 생성된 옷의 계절을 옷 수정 화면에서 변경하는 UI로 다루지 않습니다. 현재 `GET /api/v1/categories` 일반 응답은 계절 code 목록을 별도 필드로 제공하지 않으므로, 계절 code 기준은 [catalog.md](../domain/catalog.md)의 계절 섹션을 따릅니다.
 
 ## 인증 유지 API 확인 대상 (`AUTH-005`)
 
@@ -229,7 +241,7 @@ analyze/draft 응답(`PurchaseCaptureDraftResponse`)과 save 응답(`PurchaseCap
 
 | 필드 | FE 처리 |
 | --- | --- |
-| `items[]` | 상품 카드 목록. `itemIndex`, `status`(`PENDING`/`SAVED`/`SKIPPED`), `imageUrl` 사용 |
+| `items[]` | 상품 카드 목록. `itemIndex`, `status`(`PENDING`/`SAVED`/`SKIPPED`), `season`, `gender`, `imageUrl` 사용 |
 | `pendingItemCount` | 남은 상품 수 표시, 완료 여부 판단 |
 | `captureCompleted` | true이면 등록 플로우 종료 |
 

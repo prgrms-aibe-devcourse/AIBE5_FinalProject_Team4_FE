@@ -1,7 +1,7 @@
 ---
 doc_type: fe_feature_wardrobe
 source_of_truth: AIBE5_FinalProject_Team4_FE
-last_updated: 2026-06-09
+last_updated: 2026-06-10
 ---
 
 # 옷장 화면 기준
@@ -53,7 +53,7 @@ last_updated: 2026-06-09
 | `WARDROBE-002` | 옷장 통계 | `GET /api/v1/wardrobes/users/{userId}/statistics` |
 | `WARDROBE-003`~`WARDROBE-008` | 보유 옷 조회/상세/수정/삭제/즐겨찾기 | `GET /api/v1/users/{userId}/clothes`, `GET /api/v1/clothes/{clothesId}`, `PATCH /api/v1/clothes/{clothesId}`, `DELETE /api/v1/clothes/{clothesId}` |
 | `WARDROBE-009` | 미보유 옷 조회 | `GET /api/users/{userId}/wishlist-clothes` |
-| `WARDROBE-010` | 미보유에서 보유 전환 | `PATCH /api/clothes/{clothesId}/convert-to-owned` |
+| `WARDROBE-010` | 미보유에서 보유 전환 | `PATCH /api/v1/clothes/{clothesId}/convert-to-owned` |
 
 ## 옷장 통계 기준
 
