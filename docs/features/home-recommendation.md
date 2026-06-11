@@ -1,7 +1,7 @@
 ---
 doc_type: fe_feature_home_recommendation
 source_of_truth: AIBE5_FinalProject_Team4_FE
-last_updated: 2026-06-09
+last_updated: 2026-06-10
 ---
 
 # 홈 추천 화면 기준
@@ -41,7 +41,8 @@ last_updated: 2026-06-09
 - 추천 상품 또는 코디 목록
 - 추천 이유
 - 상품 이미지
-- 상품명, 브랜드, 카테고리, 타입, 색상, 스타일
+- 상품명, 브랜드명(`brandName`), 카테고리, 타입, 계절 code, 색상, 스타일
+- 외부 구매 링크(`externalProductUrl`) 또는 대체 구매 검색 링크
 - 추천 상품 또는 코디 상세 진입 액션
 - 미보유 옷 저장 액션
 - 싫어요 또는 추천 제외 액션
@@ -54,6 +55,8 @@ last_updated: 2026-06-09
 - 추천 제외된 상품은 해당 사용자 추천 후보에서 다시 노출되지 않는 것을 기준으로 합니다.
 - 실제 추천 API는 [frontend-api-usage.md](../api/frontend-api-usage.md)에 정리된 BE API 계약 기준 경로를 사용합니다.
 - BE API 계약에 없는 임시 추천 경로는 실제 추천 연동 완료 상태로 보지 않습니다.
+- 추천 상품 카드에서 `brandName`, `season`, `externalProductUrl`을 사용하는 경우 BE 응답 필드명을 그대로 기준으로 삼습니다.
+- `season`은 `CLOTHES.season` code이며 사용자별 옷장 정보로 해석하지 않습니다.
 - 옷 대상 성별(`gender`)은 내부 분류/추천 제외 기준으로만 사용하고, 사용자 화면에 표시하거나 필터로 노출하지 않습니다.
 
 ## 미보유 옷 저장
@@ -63,6 +66,7 @@ last_updated: 2026-06-09
 기준:
 
 - 저장 대상은 `WISHLIST` 상태로 사용자 옷장에 연결됩니다.
+- 추천 응답의 `brandName`, `season`, `externalProductUrl`은 미보유 저장 payload 구성에 사용할 수 있습니다.
 - 저장 완료 후 사용자는 옷장 미보유 탭에서 확인할 수 있어야 합니다.
 - 이미 저장된 상품이면 중복 저장을 막거나 저장됨 상태를 표시합니다.
 
