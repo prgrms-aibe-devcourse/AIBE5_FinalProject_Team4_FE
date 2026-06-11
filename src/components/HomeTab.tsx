@@ -1,17 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import api from "@/api";
 import AuthenticatedImage from "@/components/common/AuthenticatedImage";
 import { fetchClothesRecommendations, DEFAULT_RECOMMENDATIONS_PER_CATEGORY } from "@/api/recommendations";
-import { fetchClothesDetail } from "@/api/wardrobe";
-import RecommendProductDetailModal from "@/components/RecommendProductDetailModal";
-import OutfitDetailModal from "@/components/OutfitDetailModal";
-import DevApiLogger from '@/components/DevApiLogger'
 import { AlertCircle, Shirt } from "./icons";
 import { Garment } from "@/types/index";
 import { extractApiErrorMessage } from "@/utils/apiError";
 import { resolveClothesDisplayImageUrl } from "@/utils/clothesImageUrl";
 import {
-  mapClothesRecommendationResponseGrouped, RecommendCardItem,
+  mapClothesRecommendationResponseGrouped,
   type RecommendCategoryGroup,
 } from "@/utils/recommendationMapper";
 import { matchesUserGender, type UserGender } from "@/utils/genderClothesFilter";
@@ -50,9 +45,6 @@ type RecommendItem = {
   imageUrl: string;
   reason: string;
   isAnchor?: boolean;
-  clothesId?: number;
-  outfitId?: number;
-  bookId?: number;
 };
 
 const labelConfig: Record<
@@ -388,17 +380,6 @@ export default function HomeTab({
   >([]);
   const [matchLoading, setMatchLoading] = useState(false);
   const [matchError, setMatchError] = useState<string | null>(null);
-
-  const [wardrobeId, setWardrobeId] = useState<number | null>(null);
-  const [currentTemp, setCurrentTemp] = useState<number | null>(null);
-  const [ootdItems, setOotdItems] = useState<RecommendItem[]>([]);
-  const [ootdCombinations, setOotdCombinations] = useState<Array<any>>([]);
-  const [styleItems, setStyleItems] = useState<RecommendItem[]>([]);
-  const [ootdLoading, setOotdLoading] = useState(false);
-  const [styleLoading, setStyleLoading] = useState(false);
-  const [ootdError, setOotdError] = useState<string | null>(null);
-  const [styleError, setStyleError] = useState<string | null>(null);
-
   const labelSectionRef = useRef<HTMLElement | null>(null);
   const ownedClothes = useMemo(
     () => clothes.filter((item) => !item.isWishlist),
@@ -458,122 +439,6 @@ export default function HomeTab({
       cancelled = true;
     };
   }, [activeLabel, anchorClothesIdNumeric, gender, userId]);
-
-  // wardrobeId 조회 + 날씨 + 추천 API
-  useEffect(() => {
-    if (!userId) return;
-
-    let cancelled = false;
-
-    const fetchData = async () => {
-      try {
-        // 1. wardrobeId 조회 (api 인스턴스 사용 → 토큰 자동 첨부)
-        const wardrobeRes = await api.get(`/api/v1/wardrobes/users/${userId}`);
-        const wId = wardrobeRes.data.data.wardrobeId;
-        if (cancelled) return;
-        setWardrobeId(wId);
-
-        // 2. 날씨 조회 (api 인스턴스 사용)
-        const weatherRes = await api.get("/api/weather", {
-          params: { region: "서울" },
-        });
-        if (cancelled) return;
-        const temp = parseFloat(
-            (weatherRes.data as Array<{ temp: string }>)[0].temp.replace("°C", ""),
-        );
-        setCurrentTemp(temp);
-
-        // 3. OOTD 추천
-        setOotdLoading(true);
-        setOotdError(null);
-        try {
-          const ootdRes = await api.get(`/api/v1/ootd/${wId}`, {
-            params: { currentTemp: temp },
-          });
-          if (!cancelled) {
-            const combinations = (ootdRes.data.data.combinations ?? []) as Array<{
-              top?: { clothesId: number; name: string; imageUrl: string; category: string };
-              bottom?: { clothesId: number; name: string; imageUrl: string; category: string };
-              outer?: { clothesId: number; name: string; imageUrl: string; category: string } | null;
-              totalScore: number;
-              outfitId?: number;
-            }>;
-            const weatherLabel = (ootdRes.data.data.weatherLabel ?? "") as string;
-            const combos = combinations.slice(0, 4)
-            setOotdCombinations(combos)
-            setOotdItems(
-                combos.map((combo, idx): RecommendItem => ({
-                  id: `ootd-api-${idx}`,
-                  title: [combo.top?.name, combo.bottom?.name, combo.outer?.name]
-                      .filter(Boolean)
-                      .join(" + "),
-                  category: (combo.top?.category ?? "Top") as RecommendItem["category"],
-                  style: "",
-                  color: "",
-                  price: "",
-                  matchRate: Math.round(combo.totalScore * 10),
-                  imageUrl: combo.top?.imageUrl ?? combo.bottom?.imageUrl ?? "",
-                  reason: weatherLabel,
-                  outfitId: combo.outfitId,
-                  bookId: wId,
-                })),
-            );
-          }
-        } catch {
-          if (!cancelled) setOotdError("OOTD 추천을 불러오지 못했습니다.");
-        } finally {
-          if (!cancelled) setOotdLoading(false);
-        }
-
-        // 4. 스타일 기반 추천
-        setStyleLoading(true);
-        setStyleError(null);
-        try {
-          const styleRes = await api.get(`/api/v1/recommendations/${wId}`, {
-            params: { currentTemp: temp },
-          });
-          if (!cancelled) {
-            const items = (styleRes.data.data ?? []) as Array<{
-              clothesId?: number;
-              title: string;
-              link: string;
-              imageUrl: string;
-              price: string;
-              score: string;
-              reason: string;
-            }>;
-            setStyleItems(
-                items.slice(0, 4).map((item, idx): RecommendItem => ({
-                  id: `style-api-${idx}`,
-                  title: item.title,
-                  category: "Top",
-                  style: "",
-                  color: "",
-                  price: item.price ? `${item.price}원` : "",
-                  matchRate: Math.round(parseFloat(item.score) * 100),
-                  imageUrl: item.imageUrl,
-                  reason: item.reason,
-                  clothesId: item.clothesId,
-                })),
-            );
-          }
-        } catch {
-          if (!cancelled) setStyleError("스타일 기반 추천을 불러오지 못했습니다.");
-        } finally {
-          if (!cancelled) setStyleLoading(false);
-        }
-      } catch (err) {
-        console.error("Failed to fetch initial data:", err);
-      }
-    };
-
-    void fetchData();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [userId]);
-
 
   const buildRecommendations = (label: RecommendationLabel) => {
     const baseList = baseRecommendations[label];
@@ -649,10 +514,8 @@ export default function HomeTab({
 
   const selectedRecommendations = useMemo(() => {
     if (activeLabel === "match") return [];
-    if (activeLabel === "ootd") return ootdItems.length > 0 ? ootdItems : buildRecommendations("ootd");
-    if (activeLabel === "style") return styleItems;
     return buildRecommendations(activeLabel);
-  }, [activeLabel, clothes, gender, ootdItems, styleItems]);
+  }, [activeLabel, clothes, gender]);
 
   const matchRecommendationCount = useMemo(
     () => matchRecommendationGroups.reduce((sum, group) => sum + group.items.length, 0),
@@ -661,35 +524,6 @@ export default function HomeTab({
 
   const activeConfig = labelConfig[activeLabel];
   const labelKeys = Object.keys(labelConfig) as RecommendationLabel[];
-
-  const [selectedItem, setSelectedItem] = useState<RecommendItem | null>(null);
-  const [selectedCombo, setSelectedCombo] = useState<any | null>(null);
-
-  const mappedSelectedItem = useMemo((): RecommendCardItem | null => {
-    if (!selectedItem) return null;
-    return {
-      id: selectedItem.id,
-      clothesId: selectedItem.clothesId ?? null,
-      title: selectedItem.title,
-      brandLabel: "추천 상품",
-      brandLogoUrl: null,
-      category: selectedItem.category,
-      categoryLabel: ({ Top: "상의", Bottom: "하의", Outer: "아우터", Shoes: "신발" } as const)[selectedItem.category],
-      itemTypeLabel: "",
-      style: selectedItem.style || "—",
-      styles: selectedItem.style ? [selectedItem.style] : [],
-      color: selectedItem.color || "기본",
-      colorHex: undefined,
-      secondaryColors: [],
-      price: selectedItem.price,
-      matchRate: selectedItem.matchRate,
-      imageUrl: selectedItem.imageUrl,
-      reason: selectedItem.reason,
-      purchaseUrl: "#",
-      hasDirectPurchaseUrl: false,
-    };
-  }, [selectedItem]);
-
 
   useEffect(() => {
     const target = labelSectionRef.current;
@@ -858,18 +692,6 @@ export default function HomeTab({
           </div>
         )}
 
-        {(activeLabel === "ootd" && ootdLoading) || (activeLabel === "style" && styleLoading) ? (
-          <div className="mb-5 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-10 text-center">
-            <p className="text-sm font-black text-slate-500">추천을 불러오는 중…</p>
-          </div>
-        ) : null}
-
-        {(activeLabel === "ootd" && ootdError) || (activeLabel === "style" && styleError) ? (
-          <div className="mb-5 rounded-2xl border border-dashed border-red-200 bg-red-50 px-4 py-10 text-center">
-            <p className="text-sm font-black text-red-600">{activeLabel === "ootd" ? ootdError : styleError}</p>
-          </div>
-        ) : null}
-
         {activeLabel === "match" && matchEligibleOwnedClothes.length > 0 && !anchorClothesId ? (
           <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center">
             <p className="text-sm font-black text-slate-600">위에서 옷을 선택해 주세요</p>
@@ -906,17 +728,7 @@ export default function HomeTab({
           {selectedRecommendations.map((item) => (
             <article
               key={item.id}
-              onClick={() => {
-                if (activeLabel === 'ootd' && item.outfitId) {
-                  const combo = ootdCombinations.find((c) => c.outfitId === item.outfitId) ?? null
-                  setSelectedCombo(combo)
-                  setSelectedItem(null)
-                } else {
-                  setSelectedItem(item)
-                  setSelectedCombo(null)
-                }
-              }}
-              className={`group rounded-[24px] border overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:rotate-[0.5deg] hover:shadow-xl active:scale-[0.99] cursor-pointer ${
+              className={`group rounded-[24px] border overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:rotate-[0.5deg] hover:shadow-xl active:scale-[0.99] ${
                 item.isAnchor
                   ? "border-[#1E3A8A]/30 bg-indigo-50/40 ring-1 ring-[#1E3A8A]/20"
                   : "border-slate-100 bg-slate-50"
@@ -945,22 +757,6 @@ export default function HomeTab({
         </div>
         )}
       </section>
-
-      <RecommendProductDetailModal
-          open={selectedItem != null}
-          item={mappedSelectedItem}
-          onClose={() => setSelectedItem(null)}
-          isOutfit={activeLabel === "ootd"}
-          userId={userId}
-      />
-
-      <OutfitDetailModal
-        open={selectedCombo != null}
-        combination={selectedCombo}
-        onClose={() => setSelectedCombo(null)}
-        onSaved={onRefreshWardrobe}
-      />
-      {import.meta.env.DEV ? <DevApiLogger /> : null}
     </div>
   );
 }

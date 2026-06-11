@@ -45,14 +45,3 @@ export async function fetchClothesRecommendations(
     ),
   )
 }
-
-/**
- * Submit recommendation feedback (SAVE / DISLIKE / EXCLUDE)
- * POST /api/v1/users/{userId}/recommendations/feedback
- */
-export async function postRecommendationFeedback(
-  userId: number,
-  payload: { type: 'SAVE' | 'DISLIKE' | 'EXCLUDE'; clothesId?: number; outfitId?: number; reason?: string },
-): Promise<void> {
-  await unwrap(api.post(`/api/v1/users/${userId}/recommendations/feedback`, payload))
-}
