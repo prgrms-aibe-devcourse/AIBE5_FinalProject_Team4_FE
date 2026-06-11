@@ -23,6 +23,7 @@ export interface RecommendedClothesItem {
   clothesId: number
   wardrobeClothesId: number | null
   name: string
+  brandName?: string | null
   imageUrl: string
   userImageUrl: string | null
   category: string
@@ -34,6 +35,7 @@ export interface RecommendedClothesItem {
   season: string | null
   gender?: ClothesGender
   compatibilityScore: number
+  externalProductUrl?: string | null
 }
 
 export interface ClothesRecommendationResponse {

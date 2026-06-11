@@ -7,7 +7,6 @@ import { extractApiErrorMessage } from "@/utils/apiError";
 import { resolveClothesDisplayImageUrl } from "@/utils/clothesImageUrl";
 import {
   mapClothesRecommendationResponseGrouped,
-  type RecommendCardItem,
   type RecommendCategoryGroup,
 } from "@/utils/recommendationMapper";
 import { matchesUserGender, type UserGender } from "@/utils/genderClothesFilter";
@@ -30,11 +29,23 @@ interface HomeTabProps {
   nickname: string;
   insightGlow?: boolean;
   resetSignal?: number;
+  onRefreshWardrobe?: () => void;
 }
 
 type RecommendationLabel = "ootd" | "style" | "similar" | "match" | "aimd";
 
-type RecommendItem = RecommendCardItem;
+type RecommendItem = {
+  id: string;
+  title: string;
+  category: "Top" | "Bottom" | "Outer" | "Shoes";
+  style: string;
+  color: string;
+  price: string;
+  matchRate: number;
+  imageUrl: string;
+  reason: string;
+  isAnchor?: boolean;
+};
 
 const labelConfig: Record<
   RecommendationLabel,
@@ -359,6 +370,7 @@ export default function HomeTab({
   wardrobeLoading = false,
   insightGlow = false,
   resetSignal = 0,
+  onRefreshWardrobe,
 }: HomeTabProps) {
   const [activeLabel, setActiveLabel] = useState<RecommendationLabel>("ootd");
   const [showStickyLabels, setShowStickyLabels] = useState(false);
@@ -510,10 +522,6 @@ export default function HomeTab({
     [matchRecommendationGroups],
   );
 
-  const selectedAnchorGarment = useMemo(
-    () => matchEligibleOwnedClothes.find((item) => item.id === anchorClothesId) ?? null,
-    [matchEligibleOwnedClothes, anchorClothesId],
-  );
   const activeConfig = labelConfig[activeLabel];
   const labelKeys = Object.keys(labelConfig) as RecommendationLabel[];
 
@@ -675,13 +683,6 @@ export default function HomeTab({
               fallbackImages={fallbackImages}
             />
 
-            {selectedAnchorGarment && (
-              <p className="text-xs font-bold text-slate-600">
-                <span className="text-[#1E3A8A]">{selectedAnchorGarment.name}</span>
-                {" "}기준 어울리는 옷
-              </p>
-            )}
-
             {matchLoading && (
               <p className="text-xs text-slate-400 font-bold">어울리는 옷 추천을 불러오는 중…</p>
             )}
@@ -710,7 +711,12 @@ export default function HomeTab({
             </p>
           </div>
         ) : activeLabel === "match" && matchEligibleOwnedClothes.length > 0 ? (
-          <MatchRecommendationByCategory groups={matchRecommendationGroups} />
+          <MatchRecommendationByCategory
+            groups={matchRecommendationGroups}
+            userId={userId}
+            existingGarments={clothes}
+            onWishlistAdded={onRefreshWardrobe}
+          />
         ) : (
         <div
           className={`grid gap-4 ${

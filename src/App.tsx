@@ -97,7 +97,7 @@ export default function App() {
     closeGarmentRegisterMethod,
   } = useCloset();
 
-  const { wardrobeLoading } = useWardrobeLoader({
+  const { wardrobeLoading, refreshWardrobe } = useWardrobeLoader({
     userId: authUserId,
     enabled: authReady && authUserId != null && profile.onboarded,
     selectedGarment,
@@ -296,6 +296,7 @@ export default function App() {
                   onAddWishlistItem={handleAddWishlistItem}
                   nickname={profile.nickname}
                   resetSignal={homeResetSignal}
+                  onRefreshWardrobe={() => void refreshWardrobe()}
                 />
               )}
 

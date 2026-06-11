@@ -11,6 +11,7 @@ import {
   buildClothesUpdatePayload,
 } from '@/utils/clothesMapper'
 import type { Garment } from '@/types'
+import type { WishlistClothesCreatePayload } from '@/utils/recommendWishlistPayload'
 
 async function unwrap<T>(promise: Promise<{ data: BeApiResponse<T> }>): Promise<T> {
   const { data: body } = await promise
@@ -187,4 +188,18 @@ export async function convertWishlistToOwned(
     ),
   )
   return mapClothesToGarment(updated)
+}
+
+/** BE `WishlistClothesCreateRequest` — POST /api/users/{userId}/wishlist-clothes */
+export async function createWishlistClothes(
+  userId: number,
+  payload: WishlistClothesCreatePayload,
+): Promise<Garment> {
+  const data = await unwrap(
+    api.post<BeApiResponse<ClothesResponse>>(
+      wishlistClothesPath(userId),
+      payload,
+    ),
+  )
+  return mapClothesToGarment(data)
 }
