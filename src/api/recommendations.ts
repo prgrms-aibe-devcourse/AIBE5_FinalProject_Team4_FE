@@ -2,10 +2,14 @@ import api from '@/api'
 import type { BeApiResponse } from '@/types/be'
 import type { ClothesRecommendationResponse } from '@/types/recommendations'
 
-/** BE `@Max(50)` — 카테고리당 추천 상품 수 상한 */
+/** BE `@Max(50)` — 카테고리당 추천 상품 수 상한 (BE PR #105 merge/배포 필요) */
 export const MAX_RECOMMENDATIONS_PER_CATEGORY = 50
 
-/** FE 기본 요청값 — 카테고리당 50건 */
+/**
+ * FE 기본 요청값 — 카테고리당 50건.
+ * BE develop(구 `@Max(10)`)만 배포된 환경에서는 validation 400이 납니다.
+ * FE 배포 전 BE PR #105 및 API 계약 문서 갱신이 먼저 반영되어야 합니다.
+ */
 export const DEFAULT_RECOMMENDATIONS_PER_CATEGORY = 50
 
 /** 카드에 TOP N 뱃지를 붙이는 최대 순위 */
