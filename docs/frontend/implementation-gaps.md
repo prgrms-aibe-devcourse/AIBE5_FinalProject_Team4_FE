@@ -1,7 +1,7 @@
 ---
 doc_type: fe_implementation_gaps
 source_of_truth: AIBE5_FinalProject_Team4_FE
-last_updated: 2026-06-10
+last_updated: 2026-06-12
 ---
 
 # FE 구현 정합성 현황
@@ -31,7 +31,7 @@ last_updated: 2026-06-10
 | 영역 | 현재 코드에 남아 있는 형태 | 목표 기준 | 관련 문서 |
 | --- | --- | --- | --- |
 | 인증 유지 | `POST /api/v1/auth/refresh`, `POST /api/v1/auth/logout` 미사용. access token은 `localStorage.token` 중심으로 복구 | `AUTH-005` refresh token 기반 로그인 상태 유지 | [frontend-api-usage.md](../api/frontend-api-usage.md) |
-| 홈 추천 API | `HomeTab`의 OOTD, 취향 기반, 유사 상품, AI MD 라벨은 static/mock. AI MD chat은 `/api/chat-gamyagi` 직접 `fetch`. **`match` 라벨은 BE recommendations API 연동** | BE API 계약 경로와 공통 API client 사용 | [home-recommendation.md](../features/home-recommendation.md), [mock-policy.md](mock-policy.md) |
+| 홈 추천 API | `HomeTab`의 OOTD와 취향 기반 라벨은 static/mock. 유사 상품, 어울리는 옷, AI MD 라벨은 BE API 연동. AI MD chat은 `/api/chat-gamyagi` 직접 `fetch` | 남은 OOTD·취향 기반 추천과 AI chat을 BE API 계약 경로 및 공통 API client로 전환 | [home-recommendation.md](../features/home-recommendation.md), [mock-policy.md](mock-policy.md) |
 | `RECO-005` limit | FE 기본 `limitPerCategory=50`. BE PR #105(`@Max(50)`) 미반영 환경에서는 400 | BE #105 merge/배포 후 FE 배포 또는 FE limit를 BE 허용 범위에 맞춤 | [home-recommendation.md](../features/home-recommendation.md), [frontend-api-usage.md](../api/frontend-api-usage.md) |
 | 추천 피드백 | 추천 저장/싫어요/추천 제외 액션이 `feedback` API와 연결되지 않음 | `RECO-013`~`RECO-014` 피드백 API 호출 | [frontend-api-usage.md](../api/frontend-api-usage.md) |
 | 옷 대상 성별 UI | 사진/구매내역 등록, 옷 수정 화면에서 `gender`를 표시하고 직접 수정 | `CLOTHES.gender`는 사용자 화면 비노출, 내부 분류/추천 및 저장 요청용 code | [garment-registration.md](../features/garment-registration.md), [domain-types.md](domain-types.md) |
@@ -53,9 +53,7 @@ last_updated: 2026-06-10
 | `WARDROBE-011`~`WARDROBE-030`, 옷 수정 | 옷 등록/수정 modal | `PhotoGarmentRegisterModal.tsx`, `PurchaseGarmentRegisterModal.tsx`, `GarmentEditModal.tsx` | [garment-registration.md](../features/garment-registration.md), [domain-types.md](domain-types.md) | 등록/수정 API 연동 자체가 아니라, 옷 대상 성별 UI 노출과 생성 후 `season` 수정 가능성 확인 필요 |
 | `RECO-001` | `home` tab `ootd` 라벨 | `HomeTab.tsx` | [home-recommendation.md](../features/home-recommendation.md) | static/mock. BE `GET /api/v1/ootd/{wardrobeId}` 미연동 |
 | `RECO-002` | `home` tab `style` 라벨 | `HomeTab.tsx` | [home-recommendation.md](../features/home-recommendation.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | static/mock. BE `GET /api/v1/recommendations/{wardrobeId}` 미연동 |
-| `RECO-003` | `home` tab `similar` 라벨 | `HomeTab.tsx` | [home-recommendation.md](../features/home-recommendation.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | static/mock. BE `similar-products` API 미연동 |
 | `RECO-005` | `home` tab `match` 라벨 | `HomeTab.tsx`, `MatchRecommendationByCategory.tsx`, `src/api/recommendations.ts` | [home-recommendation.md](../features/home-recommendation.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | BE recommendations API 연동. 기본 `limitPerCategory=50`은 BE PR #105 선행 배포 필요 |
-| `RECO-006` | `home` tab `aimd` 라벨, AI chat | `HomeTab.tsx`, `useChat.ts` | [home-recommendation.md](../features/home-recommendation.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | static/mock 및 `/api/chat-gamyagi` 직접 fetch. BE AI MD API 미연동 |
 | `RECO-013`~`RECO-014` | 추천 카드 액션 | `HomeTab.tsx`, 추천 카드 UI | [home-recommendation.md](../features/home-recommendation.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | 추천 저장/싫어요/추천 제외 피드백 API 미연동 |
 | `FEED-001` | `feed` tab | `App.tsx` 내부 feed section | [feature-index.md](../requirements/feature-index.md), [routing.md](routing.md) | static feed mock |
 
@@ -77,18 +75,16 @@ BE develop 기준으로 refresh token 기반 인증 유지 API가 반영되어 �
 - 기존 `localStorage.token` 저장/복구 흐름과 access token 재발급 흐름의 역할 분리 필요
 - 로그아웃 시 local token 제거, 서버 logout 호출, 화면 이동 순서 확정 필요
 
-### 홈 추천 static/mock
+### 홈 추천 static/mock 잔여 범위
 
-현재 `HomeTab.tsx`는 OOTD, 취향 기반, 유사 상품, AI MD 라벨에 static/mock 추천 데이터를 사용합니다. **`match` 라벨(어울리는 옷, `RECO-005`)은 mock이 아니며** `GET /api/v1/users/{userId}/clothes/{clothesId}/recommendations`를 호출합니다.
+현재 `HomeTab.tsx`는 OOTD와 취향 기반 라벨에만 static/mock 추천 데이터를 사용합니다. 유사 상품(`RECO-003`), 어울리는 옷(`RECO-005`), AI MD(`RECO-006`) 라벨은 공통 API client를 통해 BE API를 호출합니다.
 
 남은 gap:
 
 - `RECO-001` OOTD: BE `GET /api/v1/ootd/{wardrobeId}` 미연동
 - `RECO-002` 취향 기반 상품 추천: BE `GET /api/v1/recommendations/{wardrobeId}` 미연동
-- `RECO-003` 유사 상품 추천: BE `similar-products` API 미연동
-- `RECO-006` AI MD 추천: BE AI MD API 미연동
 - `RECO-013`~`RECO-014` 추천 피드백/제외: BE feedback API 미연동
-- 홈 추천 전체를 BE API로 통일할 때 static 데이터와 계약 정합 필요
+- OOTD와 취향 기반 추천을 BE API로 전환할 때 static 데이터 제거와 계약 정합 필요
 
 ### `RECO-005` 어울리는 옷 추천 — BE 배포 순서
 
@@ -213,7 +209,6 @@ BE API 계약 기준으로 `500`은 서버 내부 오류이고, `502`는 외부 
 
 - `RECO-001`: `OotdResponse`
 - `RECO-002`: `RecommendResponse`
-- `RECO-006`: AI MD persona, product recommendation, outfit recommendation, outfit save request/response
 - `RECO-013`~`RECO-014`: `RecommendationFeedbackRequest`, `feedbackType`
 - `OUTFIT-001`~`OUTFIT-006`: outfit create/update/delete, `items[]`
 - `AUTH-005`: refresh/logout 응답 및 쿠키 기반 인증 유지 흐름
@@ -227,10 +222,10 @@ BE API 계약 기준으로 `500`은 서버 내부 오류이고, `502`는 외부 
 | 1 | `AUTH-005` refresh/logout 연동 | 로그인 상태 유지와 세션 만료 처리에 직접 영향 |
 | 2 | 옷 대상 성별(`gender`) UI 비노출 전환 | 공통 문서 기준과 현재 등록/수정 UI가 다르게 동작 |
 | 3 | 옷 계절(`season`) 생성 후 수정 가능성 정리 | ERD v2.3 기준과 등록/수정 화면 payload 해석에 영향 |
-| 4 | 홈 추천 static/mock API 전환 | 사용자가 보는 추천 화면의 실제 데이터 연동 여부에 영향 |
+| 4 | OOTD·취향 기반 추천 static/mock API 전환 | 사용자가 보는 추천 화면의 실제 데이터 연동 여부에 영향 |
 | 5 | 추천 피드백 API 연동 | 저장/싫어요/추천 제외 정책과 사용자 스타일 점수에 영향 |
 | 6 | `ApiResponse<T>` 타입과 500/502 에러 분기 | 모든 API parsing과 공통 error handling에 영향 |
-| 7 | BE 신규 API 타입 정리 | 추천/OOTD/AI MD/코디/인증 유지 API 연동 시 타입 안정성에 영향 |
+| 7 | BE 신규 API 타입 정리 | 추천/OOTD/코디/인증 유지 API 연동 시 타입 안정성에 영향 |
 | 8 | `WARDROBE-002` 옷장 통계 범위 | 옷장 전체 요약과 보유 옷 통계 해석에 영향 |
 | 9 | 온보딩/스타일/피드 local·static 데이터 경계 | 실제 사용자 데이터와 mock/local 데이터 구분에 영향 |
 | 10 | `/api/chat-gamyagi` mock API 경계 | AI MD 실제 API 연동 여부 판단에 영향 |
