@@ -66,20 +66,16 @@ last_updated: 2026-06-10
 
 - 기준 옷: 사용자 보유 옷(`OWNED`) 중 카테고리·성별 필터를 통과한 항목
 - API: `GET /api/v1/users/{userId}/clothes/{clothesId}/recommendations?limitPerCategory={n}`
-- FE 기본 요청: `limitPerCategory=50` (`src/api/recommendations.ts`)
+- FE 기본 요청: `limitPerCategory=50` (`src/api/recommendations.ts`, BE 허용 범위 `1`~`50`, BE 기본값 `5`)
 - UI: 카테고리(상의/하의/아우터/신발)별 섹션, `TOP 1`~`TOP 10` 뱃지만 표시, 접기/더보기 그리드
-- 카드 액션: 상세 모달, 위시리스트 토글(`POST /api/users/{userId}/wishlist-clothes`)
+- 카드 액션: 상세 모달, 위시리스트 토글(`POST /api/users/{userId}/wishlist-clothes/{clothesId}`)
 
-### BE 배포 의존 (`limitPerCategory`)
+### `limitPerCategory` 계약
 
-FE는 카테고리당 최대 50건을 요청합니다. 이 값은 BE PR #105(`@Max(50)` 및 후보 풀 상한 확대)에 의존합니다.
-
-| BE 상태 | FE `limitPerCategory=50` 결과 |
-| --- | --- |
-| BE PR #105 미반영(구 `@Max(10)`) | validation 400 → `match` 탭 추천 빈 화면/에러 |
-| BE PR #105 반영 후 | 정상 응답 |
-
-FE를 먼저 배포할 경우 BE #105와 API 계약 문서 갱신이 선행되어야 합니다.
+| 항목 | BE | FE |
+| --- | --- | --- |
+| query `limitPerCategory` | 기본 `5`, 허용 `1`~`50` (`@Max(50)`) | 기본 요청 `50` (명시 전달) |
+| UI 뱃지 | — | `TOP 1`~`TOP 10`만 표시 (`MAX_TOP_RANK_LABEL=10`) |
 
 ## 추천 상세 — 구매 후 보유 옷장 등록 (`match`)
 
@@ -92,8 +88,8 @@ FE를 먼저 배포할 경우 BE #105와 API 계약 문서 갱신이 선행되�
 
 **샀어요** BE 호출 순서:
 
-1. 위시리스트에 없으면 `POST /api/users/{userId}/wishlist-clothes` (추천 item body, `REC-{clothesId}` productCode)
-2. `PATCH /api/clothes/{clothesId}/convert-to-owned` 로 `WISHLIST` → `OWNED` 전환
+1. 위시리스트에 없으면 `POST /api/users/{userId}/wishlist-clothes/{clothesId}` 로 기존 `EXTERNAL_SHOPPING` 마스터 연결
+2. `PATCH /api/v1/clothes/{clothesId}/convert-to-owned` 로 `WISHLIST` → `OWNED` 전환
 
 이미 보유 옷장에 있으면 API 호출 없이 안내 토스트만 표시합니다. 성공 시 옷장 목록 refresh 콜백(`onRefreshWardrobe`)을 호출합니다.
 

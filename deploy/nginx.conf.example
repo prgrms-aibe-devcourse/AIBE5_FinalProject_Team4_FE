@@ -1,0 +1,27 @@
+# EC2 Nginx — SPA 정적 호스팅 예시
+# /etc/nginx/conf.d/closetnangam.conf 등으로 복사 후 server_name, root 를 환경에 맞게 수정
+
+server {
+    listen 80;
+    server_name example.com www.example.com;
+
+    # deploy-ec2.sh 의 EC2_DEPLOY_PATH 와 동일하게
+    root /var/www/closetnangam;
+    index index.html;
+
+    # Vite 빌드 산출물 (gzip은 nginx gzip 모듈 또는 CloudFront에서 처리)
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # BE API는 이 서버가 아닌 APP_BASE_URL(ALB/BE EC2)로 프록시하지 않습니다.
+    # FE는 빌드 시 VITE_API_BASE_URL 로 BE를 직접 호출합니다.
+
+    location ~* \.(js|css|png|jpg|jpeg|gif|svg|ico|woff2?)$ {
+        expires 7d;
+        add_header Cache-Control "public, immutable";
+        try_files $uri =404;
+    }
+}
+
+# HTTPS: ACM + ALB 또는 certbot 사용 후 listen 443 ssl 블록 추가

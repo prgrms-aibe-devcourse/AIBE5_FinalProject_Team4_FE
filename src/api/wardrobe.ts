@@ -183,11 +183,24 @@ export async function convertWishlistToOwned(
 ): Promise<Garment> {
   const updated = await unwrap(
     api.patch<BeApiResponse<ClothesResponse>>(
-      `/api/clothes/${clothesId}/convert-to-owned`,
+      `/api/v1/clothes/${clothesId}/convert-to-owned`,
       payload,
     ),
   )
   return mapClothesToGarment(updated)
+}
+
+/** BE 추천 상품 저장 — POST /api/users/{userId}/wishlist-clothes/{clothesId} */
+export async function addExistingClothesToWishlist(
+  userId: number,
+  clothesId: number,
+): Promise<Garment> {
+  const data = await unwrap(
+    api.post<BeApiResponse<ClothesResponse>>(
+      `${wishlistClothesPath(userId)}/${clothesId}`,
+    ),
+  )
+  return mapClothesToGarment(data)
 }
 
 /** BE `WishlistClothesCreateRequest` — POST /api/users/{userId}/wishlist-clothes */
