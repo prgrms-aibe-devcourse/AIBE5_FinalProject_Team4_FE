@@ -40,6 +40,7 @@ export type RecommendCardItem = {
   brandLogoUrl: string | null
   category: 'Top' | 'Bottom' | 'Outer' | 'Shoes'
   categoryLabel: string
+  itemTypeCode: string
   itemTypeLabel: string
   style: string
   styles: string[]
@@ -112,6 +113,7 @@ function mapRecommendedItemToCard(
     brandLogoUrl: getBrandLogoUrl(item.brandName),
     category: uiCategory,
     categoryLabel,
+    itemTypeCode: item.itemType,
     itemTypeLabel: getItemTypeLabel(uiCategory, item.itemType),
     style: styleLabels[0] ?? '—',
     styles: styleLabels,
@@ -141,6 +143,7 @@ function mapAnchorToCard(anchor: RecommendationAnchorItem): RecommendCardItem | 
     brandLogoUrl: null,
     category: uiCategory,
     categoryLabel: BE_CATEGORY_LABEL[anchor.category] ?? anchor.category,
+    itemTypeCode: anchor.itemType,
     itemTypeLabel: getItemTypeLabel(uiCategory, anchor.itemType),
     style: '—',
     styles: [],
