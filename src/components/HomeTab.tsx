@@ -13,6 +13,8 @@ import { matchesUserGender, type UserGender } from "@/utils/genderClothesFilter"
 import { parseBeClothesId } from "@/utils/beClothesId";
 import MatchAnchorWardrobeScroller from "@/components/MatchAnchorWardrobeScroller";
 import MatchRecommendationByCategory from "@/components/MatchRecommendationByCategory";
+import SimilarProductRecommendations from "@/components/SimilarProductRecommendations";
+import AiMdRecommendations from "@/components/AiMdRecommendations";
 
 interface HomeTabProps {
   clothes: Garment[];
@@ -30,6 +32,7 @@ interface HomeTabProps {
   insightGlow?: boolean;
   resetSignal?: number;
   onRefreshWardrobe?: () => void;
+  onGoToCloset?: () => void;
 }
 
 type RecommendationLabel = "ootd" | "style" | "similar" | "match" | "aimd";
@@ -76,7 +79,7 @@ const labelConfig: Record<
     icon: "👕",
   },
   aimd: {
-    title: "AI 페르소나 MD 추천",
+    title: "AI MD 추천",
     subtitle: "MD 코디 설명 제공",
     icon: "🤖",
   },
@@ -371,6 +374,7 @@ export default function HomeTab({
   insightGlow = false,
   resetSignal = 0,
   onRefreshWardrobe,
+  onGoToCloset,
 }: HomeTabProps) {
   const [activeLabel, setActiveLabel] = useState<RecommendationLabel>("ootd");
   const [showStickyLabels, setShowStickyLabels] = useState(false);
@@ -652,20 +656,32 @@ export default function HomeTab({
               <p className="text-xs text-slate-400 font-bold mt-1">{activeConfig.subtitle}</p>
             ) : null}
           </div>
-          {activeLabel !== "match" && (
+          {activeLabel !== "match" && activeLabel !== "similar" && activeLabel !== "aimd" && (
           <span className="text-xs font-black text-slate-400 shrink-0">
             {`${selectedRecommendations.length}개`}
           </span>
           )}
         </div>
 
-        {activeLabel === "match" && wardrobeLoading && matchEligibleOwnedClothes.length === 0 && (
+        {activeLabel === "similar" ? (
+          <SimilarProductRecommendations
+            userId={userId}
+            onWishlistAdded={onRefreshWardrobe}
+            onGoToCloset={onGoToCloset}
+          />
+        ) : activeLabel === "aimd" ? (
+          <AiMdRecommendations
+            userId={userId}
+            gender={gender}
+            onWishlistAdded={onRefreshWardrobe}
+          />
+        ) : activeLabel === "match" && wardrobeLoading && matchEligibleOwnedClothes.length === 0 ? (
           <div className="mb-5 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-10 text-center">
             <p className="text-sm font-black text-slate-500">옷장 데이터를 불러오는 중…</p>
           </div>
-        )}
+        ) : null}
 
-        {activeLabel === "match" && !wardrobeLoading && matchEligibleOwnedClothes.length === 0 && (
+        {activeLabel !== "similar" && activeLabel === "match" && !wardrobeLoading && matchEligibleOwnedClothes.length === 0 && (
           <div className="mb-5 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center">
             <p className="text-sm font-black text-slate-600">보유 옷을 등록하면 어울리는 옷 추천을 받을 수 있어요</p>
             <p className="text-xs text-slate-400 font-bold mt-2">
@@ -674,7 +690,7 @@ export default function HomeTab({
           </div>
         )}
 
-        {activeLabel === "match" && matchEligibleOwnedClothes.length > 0 && (
+        {activeLabel !== "similar" && activeLabel === "match" && matchEligibleOwnedClothes.length > 0 && (
           <div className="mb-5 space-y-3">
             <MatchAnchorWardrobeScroller
               items={matchEligibleOwnedClothes}
@@ -692,7 +708,7 @@ export default function HomeTab({
           </div>
         )}
 
-        {activeLabel === "match" && matchEligibleOwnedClothes.length > 0 && !anchorClothesId ? (
+        {activeLabel === "similar" || activeLabel === "aimd" ? null : activeLabel === "match" && matchEligibleOwnedClothes.length > 0 && !anchorClothesId ? (
           <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center">
             <p className="text-sm font-black text-slate-600">위에서 옷을 선택해 주세요</p>
             <p className="text-xs text-slate-400 font-bold mt-2">
@@ -720,7 +736,7 @@ export default function HomeTab({
         ) : (
         <div
           className={`grid gap-4 ${
-            activeLabel === "ootd" || activeLabel === "aimd"
+            activeLabel === "ootd"
               ? "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3"
               : "grid-cols-2 lg:grid-cols-3"
           }`}

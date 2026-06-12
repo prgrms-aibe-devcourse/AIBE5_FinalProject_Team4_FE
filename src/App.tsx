@@ -297,6 +297,7 @@ export default function App() {
                   nickname={profile.nickname}
                   resetSignal={homeResetSignal}
                   onRefreshWardrobe={() => void refreshWardrobe()}
+                  onGoToCloset={() => setCurrentTab("closet")}
                 />
               )}
 
@@ -460,7 +461,7 @@ export default function App() {
             </main>
 
             {/* ----------------- Floating scroll-to-top ----------------- */}
-            <div className="fixed bottom-20 right-5 z-40">
+            <div className="fixed bottom-36 right-5 z-40">
               <button
                 id="btn-scroll-top"
                 onClick={scrollAppToTop}
