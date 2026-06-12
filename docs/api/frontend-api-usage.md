@@ -79,7 +79,7 @@ fetch('/api/chat-gamyagi') // mock 경로 — 공통 api client·BE 계약 경�
 api.get('api/v1/categories')
 ```
 
-홈 추천은 라벨별로 다릅니다. 현재 `HomeTab.tsx`에서 OOTD(`RECO-001`), 취향 기반 추천(`RECO-002`), 유사 상품(`RECO-003`), AI MD(`RECO-006`) 라벨은 static/mock이며 `/api/recommend`를 호출하지 않습니다. **`match` 탭(어울리는 옷 추천, `RECO-005`)** 은 `src/api/recommendations.ts` → `GET /api/v1/users/{userId}/clothes/{clothesId}/recommendations`를 사용합니다. ([implementation-gaps.md](../frontend/implementation-gaps.md))
+홈 추천은 라벨별로 다릅니다. 현재 `HomeTab.tsx`에서 OOTD(`RECO-001`), 취향 기반 추천(`RECO-002`), 유사 상품(`RECO-003`), AI MD(`RECO-006`) 라벨은 static/mock이며 `/api/recommend`를 호출하지 않습니다. **`match` 탭(어울리는 옷 추천, `RECO-005`)** 은 `src/api/recommendations.ts` → `GET /api/v1/users/{userId}/clothes/{clothesId}/recommendations?limitPerCategory=50`(기본값)을 사용합니다. BE PR #105(`@Max(50)`) 선행 배포가 필요합니다. ([implementation-gaps.md](../frontend/implementation-gaps.md), [home-recommendation.md](../features/home-recommendation.md))
 
 직접 `fetch`를 사용하는 경우에도 인증, 에러 처리, base URL 기준이 동일하게 적용되어야 하므로 공통 API 클라이언트로 옮기는 것을 우선합니다.
 
@@ -179,7 +179,7 @@ API를 호출하는 화면은 아래 상태를 구분합니다.
 | 외부 상품 | POST | `/api/v1/external/clothes/naver` | 외부 상품을 옷 정보로 저장 |
 | 추천 | GET | `/api/v1/recommendations/{wardrobeId}?currentTemp={temp}` | 취향 기반 상품 추천 표시. 현재 FE 홈 `style` 라벨은 static/mock |
 | 추천 | GET | `/api/v1/users/{userId}/clothes/{clothesId}/similar-products` | 유사 상품 추천 표시. 현재 FE 홈 `similar` 라벨은 static/mock |
-| 추천 | GET | `/api/v1/users/{userId}/clothes/{clothesId}/recommendations` | 옷장 기반 어울리는 옷 추천 표시. 현재 FE `match` 라벨 연동 완료 |
+| 추천 | GET | `/api/v1/users/{userId}/clothes/{clothesId}/recommendations?limitPerCategory={n}` | 옷장 기반 어울리는 옷 추천. FE `match` 라벨 연동. 기본 `n=50` (BE PR #105 필요) |
 | 추천 | GET | `/api/v1/ootd/{wardrobeId}?currentTemp={temp}` | OOTD 추천 표시. 현재 FE 홈 `ootd` 라벨은 static/mock |
 | 추천 | POST | `/api/v1/users/{userId}/recommendations/feedback` | 추천 저장/싫어요/추천 제외 피드백 제출 |
 | AI MD | GET | `/api/v1/users/{userId}/recommendations/ai-md/personas` | 사용자 성별에 맞는 AI MD 목록 표시 |
@@ -205,7 +205,7 @@ BE 추천 API 중 현재 FE에서 실제 호출하는 API와 아직 mock/static 
 | `RECO-001` | `GET /api/v1/ootd/{wardrobeId}?currentTemp={temp}` | `HomeTab` `ootd` 라벨 static/mock |
 | `RECO-002` | `GET /api/v1/recommendations/{wardrobeId}?currentTemp={temp}` | `HomeTab` `style` 라벨 static/mock |
 | `RECO-003` | `GET /api/v1/users/{userId}/clothes/{clothesId}/similar-products` | `HomeTab` `similar` 라벨 static/mock |
-| `RECO-005` | `GET /api/v1/users/{userId}/clothes/{clothesId}/recommendations` | `HomeTab` `match` 라벨 연동 완료 |
+| `RECO-005` | `GET /api/v1/users/{userId}/clothes/{clothesId}/recommendations?limitPerCategory={n}` | `HomeTab` `match` 라벨 연동. FE 기본 `n=50`. BE `@Max(50)`(PR #105) 선행 배포 필요 |
 | `RECO-006` | `/api/v1/users/{userId}/recommendations/ai-md/**` | `HomeTab` `aimd` 라벨 static/mock |
 | `RECO-013`~`RECO-014` | `POST /api/v1/users/{userId}/recommendations/feedback` | 저장/싫어요/추천 제외 액션 연동 필요 |
 
@@ -217,6 +217,8 @@ BE 추천 API 중 현재 FE에서 실제 호출하는 API와 아직 mock/static 
 | `season` | `CLOTHES.season` code입니다. 추천 카드 저장 payload에 전달할 수 있지만 사용자별 옷장 정보로 해석하지 않습니다. |
 | `externalProductUrl` | 구매 이동 URL 또는 네이버쇼핑 URL 생성의 우선 입력값입니다. 값이 없으면 상품명 기반 검색 URL로 대체할 수 있습니다. |
 | `gender` | 옷 대상 성별 code입니다. 사용자 화면에 표시하지 않고 내부 필터/추천 제외 기준으로만 사용합니다. |
+
+`RECO-005` `match` 상세에서 구매 링크 클릭 후 **샀어요** 선택 시 FE는 `POST /api/users/{userId}/wishlist-clothes`(필요 시)와 `PATCH /api/clothes/{id}/convert-to-owned`로 보유 옷장 등록합니다. 흐름 상세는 [home-recommendation.md](../features/home-recommendation.md)를 따릅니다.
 
 날씨, 지역, 체감온도 정보(`EXT-004`~`EXT-006`)는 독립 추천 기능이 아니라 `RECO-001`, `RECO-002` 등 추천 기능의 보조 조건입니다. `/api/weather`는 추천 보조 정보 API로 설명합니다.
 

@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
-import { createWishlistClothes, deleteClothes } from '@/api/wardrobe'
+import {
+  convertWishlistToOwned,
+  createWishlistClothes,
+  deleteClothes,
+} from '@/api/wardrobe'
 import type { Garment } from '@/types'
 import { extractApiErrorMessage } from '@/utils/apiError'
 import {
@@ -9,7 +13,9 @@ import {
 import type { RecommendCardItem } from '@/utils/recommendationMapper'
 import {
   buildWishlistPayloadFromRecommendedItem,
+  findOwnedGarmentForRecommendation,
   findWishlistGarmentForRecommendation,
+  recommendationWishlistProductCode,
 } from '@/utils/recommendWishlistPayload'
 
 interface UseRecommendWishlistToggleOptions {
@@ -102,10 +108,76 @@ export function useRecommendWishlistToggle({
     [existingGarments, isWishlisted, onWishlistChanged, submittingClothesId, userId],
   )
 
+  const addPurchasedToCloset = useCallback(
+    async (item: RecommendCardItem): Promise<boolean> => {
+      const clothesId = item.clothesId
+      if (clothesId == null || item.isAnchor) return false
+
+      if (userId == null) {
+        setToastMessage('로그인 후 이용할 수 있어요')
+        return false
+      }
+      if (submittingClothesId != null) return false
+
+      if (findOwnedGarmentForRecommendation(clothesId, existingGarments)) {
+        setToastMessage('이미 보유 옷장에 있어요')
+        return true
+      }
+
+      setSubmittingClothesId(clothesId)
+
+      try {
+        let garment = findWishlistGarmentForRecommendation(
+          clothesId,
+          existingGarments,
+        )
+
+        if (!garment) {
+          if (!item.source) {
+            throw new Error('옷장 추가에 필요한 상품 정보가 없습니다.')
+          }
+          garment = await createWishlistClothes(
+            userId,
+            buildWishlistPayloadFromRecommendedItem(item.source),
+          )
+        }
+
+        const imageUrl =
+          garment.userImageUrl ?? garment.thumbnailUrl ?? item.imageUrl
+        if (!imageUrl?.startsWith('http')) {
+          setToastMessage('옷장 추가에 필요한 이미지 URL이 없습니다.')
+          return false
+        }
+
+        await convertWishlistToOwned(Number(garment.id), {
+          productCode:
+            garment.productCode ?? recommendationWishlistProductCode(clothesId),
+          size: garment.size ?? 'FREE',
+          userImageUrl: imageUrl,
+          isVerified: false,
+        })
+
+        setOverrides((prev) => new Map(prev).set(clothesId, false))
+        setToastMessage('보유 옷장에 추가했어요')
+        onWishlistChanged?.()
+        return true
+      } catch (error) {
+        setToastMessage(
+          extractApiErrorMessage(error, '옷장 추가에 실패했습니다.'),
+        )
+        return false
+      } finally {
+        setSubmittingClothesId(null)
+      }
+    },
+    [existingGarments, onWishlistChanged, submittingClothesId, userId],
+  )
+
   return {
     toastMessage,
     isWishlisted,
     isSubmitting,
     toggleWishlist,
+    addPurchasedToCloset,
   }
 }
