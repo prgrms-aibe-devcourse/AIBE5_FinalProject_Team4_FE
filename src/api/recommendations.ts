@@ -1,6 +1,6 @@
 import api from '@/api'
 import type { BeApiResponse } from '@/types/be'
-import type { ClothesRecommendationResponse } from '@/types/recommendations'
+import type { ClothesRecommendationResponse, RecommendedClothesItem } from '@/types/recommendations'
 
 /** BE `@Max(10)` — 카테고리당 추천 상품 수 상한 */
 export const MAX_RECOMMENDATIONS_PER_CATEGORY = 10
@@ -44,4 +44,53 @@ export async function fetchClothesRecommendations(
       { params: { limitPerCategory } },
     ),
   )
+}
+
+/**
+ * GET /api/v1/recommendations/{wardrobeId}
+ * 취향 기반 추천 (RECO-002)
+ */
+export async function fetchWardrobeRecommendations(
+  wardrobeId: number,
+  currentTemp?: number,
+): Promise<RecommendedClothesItem[]> {
+  return unwrap(
+    api.get<BeApiResponse<RecommendedClothesItem[]>>(
+      `/api/v1/recommendations/${wardrobeId}`,
+      { params: { currentTemp } },
+    ),
+  )
+}
+
+/**
+ * GET /api/v1/ootd/{wardrobeId}
+ * OOTD 추천 (RECO-001)
+ */
+export async function fetchOotdRecommendations(
+  wardrobeId: number,
+  currentTemp?: number,
+): Promise<any> {
+  return unwrap(
+    api.get<BeApiResponse<any>>(
+      `/api/v1/ootd/${wardrobeId}`,
+      { params: { currentTemp } },
+    ),
+  )
+}
+
+export type RecommendationFeedbackType = 'SAVED' | 'DISLIKE' | 'EXCLUDE'
+
+export interface RecommendationFeedbackPayload {
+  feedbackType: RecommendationFeedbackType
+  clothesId?: number | null
+  outfitId?: number | null
+}
+
+/** POST /api/v1/users/{userId}/recommendations/feedback */
+export async function postRecommendationFeedback(
+  userId: number,
+  payload: RecommendationFeedbackPayload,
+): Promise<void> {
+  if (!userId) throw new Error('userId is required')
+  await unwrap(api.post(`/api/v1/users/${userId}/recommendations/feedback`, payload))
 }

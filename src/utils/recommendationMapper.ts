@@ -118,7 +118,7 @@ function mapRecommendedItemToCard(
     color: primaryColor.label,
     colorHex: primaryColor.hex,
     secondaryColors: item.secondaryColors.map((code) => mapColorChip(code)),
-    price: `${item.compatibilityScore}% 어울림`,
+    price: '',
     matchRate: item.compatibilityScore,
     imageUrl: resolveClothesDisplayImageUrl(item) ?? '',
     reason: `"${anchorName}"와 ${categoryLabel} 조합`,
