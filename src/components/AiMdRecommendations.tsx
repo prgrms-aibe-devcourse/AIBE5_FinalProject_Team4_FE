@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import axios from 'axios'
 import {
   fetchAiMdOutfits,
   fetchAiMdProducts,
@@ -25,12 +26,14 @@ import type {
   AiMdProductRecommendation,
 } from '@/types/aiMd'
 import type { NaverShoppingProduct, SimilarProductSaveForm } from '@/types/similarProducts'
+import type { Garment } from '@/types'
 import type { UserGender } from '@/utils/genderClothesFilter'
 import { extractApiErrorMessage } from '@/utils/apiError'
 
 interface AiMdRecommendationsProps {
   userId: number | null
   gender: UserGender
+  existingGarments: Garment[]
   onWishlistAdded?: () => void
 }
 
@@ -52,6 +55,9 @@ const formatPrice = (value: number) =>
 
 const productKey = (product: NaverShoppingProduct) =>
   product.productId || product.link
+
+const isAlreadySavedError = (reason: unknown) =>
+  axios.isAxiosError(reason) && reason.response?.status === 409
 
 function inferCategory(product: NaverShoppingProduct): BeCategoryCode {
   const text = [
@@ -95,6 +101,7 @@ function outfitKey(outfit: AiMdOutfitRecommendation, index: number) {
 export default function AiMdRecommendations({
   userId,
   gender,
+  existingGarments,
   onWishlistAdded,
 }: AiMdRecommendationsProps) {
   const [mds, setMds] = useState<AiMd[]>([])
@@ -108,6 +115,7 @@ export default function AiMdRecommendations({
   const [products, setProducts] = useState<AiMdProductRecommendation[]>([])
   const [selectedOutfits, setSelectedOutfits] = useState<Set<string>>(new Set())
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set())
+  const [savedProductKeys, setSavedProductKeys] = useState<Set<string>>(new Set())
   const [savedOutfits, setSavedOutfits] = useState<Set<string>>(new Set())
   const [savingOutfits, setSavingOutfits] = useState(false)
   const [detailProduct, setDetailProduct] = useState<AiMdProductRecommendation | null>(null)
@@ -132,10 +140,29 @@ export default function AiMdRecommendations({
   const chosenProducts = useMemo(
     () =>
       products.filter(({ product }) =>
-        selectedProducts.has(productKey(product)),
+        selectedProducts.has(productKey(product)) &&
+        !savedProductKeys.has(productKey(product)),
       ),
-    [products, selectedProducts],
+    [products, savedProductKeys, selectedProducts],
   )
+
+  const existingSavedProductKeys = useMemo(
+    () =>
+      new Set(
+        existingGarments
+          .filter((garment) => garment.isWishlist && garment.productCode)
+          .map((garment) => garment.productCode as string),
+      ),
+    [existingGarments],
+  )
+
+  const isProductSaved = (product: NaverShoppingProduct) => {
+    const key = productKey(product)
+    return (
+      savedProductKeys.has(key) ||
+      Boolean(product.productId && existingSavedProductKeys.has(product.productId))
+    )
+  }
 
   useEffect(() => {
     if (userId == null) {
@@ -236,6 +263,7 @@ export default function AiMdRecommendations({
   }
 
   const toggleProduct = (product: NaverShoppingProduct) => {
+    if (isProductSaved(product)) return
     const key = productKey(product)
     setSelectedProducts((current) => {
       const next = new Set(current)
@@ -285,6 +313,7 @@ export default function AiMdRecommendations({
   }
 
   const saveFromDetail = (item: AiMdProductRecommendation) => {
+    if (isProductSaved(item.product)) return
     setSelectedProducts(new Set([productKey(item.product)]))
     setDetailProduct(null)
     window.setTimeout(() => openProductSave([item]), 0)
@@ -328,8 +357,15 @@ export default function AiMdRecommendations({
       ),
     )
 
-    const successCount = results.filter((result) => result.status === 'fulfilled').length
-    const failedCount = results.length - successCount
+    const savedKeys = chosenProducts
+      .filter((_, index) => {
+        const result = results[index]
+        return result.status === 'fulfilled' || isAlreadySavedError(result.reason)
+      })
+      .map(({ product }) => productKey(product))
+    const successCount = savedKeys.length
+    const failedCount = results.length - savedKeys.length
+    setSavedProductKeys((current) => new Set([...current, ...savedKeys]))
     setSavingProducts(false)
     setSaveOpen(false)
     setSelectedProducts(new Set())
@@ -574,6 +610,7 @@ export default function AiMdRecommendations({
             const { product } = item
             const key = productKey(product)
             const selected = selectedProducts.has(key)
+            const saved = isProductSaved(product)
             return (
               <article
                 key={key}
@@ -587,7 +624,9 @@ export default function AiMdRecommendations({
                   }
                 }}
                 className={`group rounded-2xl border overflow-hidden bg-slate-50 transition hover:-translate-y-1 hover:shadow-lg cursor-pointer ${
-                  selected
+                  saved
+                    ? 'border-emerald-200'
+                    : selected
                     ? 'border-[#111827] ring-2 ring-[#C4B5FD]'
                     : 'border-slate-100'
                 }`}
@@ -602,18 +641,25 @@ export default function AiMdRecommendations({
                   />
                   <button
                     type="button"
+                    disabled={saved}
                     onClick={(event) => {
                       event.stopPropagation()
                       toggleProduct(product)
                     }}
-                    className={`absolute top-2 right-2 w-8 h-8 rounded-full grid place-items-center border shadow-sm ${
-                      selected
+                    className={`absolute top-2 right-2 ${saved ? 'w-12' : 'w-8'} h-8 rounded-full grid place-items-center border shadow-sm ${
+                      saved
+                        ? 'bg-emerald-500 text-white border-emerald-500'
+                        : selected
                         ? 'bg-[#111827] text-white border-[#111827]'
                         : 'bg-white/90 text-slate-500 border-white'
                     }`}
-                    aria-label={selected ? '선택 해제' : '저장할 상품 선택'}
+                    aria-label={saved ? '저장된 상품' : selected ? '선택 해제' : '저장할 상품 선택'}
                   >
-                    <Check className="w-4 h-4" />
+                    {saved ? (
+                      <span className="text-[9px] font-black">저장됨</span>
+                    ) : (
+                      <Check className="w-4 h-4" />
+                    )}
                   </button>
                   <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/85 via-black/45 to-transparent text-white">
                     <p className="text-[10px] font-bold text-white/75 truncate">
@@ -712,10 +758,11 @@ export default function AiMdRecommendations({
               </a>
               <button
                 type="button"
+                disabled={isProductSaved(detailProduct.product)}
                 onClick={() => saveFromDetail(detailProduct)}
-                className="h-11 rounded-xl bg-[#111827] text-white text-sm font-black"
+                className="h-11 rounded-xl bg-[#111827] text-white text-sm font-black disabled:bg-emerald-500"
               >
-                저장하기
+                {isProductSaved(detailProduct.product) ? '저장됨' : '저장하기'}
               </button>
             </ModalFooter>
           </>

@@ -70,7 +70,7 @@ const labelConfig: Record<
   },
   similar: {
     title: "유사 상품 추천",
-    subtitle: "보유/저장 옷과 유사",
+    subtitle: "보유 옷과 유사",
     icon: "🛍️",
   },
   match: {
@@ -666,6 +666,7 @@ export default function HomeTab({
         {activeLabel === "similar" ? (
           <SimilarProductRecommendations
             userId={userId}
+            existingGarments={clothes}
             onWishlistAdded={onRefreshWardrobe}
             onGoToCloset={onGoToCloset}
           />
@@ -673,6 +674,7 @@ export default function HomeTab({
           <AiMdRecommendations
             userId={userId}
             gender={gender}
+            existingGarments={clothes}
             onWishlistAdded={onRefreshWardrobe}
           />
         ) : activeLabel === "match" && wardrobeLoading && matchEligibleOwnedClothes.length === 0 ? (

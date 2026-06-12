@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import axios from 'axios'
 import { getOwnedClothesForSimilarProducts, getSimilarProducts } from '@/api/similarProducts'
 import { createWishlistClothes } from '@/api/wardrobe'
 import AuthenticatedImage from '@/components/common/AuthenticatedImage'
@@ -16,6 +17,7 @@ import { resolveClothesGender } from '@/data/garmentGender'
 import { GARMENT_COLORS, resolveGarmentColorCode } from '@/data/garmentColors'
 import { GARMENT_STYLES, resolveGarmentStyleCode } from '@/data/garmentStyles'
 import type { ClothesResponse } from '@/types/be'
+import type { Garment } from '@/types'
 import type {
   NaverShoppingProduct,
   SimilarProductRecommendation,
@@ -25,6 +27,7 @@ import { extractApiErrorMessage } from '@/utils/apiError'
 
 interface SimilarProductRecommendationsProps {
   userId: number | null
+  existingGarments: Garment[]
   onWishlistAdded?: () => void
   onGoToCloset?: () => void
 }
@@ -45,6 +48,9 @@ const formatPrice = (value: number) =>
 
 const productKey = (product: NaverShoppingProduct) =>
   product.productId || product.link
+
+const isAlreadySavedError = (reason: unknown) =>
+  axios.isAxiosError(reason) && reason.response?.status === 409
 
 function defaultSaveForm(base: ClothesResponse): SimilarProductSaveForm {
   const category = (base.category in BE_CATEGORY_TO_UI
@@ -72,6 +78,7 @@ function defaultSaveForm(base: ClothesResponse): SimilarProductSaveForm {
 
 export default function SimilarProductRecommendations({
   userId,
+  existingGarments,
   onWishlistAdded,
   onGoToCloset,
 }: SimilarProductRecommendationsProps) {
@@ -84,6 +91,7 @@ export default function SimilarProductRecommendations({
   const [recommendLoading, setRecommendLoading] = useState(false)
   const [recommendError, setRecommendError] = useState<string | null>(null)
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set())
+  const [savedProductKeys, setSavedProductKeys] = useState<Set<string>>(new Set())
   const [clothesPickerOpen, setClothesPickerOpen] = useState(false)
   const [detailProduct, setDetailProduct] =
     useState<NaverShoppingProduct | null>(null)
@@ -153,9 +161,28 @@ export default function SimilarProductRecommendations({
   const selectedItems = useMemo(() => {
     if (!recommendation) return []
     return recommendation.products.filter((product) =>
-      selectedProducts.has(productKey(product)),
+      selectedProducts.has(productKey(product)) &&
+      !savedProductKeys.has(productKey(product)),
     )
-  }, [recommendation, selectedProducts])
+  }, [recommendation, savedProductKeys, selectedProducts])
+
+  const existingSavedProductKeys = useMemo(
+    () =>
+      new Set(
+        existingGarments
+          .filter((garment) => garment.isWishlist && garment.productCode)
+          .map((garment) => garment.productCode as string),
+      ),
+    [existingGarments],
+  )
+
+  const isProductSaved = (product: NaverShoppingProduct) => {
+    const key = productKey(product)
+    return (
+      savedProductKeys.has(key) ||
+      Boolean(product.productId && existingSavedProductKeys.has(product.productId))
+    )
+  }
 
   const selectedClothes = useMemo(
     () =>
@@ -169,6 +196,7 @@ export default function SimilarProductRecommendations({
   }
 
   const toggleProduct = (product: NaverShoppingProduct) => {
+    if (isProductSaved(product)) return
     const key = productKey(product)
     setSelectedProducts((prev) => {
       const next = new Set(prev)
@@ -185,6 +213,7 @@ export default function SimilarProductRecommendations({
   }
 
   const saveFromDetail = (product: NaverShoppingProduct) => {
+    if (isProductSaved(product)) return
     const key = productKey(product)
     setSelectedProducts((prev) => new Set(prev).add(key))
     setDetailProduct(null)
@@ -234,8 +263,15 @@ export default function SimilarProductRecommendations({
       ),
     )
 
-    const successCount = results.filter((result) => result.status === 'fulfilled').length
-    const failedCount = results.length - successCount
+    const savedKeys = selectedItems
+      .filter((_, index) => {
+        const result = results[index]
+        return result.status === 'fulfilled' || isAlreadySavedError(result.reason)
+      })
+      .map(productKey)
+    const successCount = savedKeys.length
+    const failedCount = results.length - savedKeys.length
+    setSavedProductKeys((current) => new Set([...current, ...savedKeys]))
     setSaving(false)
     setSaveOpen(false)
     setSelectedProducts(new Set())
@@ -416,6 +452,7 @@ export default function SimilarProductRecommendations({
                 {recommendation.products.map((product) => {
                   const key = productKey(product)
                   const selected = selectedProducts.has(key)
+                  const saved = isProductSaved(product)
                   return (
                     <article
                       key={key}
@@ -429,7 +466,9 @@ export default function SimilarProductRecommendations({
                         }
                       }}
                       className={`group rounded-2xl border overflow-hidden bg-slate-50 transition-all hover:-translate-y-1 hover:shadow-lg ${
-                        selected
+                        saved
+                          ? 'border-emerald-200'
+                          : selected
                           ? 'border-[#111827] ring-2 ring-[#C4B5FD]'
                           : 'border-slate-100'
                       } cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#C4B5FD]`}
@@ -447,19 +486,26 @@ export default function SimilarProductRecommendations({
                         />
                         <button
                           type="button"
+                          disabled={saved}
                           onClick={(event) => {
                             event.stopPropagation()
                             toggleProduct(product)
                           }}
                           aria-pressed={selected}
-                          className={`absolute top-2 right-2 w-8 h-8 rounded-full grid place-items-center border shadow-sm transition ${
-                            selected
+                          className={`absolute top-2 right-2 ${saved ? 'w-12' : 'w-8'} h-8 rounded-full grid place-items-center border shadow-sm transition ${
+                            saved
+                              ? 'bg-emerald-500 text-white border-emerald-500'
+                              : selected
                               ? 'bg-[#111827] text-white border-[#111827]'
                               : 'bg-white/90 text-slate-500 border-white'
                           }`}
-                          aria-label={selected ? '선택 해제' : '저장할 상품 선택'}
+                          aria-label={saved ? '저장된 상품' : selected ? '선택 해제' : '저장할 상품 선택'}
                         >
-                          <Check className="w-4 h-4" />
+                          {saved ? (
+                            <span className="text-[9px] font-black">저장됨</span>
+                          ) : (
+                            <Check className="w-4 h-4" />
+                          )}
                         </button>
                         <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/85 via-black/45 to-transparent text-white">
                           <p className="text-[10px] font-bold text-white/75 truncate">
@@ -634,10 +680,11 @@ export default function SimilarProductRecommendations({
               </a>
               <button
                 type="button"
+                disabled={isProductSaved(detailProduct)}
                 onClick={() => saveFromDetail(detailProduct)}
-                className="h-11 rounded-xl bg-[#111827] text-white text-sm font-black"
+                className="h-11 rounded-xl bg-[#111827] text-white text-sm font-black disabled:bg-emerald-500"
               >
-                저장하기
+                {isProductSaved(detailProduct) ? '저장됨' : '저장하기'}
               </button>
             </ModalFooter>
           </>
