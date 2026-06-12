@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { getClothesForSimilarProducts, getSimilarProducts } from '@/api/similarProducts'
+import { getOwnedClothesForSimilarProducts, getSimilarProducts } from '@/api/similarProducts'
 import { createWishlistClothes } from '@/api/wardrobe'
 import AuthenticatedImage from '@/components/common/AuthenticatedImage'
 import { Modal, ModalBody, ModalFooter, ModalHeader } from '@/components/common/Modal'
@@ -28,8 +28,6 @@ interface SimilarProductRecommendationsProps {
   onWishlistAdded?: () => void
   onGoToCloset?: () => void
 }
-
-type ClothesPickerFilter = 'ALL' | 'OWNED' | 'WISHLIST'
 
 const seasonOptions = [
   { code: '', label: '선택 안 함' },
@@ -87,8 +85,6 @@ export default function SimilarProductRecommendations({
   const [recommendError, setRecommendError] = useState<string | null>(null)
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set())
   const [clothesPickerOpen, setClothesPickerOpen] = useState(false)
-  const [clothesPickerFilter, setClothesPickerFilter] =
-    useState<ClothesPickerFilter>('ALL')
   const [detailProduct, setDetailProduct] =
     useState<NaverShoppingProduct | null>(null)
   const [saveForm, setSaveForm] = useState<SimilarProductSaveForm | null>(null)
@@ -107,7 +103,7 @@ export default function SimilarProductRecommendations({
     setOwnedLoading(true)
     setOwnedError(null)
     try {
-      const items = await getClothesForSimilarProducts(userId)
+      const items = await getOwnedClothesForSimilarProducts(userId)
       setOwnedClothes(items)
       setSelectedClothesId((current) =>
         current != null && !items.some((item) => item.clothesId === current)
@@ -165,24 +161,6 @@ export default function SimilarProductRecommendations({
     () =>
       ownedClothes.find((item) => item.clothesId === selectedClothesId) ?? null,
     [ownedClothes, selectedClothesId],
-  )
-
-  const ownedCount = useMemo(
-    () =>
-      ownedClothes.filter((item) => item.ownershipStatus === 'OWNED').length,
-    [ownedClothes],
-  )
-
-  const wishlistCount = ownedClothes.length - ownedCount
-
-  const pickerClothes = useMemo(
-    () =>
-      clothesPickerFilter === 'ALL'
-        ? ownedClothes
-        : ownedClothes.filter(
-            (item) => item.ownershipStatus === clothesPickerFilter,
-          ),
-    [clothesPickerFilter, ownedClothes],
   )
 
   const selectBaseClothes = (clothesId: number) => {
@@ -322,7 +300,7 @@ export default function SimilarProductRecommendations({
           <div>
             <h3 className="text-sm font-black text-slate-900">기준 옷 선택</h3>
             <p className="text-[11px] text-slate-400 font-bold mt-1">
-              보유 옷이나 미보유 옷을 선택하면 비슷한 상품을 찾아드려요.
+              보유 옷을 선택하면 비슷한 상품을 찾아드려요.
             </p>
           </div>
         </div>
@@ -365,7 +343,7 @@ export default function SimilarProductRecommendations({
                   유사 상품을 찾을 옷을 선택해 주세요
                 </p>
                 <p className="mt-1 text-[11px] font-bold text-slate-400">
-                  보유 {ownedCount}개 · 미보유 {wishlistCount}개
+                  보유 옷 {ownedClothes.length}개
                 </p>
               </div>
               <span className="shrink-0 h-8 px-3 rounded-full bg-[#111827] text-white text-[11px] font-black grid place-items-center">
@@ -537,33 +515,12 @@ export default function SimilarProductRecommendations({
       >
         <ModalHeader
           title="기준 옷 선택"
-          subtitle={`보유 ${ownedCount}개 · 미보유 ${wishlistCount}개`}
+          subtitle={`보유 옷 ${ownedClothes.length}개`}
           onClose={() => setClothesPickerOpen(false)}
         />
         <ModalBody className="p-4 sm:p-6">
-          <div className="mb-5 grid grid-cols-3 gap-1 rounded-xl bg-slate-100 p-1">
-            {([
-              ['ALL', `전체 ${ownedClothes.length}`],
-              ['OWNED', `보유 ${ownedCount}`],
-              ['WISHLIST', `미보유 ${wishlistCount}`],
-            ] as const).map(([filter, label]) => (
-              <button
-                key={filter}
-                type="button"
-                onClick={() => setClothesPickerFilter(filter)}
-                className={`h-9 rounded-lg text-[11px] font-black transition ${
-                  clothesPickerFilter === filter
-                    ? 'bg-white text-slate-950 shadow-sm'
-                    : 'text-slate-400 hover:text-slate-700'
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-
           <div className="grid grid-cols-3 sm:grid-cols-5 gap-x-2.5 gap-y-4">
-            {pickerClothes.map((item) => {
+            {ownedClothes.map((item) => {
               const selected = selectedClothesId === item.clothesId
               return (
                 <button
@@ -595,15 +552,6 @@ export default function SimilarProductRecommendations({
                         <Check className="w-3.5 h-3.5" />
                       </span>
                     )}
-                    <span
-                      className={`absolute left-1.5 bottom-1.5 rounded-md px-1.5 py-1 text-[9px] font-black shadow-sm ${
-                        item.ownershipStatus === 'WISHLIST'
-                          ? 'bg-[#C4B5FD] text-[#312E81]'
-                          : 'bg-white/90 text-slate-800'
-                      }`}
-                    >
-                      {item.ownershipStatus === 'WISHLIST' ? '미보유' : '보유'}
-                    </span>
                   </div>
                   <p className="mt-1.5 text-[11px] font-black text-slate-800 truncate">
                     {item.name}
@@ -615,11 +563,6 @@ export default function SimilarProductRecommendations({
               )
             })}
           </div>
-          {pickerClothes.length === 0 && (
-            <div className="py-14 text-center text-sm font-black text-slate-400">
-              해당하는 옷이 없습니다.
-            </div>
-          )}
         </ModalBody>
       </Modal>
 

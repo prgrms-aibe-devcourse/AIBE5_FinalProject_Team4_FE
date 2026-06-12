@@ -890,4 +890,3 @@ export default function AiMdRecommendations({
     </div>
   )
 }
-

@@ -14,39 +14,15 @@ async function unwrap<T>(
   return body.data
 }
 
-export async function getClothesForSimilarProducts(
+export async function getOwnedClothesForSimilarProducts(
   userId: number,
 ): Promise<ClothesResponse[]> {
-  const [ownedResult, wishlistResult] = await Promise.allSettled([
-    unwrap(
-      api.get<BeApiResponse<ClothesResponse[]>>(
-        `/api/v1/users/${userId}/clothes`,
-      ),
+  const clothes = await unwrap(
+    api.get<BeApiResponse<ClothesResponse[]>>(
+      `/api/v1/users/${userId}/clothes`,
     ),
-    unwrap(
-      api.get<BeApiResponse<ClothesResponse[]>>(
-        `/api/users/${userId}/wishlist-clothes`,
-      ),
-    ),
-  ])
-
-  const owned = ownedResult.status === 'fulfilled' ? ownedResult.value : []
-  const wishlist =
-    wishlistResult.status === 'fulfilled' ? wishlistResult.value : []
-
-  if (ownedResult.status === 'rejected' && wishlistResult.status === 'rejected') {
-    throw new Error('옷장 목록을 불러오지 못했습니다.')
-  }
-
-  const clothesById = new Map<number, ClothesResponse>()
-  owned.forEach((item) =>
-    clothesById.set(item.clothesId, { ...item, ownershipStatus: 'OWNED' }),
   )
-  wishlist.forEach((item) =>
-    clothesById.set(item.clothesId, { ...item, ownershipStatus: 'WISHLIST' }),
-  )
-
-  return [...clothesById.values()]
+  return clothes.filter((item) => item.ownershipStatus === 'OWNED')
 }
 
 export async function getSimilarProducts(

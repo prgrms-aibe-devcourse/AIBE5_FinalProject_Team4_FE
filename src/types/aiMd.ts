@@ -55,4 +55,3 @@ export interface AiMdProductRecommendationData {
   query: string
   products: AiMdProductRecommendation[]
 }
-
