@@ -3,24 +3,22 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import api from "@/api/index";
 import { useState, useEffect } from "react";
 import { 
   Home, 
   X, 
   ChevronRight,
   Activity, 
-  Layout,
-  Shirt,
+  Layers,
 } from "./components/icons";
 import { UserProfile } from "@/types/index";
 import HomeTab from "./components/HomeTab";
 import ClosetTab from "./components/ClosetTab";
-import OutfitBookTab from "./components/OutfitBookTab";
 import GarmentRegisterMethodModal from "./components/GarmentRegisterMethodModal";
 import PhotoGarmentRegisterModal from "./components/PhotoGarmentRegisterModal";
 import PurchaseGarmentRegisterModal from "./components/PurchaseGarmentRegisterModal";
 import {
-  captureOAuthTokenFromUrl,
   getUserIdFromAccessToken,
 } from "@/utils/authUser";
 import { ensureDevToken, DEFAULT_DEV_USER_ID } from "@/utils/ensureDevToken";
@@ -38,19 +36,13 @@ import {
   loadUserProfile,
   saveUserProfile,
 } from "@/utils/userProfileStorage";
-import { updateMarketingConsent } from "@/api/marketingConsent";
-import MarketingConsentSetting from "@/components/legal/MarketingConsentSetting";
 // 기존 상수 data ( TRIGGER_PRODUCTS 는 사용을 하지않아 우선 주석처리함 )
 // import { TRIGGER_PRODUCTS } from "@/data/triggerProducts";
 
 export default function App() {
   // Login State
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(
-    () => getUserIdFromAccessToken() != null,
-  );
-  const [authUserId, setAuthUserId] = useState<number | null>(
-    getUserIdFromAccessToken,
-  );
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  const [authUserId, setAuthUserId] = useState<number | null>(null);
   // 로그인 모달 열림 여부
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
@@ -101,7 +93,7 @@ export default function App() {
     closeGarmentRegisterMethod,
   } = useCloset();
 
-  const { wardrobeLoading, refreshWardrobe } = useWardrobeLoader({
+  const { wardrobeLoading } = useWardrobeLoader({
     userId: authUserId,
     enabled: authReady && authUserId != null && profile.onboarded,
     selectedGarment,
@@ -109,19 +101,23 @@ export default function App() {
     setSelectedGarment,
   });
 
-  // Navigation state: 'home' | 'closet' | 'outfit-book' | 'feed' | 'profile'
-  const [currentTab, setCurrentTab] = useState<"home" | "closet" | "outfit-book" | "feed" | "profile">("home");
+  // Navigation state: 'home' | 'closet' | 'feed' | 'profile'
+  const [currentTab, setCurrentTab] = useState<"home" | "closet" | "feed" | "profile">("home");
   const [homeResetSignal, setHomeResetSignal] = useState<number>(0);
   const [isPhotoRegisterOpen, setIsPhotoRegisterOpen] = useState(false);
   const [isPurchaseRegisterOpen, setIsPurchaseRegisterOpen] = useState(false);
 
-  // OAuth 콜백(?token=): URL에서 토큰 추출 후 상태 반영
+  // 앱 시작 시 쿠키인증 상태 확인
   useEffect(() => {
-    if (captureOAuthTokenFromUrl()) {
-      const uid = getUserIdFromAccessToken();
-      setAuthUserId(uid);
-      setIsLoggedIn(uid != null);
-    }
+    api.get('/api/v1/users/profile')
+        .then((res) => {
+          const userId = res.data.data.userId;
+          setAuthUserId(userId);
+          setIsLoggedIn(true);
+        })
+        .catch(() => {
+          setIsLoggedIn(false);
+        });
   }, []);
 
   useEffect(() => {
@@ -138,7 +134,7 @@ export default function App() {
 
     (async () => {
       let tokenError: string | null = null;
-      if (import.meta.env.DEV && !getUserIdFromAccessToken()) {
+      if (import.meta.env.DEV && import.meta.env.VITE_USE_REAL_AUTH !== "true" && !getUserIdFromAccessToken()) {
         try {
           await ensureDevToken(DEFAULT_DEV_USER_ID, { forceRefresh: false });
         } catch (err) {
@@ -150,8 +146,12 @@ export default function App() {
         }
       }
 
+      const fromStorage = getUserIdFromAccessToken();
+
       if (cancelled) return;
-      setAuthUserId(getUserIdFromAccessToken());
+      if (fromStorage != null) {
+        setAuthUserId(fromStorage);
+      }
       setAuthTokenError(tokenError);
       setAuthReady(true);
     })();
@@ -204,20 +204,11 @@ export default function App() {
       {/* ========================================================= */}
       {isLoginModalOpen && (<LoginPage isModal onClose={() => setIsLoginModalOpen(false)} onSocialLogin={handleSocialLogin} />)}
 
-      {/* ========================================================= */}
       {/* 2. ONBOARDING PROFILE FLOWS */}
       {/* ========================================================= */}
       {isLoggedIn && !profile.onboarded && (
-          <OnboardingPage onComplete={async (nickname, birthday, gender, styles, openModal, marketingAgreed) => {
-            persistProfile({ nickname, birthday, gender, styles, onboarded: true });
-            const targetUserId = authUserId ?? getUserIdFromAccessToken();
-            if (targetUserId != null) {
-              try {
-                await updateMarketingConsent(targetUserId, { marketingAgreed });
-              } catch {
-                alert("마케팅 정보 수신 동의 저장에 실패했습니다. 마이페이지에서 다시 변경할 수 있습니다.");
-              }
-            }
+          <OnboardingPage onComplete={(nickname, birthday, gender, styles, region, openModal) => {
+            persistProfile({ nickname, birthday, gender, styles, region: region || undefined, onboarded: true });
             if (openModal) openGarmentRegister();
           }} />
       )}
@@ -308,8 +299,6 @@ export default function App() {
                   onAddWishlistItem={handleAddWishlistItem}
                   nickname={profile.nickname}
                   resetSignal={homeResetSignal}
-                  onRefreshWardrobe={() => void refreshWardrobe()}
-                  onGoToCloset={() => setCurrentTab("closet")}
                 />
               )}
 
@@ -351,13 +340,6 @@ export default function App() {
                 <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-center text-sm text-amber-900">
                   로그인 정보를 확인할 수 없습니다. 다시 로그인해 주세요.
                 </div>
-              )}
-
-              {/* ========================================================= */}
-              {/* TAB 2.5: OUTFIT BOOK (Saved outfits collection) */}
-              {/* ========================================================= */}
-              {currentTab === "outfit-book" && (
-                <OutfitBookTab userId={authUserId ?? 0} />
               )}
 
               {/* ========================================================= */}
@@ -451,14 +433,9 @@ export default function App() {
                     </div>
                   </div>
 
-                  <MarketingConsentSetting
-                    userId={authUserId}
-                    enabled={authReady && authTokenError == null && authUserId != null}
-                  />
-
                   {/* Reset account Option and info */}
                   <div className="p-4 rounded-xl bg-[#BBF7D0]/10 border border-[#BBF7D0]/20 space-y-1.5">
-                    <p className="text-[11px] text-slate-600"></p>
+                    <p className="text-[11px] text-slate-600">가입하신 데이터는 로컬 저장소와 Google Gemini API를 피드삼아 고정밀 스타일링 매칭 가이드와 소통합니다.</p>
                     <button
                       onClick={() => {
                         if (confirm("초기 온보딩으로 되돌아가시겠습니까?")) {
@@ -485,7 +462,7 @@ export default function App() {
             </main>
 
             {/* ----------------- Floating scroll-to-top ----------------- */}
-            <div className="fixed bottom-36 right-5 z-40">
+            <div className="fixed bottom-20 right-5 z-40">
               <button
                 id="btn-scroll-top"
                 onClick={scrollAppToTop}
@@ -516,19 +493,8 @@ export default function App() {
                   setCurrentTab("closet")}}
                 className={`flex flex-col items-center justify-center flex-1 py-1 transition ${currentTab === "closet" ? "text-[#1E3A8A]" : "text-slate-400 hover:text-slate-600"}`}
               >
-                <Shirt className="w-5 h-5" />
+                <Layers className="w-5 h-5" />
                 <span className="text-[9px] font-extrabold mt-1">옷장</span>
-              </button>
-
-              <button 
-                id="nav-outfit-book" 
-                onClick={() => {
-                  if(!requireLogin()) return;
-                  setCurrentTab("outfit-book")}}
-                className={`flex flex-col items-center justify-center flex-1 py-1 transition ${currentTab === "outfit-book" ? "text-[#1E3A8A]" : "text-slate-400 hover:text-slate-600"}`}
-              >
-                <Layout className="w-5 h-5" />
-                <span className="text-[9px] font-extrabold mt-1">코디북</span>
               </button>
 
               <button 
