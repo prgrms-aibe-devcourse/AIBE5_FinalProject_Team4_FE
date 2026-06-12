@@ -166,7 +166,17 @@ export default function SimilarProductRecommendations({
     )
   }, [recommendation, savedProductKeys, selectedProducts])
 
-  const existingSavedProductKeys = useMemo(
+  const existingOwnedProductKeys = useMemo(
+    () =>
+      new Set(
+        existingGarments
+          .filter((garment) => !garment.isWishlist && garment.productCode)
+          .map((garment) => garment.productCode as string),
+      ),
+    [existingGarments],
+  )
+
+  const existingWishlistProductKeys = useMemo(
     () =>
       new Set(
         existingGarments
@@ -176,13 +186,27 @@ export default function SimilarProductRecommendations({
     [existingGarments],
   )
 
-  const isProductSaved = (product: NaverShoppingProduct) => {
+  const getProductStorageStatus = (
+    product: NaverShoppingProduct,
+  ): 'owned' | 'saved' | null => {
     const key = productKey(product)
-    return (
+    if (product.productId && existingOwnedProductKeys.has(product.productId)) {
+      return 'owned'
+    }
+    if (
       savedProductKeys.has(key) ||
-      Boolean(product.productId && existingSavedProductKeys.has(product.productId))
-    )
+      Boolean(
+        product.productId &&
+          existingWishlistProductKeys.has(product.productId),
+      )
+    ) {
+      return 'saved'
+    }
+    return null
   }
+
+  const isProductSaved = (product: NaverShoppingProduct) =>
+    getProductStorageStatus(product) != null
 
   const selectedClothes = useMemo(
     () =>
@@ -452,7 +476,10 @@ export default function SimilarProductRecommendations({
                 {recommendation.products.map((product) => {
                   const key = productKey(product)
                   const selected = selectedProducts.has(key)
-                  const saved = isProductSaved(product)
+                  const storageStatus = getProductStorageStatus(product)
+                  const saved = storageStatus != null
+                  const statusLabel =
+                    storageStatus === 'owned' ? '보유 중' : '저장됨'
                   return (
                     <article
                       key={key}
@@ -499,10 +526,10 @@ export default function SimilarProductRecommendations({
                               ? 'bg-[#111827] text-white border-[#111827]'
                               : 'bg-white/90 text-slate-500 border-white'
                           }`}
-                          aria-label={saved ? '저장된 상품' : selected ? '선택 해제' : '저장할 상품 선택'}
+                          aria-label={saved ? statusLabel : selected ? '선택 해제' : '저장할 상품 선택'}
                         >
                           {saved ? (
-                            <span className="text-[9px] font-black">저장됨</span>
+                            <span className="text-[9px] font-black">{statusLabel}</span>
                           ) : (
                             <Check className="w-4 h-4" />
                           )}
@@ -684,7 +711,11 @@ export default function SimilarProductRecommendations({
                 onClick={() => saveFromDetail(detailProduct)}
                 className="h-11 rounded-xl bg-[#111827] text-white text-sm font-black disabled:bg-emerald-500"
               >
-                {isProductSaved(detailProduct) ? '저장됨' : '저장하기'}
+                {getProductStorageStatus(detailProduct) === 'owned'
+                  ? '보유 중'
+                  : isProductSaved(detailProduct)
+                    ? '저장됨'
+                    : '저장하기'}
               </button>
             </ModalFooter>
           </>
