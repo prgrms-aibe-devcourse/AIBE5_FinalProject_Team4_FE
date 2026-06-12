@@ -15,7 +15,7 @@ import {
   CATEGORY_ITEM_TYPES,
   type BeCategoryCode,
 } from '@/data/categoryItemTypes'
-import { CLOTHES_GENDER_OPTIONS, type ClothesGender } from '@/data/garmentGender'
+import type { ClothesGender } from '@/data/garmentGender'
 import { GARMENT_COLORS } from '@/data/garmentColors'
 import { GARMENT_STYLES } from '@/data/garmentStyles'
 import type {
@@ -766,42 +766,22 @@ export default function AiMdRecommendations({
                   ))}
                 </select>
               </label>
-              <div className="grid grid-cols-2 gap-3">
-                <label>
-                  <span className="text-xs font-black text-slate-700">성별</span>
-                  <select
-                    value={saveForm.gender}
-                    onChange={(event) =>
-                      setSaveForm((current) =>
-                        current
-                          ? { ...current, gender: event.target.value as ClothesGender }
-                          : current,
-                      )
-                    }
-                    className="mt-2 w-full h-11 rounded-xl border border-slate-200 px-3 text-sm font-bold bg-white"
-                  >
-                    {CLOTHES_GENDER_OPTIONS.map((option) => (
-                      <option key={option.code} value={option.code}>{option.label}</option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  <span className="text-xs font-black text-slate-700">대표 색상</span>
-                  <select
-                    value={saveForm.primaryColor}
-                    onChange={(event) =>
-                      setSaveForm((current) =>
-                        current ? { ...current, primaryColor: event.target.value } : current,
-                      )
-                    }
-                    className="mt-2 w-full h-11 rounded-xl border border-slate-200 px-3 text-sm font-bold bg-white"
-                  >
-                    {GARMENT_COLORS.map((color) => (
-                      <option key={color.code} value={color.code}>{color.name}</option>
-                    ))}
-                  </select>
-                </label>
-              </div>
+              <label className="block">
+                <span className="text-xs font-black text-slate-700">대표 색상</span>
+                <select
+                  value={saveForm.primaryColor}
+                  onChange={(event) =>
+                    setSaveForm((current) =>
+                      current ? { ...current, primaryColor: event.target.value } : current,
+                    )
+                  }
+                  className="mt-2 w-full h-11 rounded-xl border border-slate-200 px-3 text-sm font-bold bg-white"
+                >
+                  {GARMENT_COLORS.map((color) => (
+                    <option key={color.code} value={color.code}>{color.name}</option>
+                  ))}
+                </select>
+              </label>
               <div>
                 <span className="text-xs font-black text-slate-700">스타일</span>
                 <div className="mt-2 flex flex-wrap gap-2">
