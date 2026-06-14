@@ -6,12 +6,15 @@ last_updated: 2026-06-14
 
 # 시스템 아키텍처
 
-이 문서는 옷장난감 서비스의 전체 시스템 구성을 정리합니다. FE, BE, DB, 외부 API, 이미지 저장소, 인증, 배포 인프라가 어떤 책임으로 연결되는지 이해하기 위한 문서입니다.
+이 문서는 옷장난감 서비스의 전체 목표 시스템 구성을 정리합니다. FE, BE, DB, 외부 API, 이미지 저장소, 인증, 배포 인프라가 어떤 책임으로 연결되는지 이해하기 위한 문서입니다.
 
 ## 문서 기준
 
-- 실제 프로젝트에서 사용하는 구성 요소만 포함합니다.
-- 현재 프로젝트 기준에 없는 Kafka, WebSocket, GitHub Webhook 기반 서비스는 포함하지 않습니다.
+- MVP와 운영 배포까지 고려한 프로젝트 목표 구성 요소를 포함합니다.
+- 일부 구성 요소는 현재 로컬 개발 또는 구현 진행 상태와 다를 수 있습니다.
+- 현재 FE 코드와 목표 구조가 다른 항목은 [FE 구현 정합성 현황](../frontend/implementation-gaps.md)을 함께 확인합니다.
+- BE 구현 상태와 목표 구조가 다른 항목은 [BE 구현 정합성 문서](https://github.com/prgrms-aibe-devcourse/AIBE5_FinalProject_Team4_BE/blob/develop/docs/backend/implementation-gaps.md)를 함께 확인합니다.
+- 현재 프로젝트 목표에 없는 Kafka, WebSocket, GitHub Webhook 기반 서비스는 포함하지 않습니다.
 - 세부 BE 패키지 책임은 [BE 패키지 구조](https://github.com/prgrms-aibe-devcourse/AIBE5_FinalProject_Team4_BE/blob/develop/docs/architecture/package-structure.md)를 따릅니다.
 - API 경로와 요청/응답 상세는 [BE API 계약](https://github.com/prgrms-aibe-devcourse/AIBE5_FinalProject_Team4_BE/blob/develop/docs/api/api-contract.md)을 원본으로 보고, FE 호출 기준은 [FE API 사용 기준](../api/frontend-api-usage.md)을 함께 확인합니다.
 - DB 테이블 책임과 관계는 [BE ERD](https://github.com/prgrms-aibe-devcourse/AIBE5_FinalProject_Team4_BE/blob/develop/docs/database/erd.md)를 따릅니다.

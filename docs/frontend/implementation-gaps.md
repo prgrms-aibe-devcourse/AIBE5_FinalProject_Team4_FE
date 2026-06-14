@@ -41,6 +41,7 @@ last_updated: 2026-06-14
 | 온보딩/스타일 | 온보딩, 프로필, 스타일 값 일부가 local state와 하드코딩 문자열 중심 | 공식 style code와 사용자 스타일 API 기준 | [catalog.md](../domain/catalog.md), [domain-types.md](domain-types.md) |
 | 피드 | `feed` tab이 static feed mock 중심 | 룩피드 API와 실제 사용자 데이터 기준 | [feature-index.md](../requirements/feature-index.md), [routing.md](routing.md) |
 | BE 신규 API 타입 | 일부 신규 API 응답/요청 타입이 `src/types/be.ts`에 모두 정리되어 있지 않을 수 있음 | BE develop 기준 API 계약 타입 반영 | [frontend-api-usage.md](../api/frontend-api-usage.md), [domain-types.md](domain-types.md) |
+| 배포/인프라 목표 구조 | GitHub Actions는 lint/build CI를 수행하고, AWS 배포와 CD 자동화는 진행 예정. 공통 시스템 아키텍처는 목표 구조 기준 | FE/BE 배포 구현 시 시스템 아키텍처, 기술 스택, 기획서, gap 문서 동시 갱신 | [system-architecture.md](../architecture/system-architecture.md), [tech-stack.md](../architecture/tech-stack.md) |
 
 ## Feature ID 연결표
 
@@ -203,6 +204,21 @@ BE API 계약 기준으로 `500`은 서버 내부 오류이고, `502`는 외부 
 
 위 타입은 실제 FE 연동 PR에서 API 호출부와 함께 추가하거나, 별도 타입 정리 PR에서 반영합니다. 코드 타입이 추가되면 [frontend-api-usage.md](../api/frontend-api-usage.md)와 이 문서를 함께 확인합니다.
 
+### 공통 시스템 아키텍처 목표 구조와 현재 FE/CI 상태
+
+[system-architecture.md](../architecture/system-architecture.md)는 현재 로컬 구현만이 아니라 MVP와 운영 배포까지 고려한 목표 시스템 구성을 설명합니다. 따라서 AWS EC2, RDS, S3, GitHub Actions 기반 배포 흐름은 목표 구조 기준으로 읽습니다.
+
+현재 FE 레포 설정 기준으로는 아래 상태입니다.
+
+- GitHub Actions는 lint와 build CI를 수행합니다.
+- AWS 배포 또는 CD workflow는 아직 구현되지 않았습니다.
+- Docker Compose는 FE 애플리케이션 실행 기준이 아니라 BE/로컬 개발 인프라 기준으로 이해합니다.
+- AWS S3는 운영 기준 이미지 저장소이며, FE는 API 응답의 이미지 URL을 사용하는 쪽이 기준입니다.
+
+자동 코드리뷰와 문서 검토 시 `system-architecture.md`만 보고 현재 FE 구현이 누락되었다고 판단하지 않고, 이 문서의 gap 항목과 BE 레포의 구현 정합성 문서를 함께 확인합니다.
+
+FE 배포 또는 CD workflow가 구현되면 [system-architecture.md](../architecture/system-architecture.md), [tech-stack.md](../architecture/tech-stack.md), [project-plan.md](../planning/project-plan.md), 루트 [README](../../README.md), 이 문서를 같은 PR에서 함께 갱신합니다.
+
 ## 우선 정리 대상
 
 | 우선순위 | 대상 | 이유 |
@@ -217,6 +233,7 @@ BE API 계약 기준으로 `500`은 서버 내부 오류이고, `502`는 외부 
 | 8 | `WARDROBE-002` 옷장 통계 범위 | 옷장 전체 요약과 보유 옷 통계 해석에 영향 |
 | 9 | 온보딩/스타일/피드 local·static 데이터 경계 | 실제 사용자 데이터와 mock/local 데이터 구분에 영향 |
 | 10 | `/api/chat-gamyagi` mock API 경계 | AI MD 실제 API 연동 여부 판단에 영향 |
+| 11 | 배포/인프라 목표 구조와 현재 FE/CI 상태 | AWS 배포 및 CD 구현 시 공통 시스템 문서와 실제 FE 레포 설정 정합성에 영향 |
 
 ## 문서 변경 기준
 
