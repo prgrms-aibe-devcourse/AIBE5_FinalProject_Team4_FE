@@ -1,7 +1,7 @@
 ---
 doc_type: fe_feature_home_recommendation
 source_of_truth: AIBE5_FinalProject_Team4_FE
-last_updated: 2026-06-10
+last_updated: 2026-06-14
 ---
 
 # 홈 추천 화면 기준
@@ -70,16 +70,15 @@ last_updated: 2026-06-10
 - UI: 카테고리(상의/하의/아우터/신발)별 섹션, `TOP 1`~`TOP 10` 뱃지만 표시, 접기/더보기 그리드
 - 카드 액션: 상세 모달, 위시리스트 토글(`POST /api/users/{userId}/wishlist-clothes`)
 
-### BE 배포 의존 (`limitPerCategory`)
+### 어울리는 옷 추천 요청 수 (`limitPerCategory`)
 
-FE는 카테고리당 최대 50건을 요청합니다. 이 값은 BE PR #105(`@Max(50)` 및 후보 풀 상한 확대)에 의존합니다.
+FE는 카테고리당 최대 50건을 요청합니다. BE API 계약도 `limitPerCategory` 허용 범위를 `1`~`50`으로 봅니다.
 
-| BE 상태 | FE `limitPerCategory=50` 결과 |
+| 항목 | 기준 |
 | --- | --- |
-| BE PR #105 미반영(구 `@Max(10)`) | validation 400 → `match` 탭 추천 빈 화면/에러 |
-| BE PR #105 반영 후 | 정상 응답 |
-
-FE를 먼저 배포할 경우 BE #105와 API 계약 문서 갱신이 선행되어야 합니다.
+| 기본 요청값 | `50` |
+| 허용 범위 | `1`~`50` |
+| 화면 표시 | 카테고리별 `TOP 1`~`TOP 10` 우선 표시, 더보기로 추가 후보 확인 |
 
 ## 추천 상세 — 구매 후 보유 옷장 등록 (`match`)
 
