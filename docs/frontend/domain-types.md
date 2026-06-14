@@ -2,7 +2,7 @@
 doc_type: fe_domain_types
 source_of_truth: AIBE5_FinalProject_Team4_FE
 be_domain_source_of_truth: AIBE5_FinalProject_Team4_BE/docs/domain
-last_updated: 2026-06-10
+last_updated: 2026-06-14
 ---
 
 # FE 도메인 타입 기준
@@ -170,9 +170,48 @@ type ClothesCardViewModel = {
   ownershipLabel: string;
   imageUrl: string | null;
 };
+
+type MyProfileResponse = {
+  userId: number;
+  email: string;
+  nickname: string;
+  birthDate?: string | null;
+  gender?: string | null;
+  regionName?: string | null;
+  profileImageUrl?: string | null;
+};
+
+type UserProfileResponse = {
+  userId: number;
+  nickname: string;
+  profileImageUrl?: string | null;
+  profileBio?: string | null;
+  externalLinks?: Array<{
+    title: string;
+    url: string;
+  }>;
+};
+
+type OutfitResponse = {
+  outfitId: number;
+  title: string;
+  items: Array<{
+    clothesId: number;
+    itemRole: string;
+    layerOrder?: number | null;
+  }>;
+};
+
+type AiMdPersonaResponse = {
+  mdId: number;
+  name: string;
+  speechStyle: string;
+};
 ```
 
 API 응답 타입은 BE DTO 필드명과 code를 유지합니다. 화면 컴포넌트에는 별도 mapper를 통해 label, icon, swatch, empty message 등 UI 표현값을 전달합니다.
+
+프로필, 코디, AI MD 응답 타입의 상세 필드는 BE API 계약을 원본으로 확인합니다. FE 타입은 화면에서 사용하는 필드를 중심으로 작성하되, API DTO 필드명을 임의로 바꾸지 않습니다.
 
 ## 현재 코드와 목표 기준
 
