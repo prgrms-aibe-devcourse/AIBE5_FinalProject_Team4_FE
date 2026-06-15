@@ -74,7 +74,10 @@ export default function RecommendProductDetailModal({
                                                         onPurchaseConfirm,
                                                         purchaseConfirmSubmitting = false,
                                                     }: RecommendProductDetailModalProps) {
+    // ✅ 모든 Hook을 early return 전에 선언
     const { showToast } = useToast()
+    const [purchaseOpened, setPurchaseOpened] = useState(false)
+
     if (!open || !item) return null
 
     const categoryLabel = item.categoryLabel
@@ -114,12 +117,10 @@ export default function RecommendProductDetailModal({
         }
     }
 
-    const [purchaseOpened, setPurchaseOpened] = useState(false)
-
     const handlePurchaseClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
         e.preventDefault()
         window.open(item.purchaseUrl!, '_blank', 'noopener,noreferrer')
-        if (onPurchaseConfirm) setPurchaseOpened(true) // 샀어요 버튼 노출
+        if (onPurchaseConfirm) setPurchaseOpened(true)
     }
 
     return (
@@ -195,7 +196,7 @@ export default function RecommendProductDetailModal({
                             <p className="text-sm font-bold text-slate-400">—</p>
                         )}
                     </DetailRow>
-                    <DetailRow label="콜러">
+                    <DetailRow label="컬러">
                         <div className="flex flex-wrap gap-1.5">
                             {allColors.map((color, index) => (
                                 <ColorSwatch key={`${color.label}-${index}`} color={color} />
@@ -224,7 +225,7 @@ export default function RecommendProductDetailModal({
                     </button>
                 </div>
 
-                {/* 구매 링크 */}
+                {/* 구매 링크 — 클릭 시 새 탭으로 열고 샀어요 버튼 노출 */}
                 {item.hasDirectPurchaseUrl && item.purchaseUrl && item.purchaseUrl !== '#' && (
                     <a
                         href={item.purchaseUrl}
@@ -236,12 +237,14 @@ export default function RecommendProductDetailModal({
                         {purchaseConfirmSubmitting ? '처리 중...' : '네이버쇼핑에서 구매하기'}
                     </a>
                 )}
+
+                {/* 샀어요 버튼 — 구매 링크 클릭 후 노출, 클릭 시 onPurchaseConfirm 호출 */}
                 {purchaseOpened && onPurchaseConfirm && (
                     <button
                         type="button"
                         onClick={() => { void onPurchaseConfirm(); setPurchaseOpened(false) }}
                         disabled={purchaseConfirmSubmitting}
-                        className="w-full h-11 rounded-2xl bg-emerald-600 text-white font-black text-sm"
+                        className="w-full h-11 rounded-2xl bg-emerald-600 text-white font-black text-sm hover:bg-emerald-700 transition-colors disabled:opacity-60"
                     >
                         {purchaseConfirmSubmitting ? '처리 중...' : '샀어요! 옷장에 추가하기'}
                     </button>
