@@ -554,29 +554,6 @@ export default function HomeTab({
     }
   };
 
-  if (!hasRecommendationData) {
-    return (
-      <div className="space-y-6 animate-fade-in font-sans">
-        <section className="bg-white border border-slate-100 rounded-[32px] p-8 text-left shadow-sm">
-          <div className="w-14 h-14 rounded-2xl bg-[#F3E8FF] text-[#111827] flex items-center justify-center mb-5 border border-[#DDD6FE]">
-            <Shirt className="w-7 h-7" />
-          </div>
-          <h1 className="text-2xl md:text-3xl font-black text-slate-900">추천할 옷장 데이터가 없어요</h1>
-          <p className="text-sm text-slate-500 font-bold leading-relaxed mt-3 max-w-xl">
-            로그인하지 않았거나 등록된 옷이 없으면 추천 피드를 만들 수 없습니다. 옷을 등록하면 OOTD,
-            유사 상품, 어울리는 옷, AI MD 추천을 바로 확인할 수 있어요.
-          </p>
-          <div className="mt-6 p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-[#111827] shrink-0 mt-0.5" />
-            <span className="text-xs text-slate-600 font-bold leading-relaxed">
-              정확한 추천을 위해 옷 5개 이상 등록을 권장합니다.
-            </span>
-          </div>
-        </section>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6 animate-fade-in font-sans">
       {showStickyLabels && (
@@ -650,6 +627,16 @@ export default function HomeTab({
           </span>
           )}
         </div>
+
+        {!hasRecommendationData && activeLabel !== "match" && (
+            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center mb-6">
+              <span className="text-4xl block mb-3">👗</span>
+              <p className="text-sm font-bold text-slate-700">아직 등록된 옷이 없어요</p>
+              <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                옷을 등록하면 OOTD, 코디 추천이 시작돼요.
+              </p>
+            </div>
+        )}
 
         {activeLabel === "match" && wardrobeLoading && matchEligibleOwnedClothes.length === 0 && (
           <div className="mb-5 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-10 text-center">
