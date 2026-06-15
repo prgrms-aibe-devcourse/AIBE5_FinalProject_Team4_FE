@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import api from "@/api/index";
 import { useState, useEffect } from "react";
 import { 
   Home, 
@@ -18,7 +19,6 @@ import GarmentRegisterMethodModal from "./components/GarmentRegisterMethodModal"
 import PhotoGarmentRegisterModal from "./components/PhotoGarmentRegisterModal";
 import PurchaseGarmentRegisterModal from "./components/PurchaseGarmentRegisterModal";
 import {
-  captureOAuthTokenFromUrl,
   getUserIdFromAccessToken,
 } from "@/utils/authUser";
 import { ensureDevToken, DEFAULT_DEV_USER_ID } from "@/utils/ensureDevToken";
@@ -41,12 +41,8 @@ import {
 
 export default function App() {
   // Login State
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(
-    () => getUserIdFromAccessToken() != null,
-  );
-  const [authUserId, setAuthUserId] = useState<number | null>(
-    getUserIdFromAccessToken,
-  );
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  const [authUserId, setAuthUserId] = useState<number | null>(null);
   // 로그인 모달 열림 여부
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
@@ -111,13 +107,17 @@ export default function App() {
   const [isPhotoRegisterOpen, setIsPhotoRegisterOpen] = useState(false);
   const [isPurchaseRegisterOpen, setIsPurchaseRegisterOpen] = useState(false);
 
-  // OAuth 콜백(?token=): URL에서 토큰 추출 후 상태 반영
+  // 앱 시작 시 쿠키인증 상태 확인
   useEffect(() => {
-    if (captureOAuthTokenFromUrl()) {
-      const uid = getUserIdFromAccessToken();
-      setAuthUserId(uid);
-      setIsLoggedIn(uid != null);
-    }
+    api.get('/api/v1/users/profile')
+        .then((res) => {
+          const userId = res.data.data.userId;
+          setAuthUserId(userId);
+          setIsLoggedIn(true);
+        })
+        .catch(() => {
+          setIsLoggedIn(false);
+        });
   }, []);
 
   useEffect(() => {
@@ -134,7 +134,7 @@ export default function App() {
 
     (async () => {
       let tokenError: string | null = null;
-      if (import.meta.env.DEV && !getUserIdFromAccessToken()) {
+      if (import.meta.env.DEV && import.meta.env.VITE_USE_REAL_AUTH !== "true" && !getUserIdFromAccessToken()) {
         try {
           await ensureDevToken(DEFAULT_DEV_USER_ID, { forceRefresh: false });
         } catch (err) {
@@ -146,8 +146,12 @@ export default function App() {
         }
       }
 
+      const fromStorage = getUserIdFromAccessToken();
+
       if (cancelled) return;
-      setAuthUserId(getUserIdFromAccessToken());
+      if (fromStorage != null) {
+        setAuthUserId(fromStorage);
+      }
       setAuthTokenError(tokenError);
       setAuthReady(true);
     })();
@@ -200,12 +204,11 @@ export default function App() {
       {/* ========================================================= */}
       {isLoginModalOpen && (<LoginPage isModal onClose={() => setIsLoginModalOpen(false)} onSocialLogin={handleSocialLogin} />)}
 
-      {/* ========================================================= */}
       {/* 2. ONBOARDING PROFILE FLOWS */}
       {/* ========================================================= */}
       {isLoggedIn && !profile.onboarded && (
-          <OnboardingPage onComplete={(nickname, birthday, gender, styles, openModal) => {
-            persistProfile({ nickname, birthday, gender, styles, onboarded: true });
+          <OnboardingPage onComplete={(nickname, birthday, gender, styles, region, openModal) => {
+            persistProfile({ nickname, birthday, gender, styles, region: region || undefined, onboarded: true });
             if (openModal) openGarmentRegister();
           }} />
       )}
