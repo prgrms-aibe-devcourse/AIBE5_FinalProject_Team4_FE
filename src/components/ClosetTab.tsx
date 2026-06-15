@@ -12,6 +12,7 @@ import type { WardrobeStatisticsResponse } from "@/types/be";
 import { clearDevToken } from "@/utils/ensureDevToken";
 import axios from "axios";
 import ClosetGarmentDetail from "@/components/ClosetGarmentDetail";
+import ClosetWardrobeMascot from "@/components/ClosetWardrobeMascot";
 import { 
   Heart, 
   ShoppingBag, 
@@ -312,35 +313,7 @@ export default function ClosetTab({
         </div>
 
         {/* Right Mascot column: Cute animated sliding wardrobe or cabinet illustration */}
-        <div className="relative shrink-0 w-36 h-40 md:w-40 md:h-44 flex items-center justify-center select-none">
-          {/* Animated hanging star sticker above wardrobe */}
-          <div className="absolute -top-2 right-0 w-10 h-10 animate-bounce">
-            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full text-amber-300">
-              <path d="M12 2 L15 9 L22 10 L17 15 L18 22 L12 18 L6 22 L7 15 L2 10 L9 9 Z" fill="#FFF3A5" stroke="#334155" strokeWidth="1.5" strokeLinejoin="round"/>
-            </svg>
-          </div>
-
-          {/* Cute Wardrobe Mascot */}
-          <svg className="w-28 h-32 md:w-32 md:h-36 drop-shadow-md" viewBox="0 0 100 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-            {/* Wardrobe frame/body */}
-            <rect x="15" y="10" width="70" height="100" rx="10" fill="#FFF" stroke="#334155" strokeWidth="2.5" />
-            <line x1="50" y1="10" x2="50" y2="100" stroke="#334155" strokeWidth="2" strokeDasharray="3 3" />
-            {/* Wooden drawers at base */}
-            <rect x="20" y="85" width="28" height="18" rx="4" fill="#FFEAA7" stroke="#334155" strokeWidth="2" />
-            <rect x="52" y="85" width="28" height="18" rx="4" fill="#FFEAA7" stroke="#334155" strokeWidth="2" />
-            <circle cx="34" cy="94" r="2.5" fill="#334155" />
-            <circle cx="66" cy="94" r="2.5" fill="#334155" />
-            {/* Door handles */}
-            <rect x="44" y="40" width="3" height="16" rx="1.5" fill="#334155" />
-            <rect x="53" y="40" width="3" height="16" rx="1.5" fill="#334155" />
-            {/* Cute eyes & blush on the left door representing smart cabinet bot */}
-            <circle cx="30" cy="35" r="2.2" fill="#334155" />
-            <circle cx="40" cy="35" r="2.2" fill="#334155" />
-            <circle cx="26" cy="39" r="3" fill="#FAA" />
-            <circle cx="44" cy="39" r="3" fill="#FAA" />
-            <path d="M 33,39 Q 35,42 37,39" stroke="#334155" strokeWidth="1.5" strokeLinecap="round" fill="none" />
-          </svg>
-        </div>
+        <ClosetWardrobeMascot className="relative shrink-0 w-36 h-40 md:w-40 md:h-44" />
 
       </div>
 
@@ -499,13 +472,6 @@ export default function ClosetTab({
                       />
                     ) : (
                       <span className="text-4xl filter drop-shadow-sm select-none">👚</span>
-                    )}
-
-                    {/* Quick indicator check on favorited */}
-                    {item.isFavorite && (
-                      <span className="absolute bottom-2 left-2 bg-gradient-to-r from-rose-500 to-pink-500 text-white text-[8px] font-black tracking-wider px-2 py-0.5 rounded-full shadow-2xs">
-                        즐겨찾기 ⭐️
-                      </span>
                     )}
                   </div>
 

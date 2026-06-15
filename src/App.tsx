@@ -91,7 +91,7 @@ export default function App() {
     closeGarmentRegisterMethod,
   } = useCloset();
 
-  const { wardrobeLoading } = useWardrobeLoader({
+  const { wardrobeLoading, refreshWardrobe } = useWardrobeLoader({
     userId: authUserId,
     enabled: authReady && authUserId != null && profile.onboarded,
     selectedGarment,
@@ -286,6 +286,8 @@ export default function App() {
                   onAddWishlistItem={handleAddWishlistItem}
                   nickname={profile.nickname}
                   resetSignal={homeResetSignal}
+                  onRefreshWardrobe={() => void refreshWardrobe()}
+                  onGoToCloset={() => setCurrentTab("closet")}
                 />
               )}
 
@@ -423,7 +425,7 @@ export default function App() {
 
                   {/* Reset account Option and info */}
                   <div className="p-4 rounded-xl bg-[#BBF7D0]/10 border border-[#BBF7D0]/20 space-y-1.5">
-                    <p className="text-[11px] text-slate-600">가입하신 데이터는 로컬 저장소와 Google Gemini API를 피드삼아 고정밀 스타일링 매칭 가이드와 소통합니다.</p>
+                    <p className="text-[11px] text-slate-600"></p>
                     <button
                       onClick={() => {
                         if (confirm("초기 온보딩으로 되돌아가시겠습니까?")) {
@@ -450,7 +452,7 @@ export default function App() {
             </main>
 
             {/* ----------------- Floating scroll-to-top ----------------- */}
-            <div className="fixed bottom-20 right-5 z-40">
+            <div className="fixed bottom-36 right-5 z-40">
               <button
                 id="btn-scroll-top"
                 onClick={scrollAppToTop}

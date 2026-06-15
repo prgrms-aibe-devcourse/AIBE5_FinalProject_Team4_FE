@@ -2,7 +2,7 @@
 doc_type: fe_domain_types
 source_of_truth: AIBE5_FinalProject_Team4_FE
 be_domain_source_of_truth: AIBE5_FinalProject_Team4_BE/docs/domain
-last_updated: 2026-06-09
+last_updated: 2026-06-14
 ---
 
 # FE 도메인 타입 기준
@@ -58,6 +58,18 @@ FE는 이 값을 아래 목적으로만 사용합니다.
 - 옷 등록/수정 저장 요청 payload에 포함
 - 사진·구매내역 draft/analyze 응답의 내부 상태 유지
 - 추천 응답에서 내부 필터 또는 제외 기준으로 사용
+
+### ClothesSeason
+
+| Code | 화면 표시 | 설명 |
+| --- | --- | --- |
+| `SPRING` | 봄 | 봄에 주로 착용하는 옷 |
+| `SUMMER` | 여름 | 여름에 주로 착용하는 옷 |
+| `FALL` | 가을 | 가을에 주로 착용하는 옷 |
+| `WINTER` | 겨울 | 겨울에 주로 착용하는 옷 |
+| `ALL_SEASON` | 사계절 | 특정 계절에 한정하지 않는 옷 |
+
+`ClothesSeason`은 `CLOTHES.season`의 code입니다. 사용자별 옷장 정보가 아니라 옷 공통 정보이며, 옷 등록 저장 시 1개 선택하고 생성 후에는 변경하지 않습니다.
 
 ### StyleCode
 
@@ -119,15 +131,36 @@ type CategoryCode = 'TOP' | 'BOTTOM' | 'OUTER' | 'SHOES';
 type OwnershipStatus = 'OWNED' | 'WISHLIST';
 type ClothesInfoSource = 'PHOTO' | 'PURCHASE_HISTORY' | 'EXTERNAL_SHOPPING';
 type ClothesGender = 'MALE' | 'FEMALE' | 'UNISEX';
+type ClothesSeason = 'SPRING' | 'SUMMER' | 'FALL' | 'WINTER' | 'ALL_SEASON';
 
 type ApiClothes = {
   clothesId: number;
+  brandName?: string;
   name: string;
   category: CategoryCode;
   itemType: string;
+  season: ClothesSeason;
   gender: ClothesGender;
   ownershipStatus: OwnershipStatus;
   imageUrl: string | null;
+  externalProductUrl?: string | null;
+};
+
+type RecommendedClothesItem = {
+  clothesId: number;
+  wardrobeClothesId: number | null;
+  name: string;
+  brandName?: string | null;
+  imageUrl: string;
+  category: CategoryCode;
+  itemType: string;
+  season: ClothesSeason | null;
+  gender?: ClothesGender;
+  primaryColor: string;
+  secondaryColors: string[];
+  styleCodes: string[];
+  compatibilityScore: number;
+  externalProductUrl?: string | null;
 };
 
 type ClothesCardViewModel = {
@@ -137,9 +170,48 @@ type ClothesCardViewModel = {
   ownershipLabel: string;
   imageUrl: string | null;
 };
+
+type MyProfileResponse = {
+  userId: number;
+  email: string;
+  nickname: string;
+  birthDate?: string | null;
+  gender?: string | null;
+  regionName?: string | null;
+  profileImageUrl?: string | null;
+};
+
+type UserProfileResponse = {
+  userId: number;
+  nickname: string;
+  profileImageUrl?: string | null;
+  profileBio?: string | null;
+  externalLinks?: Array<{
+    title: string;
+    url: string;
+  }>;
+};
+
+type OutfitResponse = {
+  outfitId: number;
+  title: string;
+  items: Array<{
+    clothesId: number;
+    itemRole: string;
+    layerOrder?: number | null;
+  }>;
+};
+
+type AiMdPersonaResponse = {
+  mdId: number;
+  name: string;
+  speechStyle: string;
+};
 ```
 
 API 응답 타입은 BE DTO 필드명과 code를 유지합니다. 화면 컴포넌트에는 별도 mapper를 통해 label, icon, swatch, empty message 등 UI 표현값을 전달합니다.
+
+프로필, 코디, AI MD 응답 타입의 상세 필드는 BE API 계약을 원본으로 확인합니다. FE 타입은 화면에서 사용하는 필드를 중심으로 작성하되, API DTO 필드명을 임의로 바꾸지 않습니다.
 
 ## 현재 코드와 목표 기준
 
@@ -149,6 +221,7 @@ API 응답 타입은 BE DTO 필드명과 code를 유지합니다. 화면 컴포�
 | 보유 상태 | `isWishlist: boolean` | `ownershipStatus: OWNED/WISHLIST` |
 | 스타일 | `Casual`, `Amekaji`, `Dandy`, `Tech Casual` 등 | BE catalog의 `StyleCode` |
 | 옷 대상 성별 | 등록/수정 화면에서 `MALE`, `FEMALE`, `UNISEX` 직접 선택 UI | 화면 비노출, 내부 저장 요청/추천 분류 code |
+| 옷 계절 | 생성 후 수정 화면에서 변경 가능한 값처럼 취급 | `CLOTHES.season`, 등록 시 확정하고 생성 후 변경하지 않음 |
 | 응답 타입 | `{ data, message, status }` | `{ success, data, message }` |
 | 사용자 ID | `/users/1` 또는 고정 ID | 인증 사용자 ID |
 

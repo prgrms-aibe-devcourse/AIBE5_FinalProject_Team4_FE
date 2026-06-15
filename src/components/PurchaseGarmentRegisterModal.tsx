@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { FileText, Info, Sparkle, Upload, X } from './icons'
+import { FileText, Info, Sparkle, Upload } from './icons'
 import AuthenticatedImage from '@/components/common/AuthenticatedImage'
+import { Modal, ModalBody, ModalHeader } from '@/components/common/Modal'
 import { EXTERNAL_SOURCES, getExternalSourceLogoUrl } from '@/data/externalSources'
 import { usePurchaseGarmentRegister } from '@/hooks/usePurchaseGarmentRegister'
 import {
@@ -125,32 +126,20 @@ export default function PurchaseGarmentRegisterModal({
   }
 
   return (
-    <div
+    <Modal
+      open={open}
+      onClose={handleClose}
       id="modal-purchase-register"
-      className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center z-[45] animate-fade-in p-4"
-      role="dialog"
-      aria-modal="true"
-      onPaste={handlePaste}
+      panelClassName="min-h-[720px] relative"
+      overlayProps={{ onPaste: handlePaste }}
     >
-      <div className="w-full max-w-xl bg-white rounded-[28px] min-h-[720px] max-h-[95vh] flex flex-col shadow-2xl relative overflow-hidden">
-        <div className="flex justify-between items-center px-7 pt-6 pb-4 border-b border-slate-100 shrink-0">
-          <div className="space-y-0 text-left leading-tight">
-            <h3 className="text-lg font-bold text-[#1E3A8A]">구매내역 기반 등록</h3>
-            <p className="text-sm text-slate-400 mt-1">
-              쇼핑몰 구매내역 캡처를 분석해 옷장에 보유 옷으로 저장합니다.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={handleClose}
-            className="p-1.5 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition"
-            aria-label="닫기"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+      <ModalHeader
+        title="구매내역 기반 등록"
+        subtitle="쇼핑몰 구매내역 캡처를 분석해 옷장에 보유 옷으로 저장합니다."
+        onClose={handleClose}
+      />
 
-        <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain px-7 py-4 space-y-4">
+      <ModalBody className="px-7 py-4 space-y-4">
           {globalError &&
             !isDuplicateRegisterError(globalError) &&
             !(aiFailed && (step === 'upload' || step === 'form' || step === 'saving')) &&
@@ -996,8 +985,7 @@ export default function PurchaseGarmentRegisterModal({
               </form>
             </>
           )}
-        </div>
-      </div>
-    </div>
+      </ModalBody>
+    </Modal>
   )
 }

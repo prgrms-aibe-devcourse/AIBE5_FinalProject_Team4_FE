@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { Camera, Info, Sparkle, Upload, X } from './icons'
+import { Camera, Info, Sparkle, Upload } from './icons'
+import { Modal, ModalBody, ModalHeader } from '@/components/common/Modal'
 import { usePhotoGarmentRegister } from '@/hooks/usePhotoGarmentRegister'
 import {
   CATEGORY_ITEM_TYPES,
@@ -102,31 +103,19 @@ export default function PhotoGarmentRegisterModal({
   }
 
   return (
-    <div
+    <Modal
+      open={open}
+      onClose={handleClose}
       id="modal-photo-register"
-      className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center z-[45] animate-fade-in p-4"
-      role="dialog"
-      aria-modal="true"
+      panelClassName="min-h-[720px] relative"
     >
-      <div className="w-full max-w-xl bg-white rounded-[28px] min-h-[720px] max-h-[95vh] flex flex-col shadow-2xl relative overflow-hidden">
-        <div className="flex justify-between items-center px-7 pt-6 pb-4 border-b border-slate-100 shrink-0">
-          <div className="space-y-0 text-left leading-tight">
-            <h3 className="text-lg font-bold text-[#1E3A8A]">사진 기반 등록</h3>
-            <p className="text-sm text-slate-400 mt-1">
-              옷 사진을 업로드하면 AI가 분석하고, 확인 후 옷장에 저장합니다.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={handleClose}
-            className="p-1.5 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition"
-            aria-label="닫기"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+      <ModalHeader
+        title="사진 기반 등록"
+        subtitle="옷 사진을 업로드하면 AI가 분석하고, 확인 후 옷장에 저장합니다."
+        onClose={handleClose}
+      />
 
-        <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain px-7 py-4 space-y-4">
+      <ModalBody className="px-7 py-4 space-y-4">
           {globalError &&
             !isDuplicateRegisterError(globalError) &&
             !(aiFailed && (step === 'form' || step === 'saving')) && (
@@ -736,8 +725,7 @@ export default function PhotoGarmentRegisterModal({
               </form>
             </>
           )}
-        </div>
-      </div>
-    </div>
+      </ModalBody>
+    </Modal>
   )
 }

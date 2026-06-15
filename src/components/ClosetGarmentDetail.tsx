@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import AuthenticatedImage from '@/components/common/AuthenticatedImage'
+import BrandDisplay from '@/components/common/BrandDisplay'
 import GarmentEditModal, { type GarmentEditDraft } from '@/components/GarmentEditModal'
+import { formatRecommendBrandLabel, getBrandLogoUrl } from '@/data/brandLogos'
 import type { Garment } from '@/types'
 import { UI_CATEGORY_TO_BE } from '@/data/categoryItemTypes'
 import { uploadGarmentPhoto } from '@/api/photoRegistration'
@@ -14,8 +16,10 @@ import { validateGarmentImageFile } from '@/utils/imageFileValidation'
 import {
   hasFormErrors,
   validateGarmentRegisterDraft,
+  validateGarmentSizeOnlyEdit,
   type GarmentFormFieldErrors,
 } from '@/utils/garmentRegisterValidation'
+import { isExternalProductGarment } from '@/utils/garmentEditRules'
 import { resolveClothesDisplayImageUrl } from '@/utils/clothesImageUrl'
 
 interface ClosetGarmentDetailProps {
@@ -196,7 +200,10 @@ export default function ClosetGarmentDetail({
   const handleSave = async () => {
     if (!detail || !editDraft) return
 
-    const errors = validateGarmentRegisterDraft(editDraft)
+    const sizeOnly = isExternalProductGarment(detail)
+    const errors = sizeOnly
+      ? validateGarmentSizeOnlyEdit(editDraft.size)
+      : validateGarmentRegisterDraft(editDraft, { skipGender: true, skipSeason: true })
     setFieldErrors(errors)
     if (hasFormErrors(errors)) {
       onToast('입력값을 확인해 주세요.')
@@ -207,6 +214,18 @@ export default function ClosetGarmentDetail({
     setImageError(null)
 
     try {
+      if (sizeOnly) {
+        const updated = await updateClothes(Number(detail.id), detail, {
+          size: editDraft.size.trim() || 'FREE',
+        })
+        setDetail(updated)
+        onGarmentUpdated(updated)
+        setEditModalOpen(false)
+        setEditDraft(null)
+        onToast('사이즈가 수정되었습니다.')
+        return
+      }
+
       let imageUrl = editDraft.imageUrl.trim()
 
       if (pendingImageFile) {
@@ -235,12 +254,10 @@ export default function ClosetGarmentDetail({
         productCode: editDraft.productCode.trim() || detail.productCode || 'UNKNOWN',
         category: UI_CATEGORY_TO_BE[editDraft.category],
         itemType: editDraft.itemType,
-        gender: editDraft.gender,
         primaryColor: editDraft.mainColor,
         secondaryColors: editDraft.secondaryColors,
         styles,
         size: editDraft.size.trim() || 'FREE',
-        season: editDraft.season.trim() || undefined,
         imageUrl,
       })
       setDetail(updated)
@@ -259,10 +276,9 @@ export default function ClosetGarmentDetail({
   }
 
   const handleDelete = async () => {
-    if (!detail) return
-    const label = detail.isWishlist ? '위시리스트' : '보유 옷장'
+    if (!detail || detail.isWishlist) return
     const confirmed = window.confirm(
-      `"${detail.name}"을(를) ${label}에서 삭제할까요?\n삭제 후에는 목록에서 제거됩니다.`,
+      `"${detail.name}"을(를) 보유 옷장에서 삭제할까요?\n삭제 후에는 목록에서 제거됩니다.`,
     )
     if (!confirmed) return
 
@@ -276,6 +292,25 @@ export default function ClosetGarmentDetail({
     } catch (err) {
       console.error('[ClosetGarmentDetail] deleteClothes failed:', err)
       onToast('삭제에 실패했습니다.')
+    }
+  }
+
+  const handleRemoveFromWishlist = async () => {
+    if (!detail || !detail.isWishlist) return
+    const confirmed = window.confirm(
+      `"${detail.name}"을(를) 위시리스트에서 빼시겠어요?`,
+    )
+    if (!confirmed) return
+
+    try {
+      await deleteClothes(Number(detail.id))
+      onGarmentDeleted(detail.id)
+      onGarmentChange(null)
+      setDetail(null)
+      onToast('위시리스트에서 제거했어요')
+    } catch (err) {
+      console.error('[ClosetGarmentDetail] removeFromWishlist failed:', err)
+      onToast('위시리스트에서 빼지 못했습니다.')
     }
   }
 
@@ -301,6 +336,10 @@ export default function ClosetGarmentDetail({
 
   const g = detail ?? garment
   const statusLabel = g.isWishlist ? '미보유 (위시리스트)' : '보유'
+  const sizeOnlyEdit = isExternalProductGarment(g)
+  const brandName = g.be?.brandName ?? g.fabricMaterial
+  const brandLabel = formatRecommendBrandLabel(brandName)
+  const brandLogoUrl = getBrandLogoUrl(brandName)
 
   return (
     <>
@@ -312,6 +351,7 @@ export default function ClosetGarmentDetail({
           imagePreviewUrl={imagePreviewUrl}
           imageError={imageError}
           fieldErrors={fieldErrors}
+          sizeOnly={sizeOnlyEdit}
           onDraftChange={handleDraftChange}
           onImageFileSelect={handleImageFileSelect}
           onSave={() => void handleSave()}
@@ -342,40 +382,50 @@ export default function ClosetGarmentDetail({
             )}
           </div>
           <h4 className="text-lg font-black text-slate-900 leading-snug">{g.name}</h4>
-          <p className="text-sm text-slate-600 leading-relaxed">
-            브랜드: {g.be?.brandName ?? g.fabricMaterial} · 코드: {g.productCode ?? '—'}
-          </p>
+          <div className="space-y-1">
+            <p className="text-xs font-bold text-slate-500">브랜드</p>
+            <BrandDisplay label={brandLabel} logoUrl={brandLogoUrl} />
+          </div>
           <p className="text-sm text-slate-600 leading-relaxed">
             카테고리: {g.category} · 타입: {g.fitType}
           </p>
           <p className="text-sm text-slate-600 leading-relaxed">
-            색상: {g.color} · 스타일: {g.style}
+            색상: {g.color}
           </p>
-          {(g.size || g.season) && (
+          {g.size && (
             <p className="text-sm text-slate-600 leading-relaxed">
-              사이즈: {g.size ?? '—'} · 시즌: {g.season ?? '—'}
+              사이즈: {g.size}
             </p>
           )}
         </div>
 
-        <div className="grid grid-cols-2 gap-2.5">
+        {g.isWishlist ? (
           <button
             type="button"
-            onClick={openEditModal}
-            disabled={!g.be || g.isWishlist}
-            title={g.isWishlist ? '미보유 옷은 보유 전환 후 수정할 수 있습니다' : undefined}
-            className="h-12 rounded-xl text-sm font-black bg-[#1E3A8A] text-white disabled:opacity-40 cursor-pointer transition hover:bg-[#1E3A8A]/90 active:scale-[0.98]"
+            onClick={() => void handleRemoveFromWishlist()}
+            className="w-full h-12 rounded-xl text-sm font-black bg-orange-50 text-orange-900 border border-orange-200 cursor-pointer transition hover:bg-orange-100 active:scale-[0.98]"
           >
-            수정
+            위시리스트에서 빼기
           </button>
-          <button
-            type="button"
-            onClick={() => void handleDelete()}
-            className="h-12 rounded-xl text-sm font-black bg-rose-100 text-rose-800 border border-rose-200 cursor-pointer transition hover:bg-rose-200 active:scale-[0.98]"
-          >
-            삭제
-          </button>
-        </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-2.5">
+            <button
+              type="button"
+              onClick={openEditModal}
+              disabled={!g.be}
+              className="h-12 rounded-xl text-sm font-black bg-[#1E3A8A] text-white disabled:opacity-40 cursor-pointer transition hover:bg-[#1E3A8A]/90 active:scale-[0.98]"
+            >
+              수정
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleDelete()}
+              className="h-12 rounded-xl text-sm font-black bg-rose-100 text-rose-800 border border-rose-200 cursor-pointer transition hover:bg-rose-200 active:scale-[0.98]"
+            >
+              삭제
+            </button>
+          </div>
+        )}
       </div>
     </>
   )
