@@ -8,6 +8,7 @@ import {
   postRecommendationFeedback,
 } from "@/api/recommendations";
 import { fetchWardrobeMeta } from '@/api/wardrobe'
+import { fetchOutfitBooks } from '@/api/outfits'
 import { fetchWeather } from '@/api/weather'
 import { AlertCircle, Shirt } from "./icons";
 import { Garment } from "@/types/index";
@@ -23,6 +24,8 @@ import { matchesUserGender, type UserGender } from "@/utils/genderClothesFilter"
 import { parseBeClothesId } from "@/utils/beClothesId";
 import MatchAnchorWardrobeScroller from "@/components/MatchAnchorWardrobeScroller";
 import MatchRecommendationByCategory from "@/components/MatchRecommendationByCategory";
+import SimilarProductRecommendations from "@/components/SimilarProductRecommendations";
+import AiMdRecommendations from "@/components/AiMdRecommendations";
 import RecommendProductDetailModal from '@/components/RecommendProductDetailModal';
 import OutfitDetailModal from '@/components/OutfitDetailModal';
 
@@ -130,6 +133,7 @@ export default function HomeTab({
                                   resetSignal = 0,
                                   onRefreshWardrobe,
                                   onAddWishlistItem,
+                                  onGoToCloset,
                                 }: HomeTabProps) {
   const [activeLabel, setActiveLabel] = useState<RecommendationLabel>("ootd");
   const [showStickyLabels, setShowStickyLabels] = useState(false);
@@ -141,7 +145,10 @@ export default function HomeTab({
   const [styleItems, setStyleItems] = useState<RecommendItem[]>([]);
   const [ootdError, setOotdError] = useState<string | null>(null);
   const [styleError, setStyleError] = useState<string | null>(null);
+  const [ootdLoading, setOotdLoading] = useState(false);
+  const [styleLoading, setStyleLoading] = useState(false);
   const [ootdCombinations, setOotdCombinations] = useState<Array<any>>([]);
+  const [bookId, setBookId] = useState<number | null>(null);
   const [selectedItem, setSelectedItem] = useState<RecommendItem | null>(null);
   const [selectedCombo, setSelectedCombo] = useState<any | null>(null);
   const [isDisliking, setIsDisliking] = useState(false);
@@ -199,7 +206,20 @@ export default function HomeTab({
         if (!meta || cancelled) return;
         const wardrobeId = meta.wardrobeId;
 
+        // Fetch bookId once
+        if (!bookId) {
+          try {
+            const books = await fetchOutfitBooks();
+            if (books && books.length > 0) {
+              setBookId(books[0].id || books[0].bookId);
+            }
+          } catch (e) {
+            console.error('Failed to fetch outfit books:', e);
+          }
+        }
+
         if (activeLabel === 'ootd' && ootdItems.length === 0) {
+          setOotdLoading(true);
           try {
             let currentTemp: number | undefined = undefined;
             try {
@@ -228,7 +248,7 @@ export default function HomeTab({
               totalScore: item.totalScore ?? null,
               weatherLabel: weatherLabel || item.weatherLabel,
               outfitId: item.outfitId ?? null,
-              bookId: wardrobeId,
+              bookId: bookId || wardrobeId,
             }));
 
             const mapped = outfits.map((item: any, idx: number) => {
@@ -247,7 +267,7 @@ export default function HomeTab({
                 isAnchor: false,
                 clothesId: mainItem.clothesId ?? null,
                 outfitId: item.outfitId ?? null,
-                bookId: wardrobeId,
+                bookId: bookId || wardrobeId,
               } as RecommendItem;
             });
             setOotdCombinations(combos);
@@ -256,10 +276,13 @@ export default function HomeTab({
             if (!cancelled) {
               setOotdError(extractApiErrorMessage(err, "OOTD 추천을 불러오지 못했습니다."));
             }
+          } finally {
+            if (!cancelled) setOotdLoading(false);
           }
         }
 
         if (activeLabel === 'style' && styleItems.length === 0) {
+          setStyleLoading(true);
           try {
             const res = await fetchWardrobeRecommendations(wardrobeId);
             if (cancelled) return;
@@ -287,6 +310,8 @@ export default function HomeTab({
             if (!cancelled) {
               setStyleError(extractApiErrorMessage(err, "스타일 기반 추천을 불러오지 못했습니다."));
             }
+          } finally {
+            if (!cancelled) setStyleLoading(false);
           }
         }
       } catch {
@@ -368,11 +393,11 @@ export default function HomeTab({
   };
 
   const selectedRecommendations = useMemo(() => {
-    if (activeLabel === "match") return [];
-    if (activeLabel === "ootd") return ootdItems.length > 0 ? ootdItems : buildRecommendations("ootd");
-    if (activeLabel === "style") return styleItems.length > 0 ? styleItems : buildRecommendations("style");
-    return buildRecommendations(activeLabel);
-  }, [activeLabel, clothes, gender, ootdItems, styleItems]);
+    if (activeLabel === "match" || activeLabel === "similar" || activeLabel === "aimd") return [];
+    if (activeLabel === "ootd") return ootdItems;
+    if (activeLabel === "style") return styleItems;
+    return [];
+  }, [activeLabel, ootdItems, styleItems]);
 
   const matchRecommendationCount = useMemo(
       () => matchRecommendationGroups.reduce((sum, group) => sum + group.items.length, 0),
@@ -397,6 +422,8 @@ export default function HomeTab({
   useEffect(() => {
     setActiveLabel("ootd");
     setShowStickyLabels(false);
+    setOotdItems([]);
+    setStyleItems([]);
   }, [resetSignal]);
 
   const selectLabel = (label: RecommendationLabel, scrollToList = false) => {
@@ -541,74 +568,110 @@ export default function HomeTab({
               </div>
           ) : activeLabel === "match" && matchEligibleOwnedClothes.length > 0 ? (
               <MatchRecommendationByCategory groups={matchRecommendationGroups} userId={userId} existingGarments={clothes} onWishlistAdded={onRefreshWardrobe} />
+          ) : activeLabel === "similar" ? (
+              <SimilarProductRecommendations
+                  userId={userId}
+                  existingGarments={clothes}
+                  onWishlistAdded={onRefreshWardrobe}
+                  onGoToCloset={onGoToCloset}
+              />
+          ) : activeLabel === "aimd" ? (
+              <AiMdRecommendations
+                  userId={userId}
+                  gender={gender}
+                  existingGarments={clothes}
+                  onWishlistAdded={onRefreshWardrobe}
+              />
           ) : (
-              <div className={`grid gap-4 ${activeLabel === "ootd" || activeLabel === "aimd" ? "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3" : "grid-cols-2 lg:grid-cols-3"}`}>
-                {selectedRecommendations.map((item) => (
-                    <article
-                        key={item.id}
-                        onClick={() => {
-                          if (activeLabel === 'ootd') {
-                            const combo = ootdCombinations[selectedRecommendations.indexOf(item)] ?? null;
-                            setSelectedCombo(combo);
-                            setSelectedItem(null);
-                          } else {
-                            setSelectedItem(item);
-                            setSelectedCombo(null);
-                          }
-                        }}
-                        className={`group rounded-[24px] border overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:rotate-[0.5deg] hover:shadow-xl active:scale-[0.99] cursor-pointer ${item.isAnchor ? "border-[#1E3A8A]/30 bg-indigo-50/40 ring-1 ring-[#1E3A8A]/20" : "border-slate-100 bg-slate-50"}`}
-                    >
-                      {activeLabel === 'ootd' ? (
-                          <div className="h-44 sm:h-52 lg:h-72 bg-slate-100 relative overflow-hidden">
-                            {(() => {
-                              const idx = selectedRecommendations.indexOf(item);
-                              const combo = ootdCombinations[idx];
-                              if (combo && !combo.outer && combo.top && combo.bottom) {
-                                return (
-                                    <div className="w-full h-full flex flex-col">
-                                      <div className="flex-1 overflow-hidden border-b border-white/20">
-                                        <AuthenticatedImage src={combo.top.imageUrl ?? combo.top.userImageUrl ?? ''} alt="Top" className="w-full h-full object-cover object-top transition-transform duration-300 group-hover:scale-105" fallback={<div className="w-full h-full flex items-center justify-center bg-slate-200 text-slate-400 text-[10px] font-bold">상의 없음</div>} />
-                                      </div>
-                                      <div className="flex-1 overflow-hidden">
-                                        <AuthenticatedImage src={combo.bottom.imageUrl ?? combo.bottom.userImageUrl ?? ''} alt="Bottom" className="w-full h-full object-cover object-top transition-transform duration-300 group-hover:scale-105" fallback={<div className="w-full h-full flex items-center justify-center bg-slate-200 text-slate-400 text-[10px] font-bold">하의 없음</div>} />
-                                      </div>
-                                    </div>
-                                );
+              <div className={`grid gap-4 ${activeLabel === "ootd" ? "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3" : "grid-cols-2 lg:grid-cols-3"}`}>
+                {(activeLabel === 'ootd' && ootdLoading) || (activeLabel === 'style' && styleLoading) ? (
+                    Array.from({ length: 6 }).map((_, idx) => (
+                        <div key={idx} className="h-44 sm:h-52 lg:h-72 rounded-[24px] bg-slate-100 animate-pulse" />
+                    ))
+                ) : (activeLabel === 'ootd' && ootdError) || (activeLabel === 'style' && styleError) ? (
+                    <div className="col-span-full rounded-2xl border border-red-100 bg-red-50 px-5 py-10 text-center">
+                      <p className="text-sm font-black text-red-700">{(activeLabel === 'ootd' ? ootdError : styleError)}</p>
+                      <button
+                          type="button"
+                          onClick={() => onRefreshWardrobe?.()}
+                          className="mt-4 h-9 px-4 rounded-full bg-[#111827] text-white text-xs font-black"
+                      >
+                        다시 시도
+                      </button>
+                    </div>
+                ) : selectedRecommendations.length === 0 ? (
+                    <div className="col-span-full rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-5 py-10 text-center">
+                      <p className="text-sm font-black text-slate-700">추천 결과가 없습니다.</p>
+                      <p className="text-xs text-slate-400 font-bold mt-2">옷장에 아이템을 더 등록하거나 나중에 다시 시도해 주세요.</p>
+                    </div>
+                ) : (
+                    selectedRecommendations.map((item) => (
+                        <article
+                            key={item.id}
+                            onClick={() => {
+                              if (activeLabel === 'ootd') {
+                                const combo = ootdCombinations[selectedRecommendations.indexOf(item)] ?? null;
+                                setSelectedCombo(combo);
+                                setSelectedItem(null);
+                              } else {
+                                setSelectedItem(item);
+                                setSelectedCombo(null);
                               }
-                              return (
-                                  <>
-                                    <AuthenticatedImage src={item.imageUrl} alt={item.title} className="w-full h-full object-cover object-top transition-transform duration-300 group-hover:scale-105" fallback={<div className="w-full h-full flex items-center justify-center bg-slate-200 text-slate-400 text-xs font-bold">이미지 없음</div>} />
-                                    {combo && (() => {
-                                      const thumbs = [combo.bottom, combo.outer].filter(Boolean);
-                                      if (thumbs.length === 0) return null;
-                                      return (
-                                          <div className="absolute bottom-10 right-2 flex gap-1">
-                                            {thumbs.map((t: any, i: number) => (
-                                                <div key={i} className="w-12 h-12 rounded-lg overflow-hidden border-2 border-white bg-slate-100 shadow-sm">
-                                                  <AuthenticatedImage src={t.imageUrl ?? t.userImageUrl ?? ''} alt={t.name ?? ''} className="w-full h-full object-cover" fallback={<div className="w-full h-full bg-slate-200" />} />
-                                                </div>
-                                            ))}
+                            }}
+                            className={`group rounded-[24px] border overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:rotate-[0.5deg] hover:shadow-xl active:scale-[0.99] cursor-pointer ${item.isAnchor ? "border-[#1E3A8A]/30 bg-indigo-50/40 ring-1 ring-[#1E3A8A]/20" : "border-slate-100 bg-slate-50"}`}
+                        >
+                          {activeLabel === 'ootd' ? (
+                              <div className="h-44 sm:h-52 lg:h-72 bg-slate-100 relative overflow-hidden">
+                                {(() => {
+                                  const idx = selectedRecommendations.indexOf(item);
+                                  const combo = ootdCombinations[idx];
+                                  if (combo && !combo.outer && combo.top && combo.bottom) {
+                                    return (
+                                        <div className="w-full h-full flex flex-col">
+                                          <div className="flex-1 overflow-hidden border-b border-white/20">
+                                            <AuthenticatedImage src={combo.top.imageUrl ?? combo.top.userImageUrl ?? ''} alt="Top" className="w-full h-full object-cover object-top transition-transform duration-300 group-hover:scale-105" fallback={<div className="w-full h-full flex items-center justify-center bg-slate-200 text-slate-400 text-[10px] font-bold">상의 없음</div>} />
                                           </div>
-                                      );
-                                    })()}
-                                  </>
-                              );
-                            })()}
-                            <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/80 via-black/45 to-transparent text-white">
-                              <h3 className="text-sm font-black truncate">{item.title}</h3>
-                            </div>
-                          </div>
-                      ) : (
-                          <div className="h-44 sm:h-52 lg:h-72 bg-slate-100 relative overflow-hidden">
-                            <AuthenticatedImage src={item.imageUrl} alt={item.title} className="w-full h-full object-cover object-top transition-transform duration-300 group-hover:scale-105" fallback={<div className="w-full h-full flex items-center justify-center bg-slate-200 text-slate-400 text-xs font-bold">이미지 없음</div>} />
-                            <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/80 via-black/45 to-transparent text-white">
-                              <h3 className="text-sm font-black truncate">{item.title}</h3>
-                              <div className="mt-1"><strong className="text-sm">{item.price}</strong></div>
-                            </div>
-                          </div>
-                      )}
-                    </article>
-                ))}
+                                          <div className="flex-1 overflow-hidden">
+                                            <AuthenticatedImage src={combo.bottom.imageUrl ?? combo.bottom.userImageUrl ?? ''} alt="Bottom" className="w-full h-full object-cover object-top transition-transform duration-300 group-hover:scale-105" fallback={<div className="w-full h-full flex items-center justify-center bg-slate-200 text-slate-400 text-[10px] font-bold">하의 없음</div>} />
+                                          </div>
+                                        </div>
+                                    );
+                                  }
+                                  return (
+                                      <>
+                                        <AuthenticatedImage src={item.imageUrl} alt={item.title} className="w-full h-full object-cover object-top transition-transform duration-300 group-hover:scale-105" fallback={<div className="w-full h-full flex items-center justify-center bg-slate-200 text-slate-400 text-xs font-bold">이미지 없음</div>} />
+                                        {combo && (() => {
+                                          const thumbs = [combo.bottom, combo.outer].filter(Boolean);
+                                          if (thumbs.length === 0) return null;
+                                          return (
+                                              <div className="absolute bottom-10 right-2 flex gap-1">
+                                                {thumbs.map((t: any, i: number) => (
+                                                    <div key={i} className="w-12 h-12 rounded-lg overflow-hidden border-2 border-white bg-slate-100 shadow-sm">
+                                                      <AuthenticatedImage src={t.imageUrl ?? t.userImageUrl ?? ''} alt={t.name ?? ''} className="w-full h-full object-cover" fallback={<div className="w-full h-full bg-slate-200" />} />
+                                                    </div>
+                                                ))}
+                                              </div>
+                                          );
+                                        })()}
+                                      </>
+                                  );
+                                })()}
+                                <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/80 via-black/45 to-transparent text-white">
+                                  <h3 className="text-sm font-black truncate">{item.title}</h3>
+                                </div>
+                              </div>
+                          ) : (
+                              <div className="h-44 sm:h-52 lg:h-72 bg-slate-100 relative overflow-hidden">
+                                <AuthenticatedImage src={item.imageUrl} alt={item.title} className="w-full h-full object-cover object-top transition-transform duration-300 group-hover:scale-105" fallback={<div className="w-full h-full flex items-center justify-center bg-slate-200 text-slate-400 text-xs font-bold">이미지 없음</div>} />
+                                <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/80 via-black/45 to-transparent text-white">
+                                  <h3 className="text-sm font-black truncate">{item.title}</h3>
+                                  <div className="mt-1"><strong className="text-sm">{item.price}</strong></div>
+                                </div>
+                              </div>
+                          )}
+                        </article>
+                    ))
+                )}
               </div>
           )}
         </section>

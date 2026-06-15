@@ -320,9 +320,13 @@ export default function MatchRecommendationByCategory({
 
   const handlePurchaseConfirm = useCallback(async () => {
     if (!selectedItem) return false;
-    const added = await addPurchasedToCloset(selectedItem);
-    if (added) setSelectedItem(null);
-    return added;
+    const confirmed = window.confirm('네이버쇼핑에서 구매를 진행하시겠습니까? 구매 완료 후 "확인"을 누르면 옷장에 자동으로 등록됩니다.');
+    if (confirmed) {
+      const added = await addPurchasedToCloset(selectedItem);
+      if (added) setSelectedItem(null);
+      return added;
+    }
+    return false;
   }, [addPurchasedToCloset, selectedItem]);
 
   const toggleCategoryExpanded = useCallback((categoryCode: string) => {

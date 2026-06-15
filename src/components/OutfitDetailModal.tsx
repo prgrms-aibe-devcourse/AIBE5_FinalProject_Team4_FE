@@ -44,7 +44,10 @@ export default function OutfitDetailModal({ open, combination, onClose, onSaved,
   ].filter(it => it.item != null)
 
   const handleSave = async () => {
-    if (!combination.bookId) return
+    if (!combination.bookId) {
+      showToast('error', '코디북 정보를 불러오지 못했습니다.')
+      return
+    }
     setSaving(true)
     try {
       const payload = {

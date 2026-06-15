@@ -26,6 +26,11 @@ export interface OutfitSavePayload {
 }
 
 
+/** GET /api/v1/outfit-books */
+export async function fetchOutfitBooks(): Promise<any[]> {
+  return unwrap(api.get<BeApiResponse<any[]>>('/api/v1/outfit-books'))
+}
+
 /** POST /api/v1/outfit-books/{bookId}/outfits */
 export async function createOutfit(bookId: number, payload: OutfitSavePayload): Promise<void> {
   await unwrap(api.post(`/api/v1/outfit-books/${bookId}/outfits`, payload))
