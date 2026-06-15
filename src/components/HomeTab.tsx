@@ -42,6 +42,7 @@ interface HomeTabProps {
   insightGlow?: boolean;
   resetSignal?: number;
   onRefreshWardrobe?: () => void;
+  onGoToCloset?: () => void;
 }
 
 type RecommendationLabel = "ootd" | "style" | "similar" | "match" | "aimd";
@@ -138,6 +139,8 @@ export default function HomeTab({
   const [matchError, setMatchError] = useState<string | null>(null);
   const [ootdItems, setOotdItems] = useState<RecommendItem[]>([]);
   const [styleItems, setStyleItems] = useState<RecommendItem[]>([]);
+  const [ootdError, setOotdError] = useState<string | null>(null);
+  const [styleError, setStyleError] = useState<string | null>(null);
   const [ootdCombinations, setOotdCombinations] = useState<Array<any>>([]);
   const [selectedItem, setSelectedItem] = useState<RecommendItem | null>(null);
   const [selectedCombo, setSelectedCombo] = useState<any | null>(null);
@@ -212,11 +215,12 @@ export default function HomeTab({
               console.error('[DEBUG] weather fetch failed:', e);
             }
 
-            const res = await fetchOotdRecommendations(wardrobeId, currentTemp);
+            const res = await fetchOotdRecommendations(wardrobeId, currentTemp ?? 20);
             const outfits = res?.combinations || res?.outfits || (Array.isArray(res) ? res : []);
             const weatherLabel = res?.weatherLabel || "";
 
             if (cancelled) return;
+            setOotdError(null);
             const combos = outfits.map((item: any) => ({
               top: item.top ?? null,
               bottom: item.bottom ?? null,
@@ -248,8 +252,10 @@ export default function HomeTab({
             });
             setOotdCombinations(combos);
             setOotdItems(mapped);
-          } catch {
-            // fallback to static
+          } catch (err) {
+            if (!cancelled) {
+              setOotdError(extractApiErrorMessage(err, "OOTD 추천을 불러오지 못했습니다."));
+            }
           }
         }
 
@@ -257,6 +263,7 @@ export default function HomeTab({
           try {
             const res = await fetchWardrobeRecommendations(wardrobeId);
             if (cancelled) return;
+            setStyleError(null);
             const items = Array.isArray(res) ? res : [];
             const mapped = items.slice(0, DEFAULT_RECOMMENDATIONS_PER_CATEGORY).map((item: any, idx: number) => ({
               id: `style-${item.clothesId ?? idx}`,
@@ -276,8 +283,10 @@ export default function HomeTab({
               purchaseUrl: item.link ?? '#',
             } as RecommendItem));
             setStyleItems(mapped);
-          } catch {
-            // fallback to static
+          } catch (err) {
+            if (!cancelled) {
+              setStyleError(extractApiErrorMessage(err, "스타일 기반 추천을 불러오지 못했습니다."));
+            }
           }
         }
       } catch {
@@ -490,7 +499,9 @@ export default function HomeTab({
               <h2 className="text-xl md:text-2xl font-black text-slate-950 mt-1">{activeConfig.title}</h2>
               {activeConfig.subtitle ? <p className="text-xs text-slate-400 font-bold mt-1">{activeConfig.subtitle}</p> : null}
             </div>
-            {activeLabel !== "match" && (
+            {activeLabel === 'ootd' && ootdError && <p className="text-[10px] text-rose-500 font-bold max-w-[150px] text-right leading-tight">{ootdError}</p>}
+            {activeLabel === 'style' && styleError && <p className="text-[10px] text-rose-500 font-bold max-w-[150px] text-right leading-tight">{styleError}</p>}
+            {activeLabel !== "match" && !ootdError && !styleError && (
                 <span className="text-xs font-black text-slate-400 shrink-0">{`${selectedRecommendations.length}개`}</span>
             )}
           </div>

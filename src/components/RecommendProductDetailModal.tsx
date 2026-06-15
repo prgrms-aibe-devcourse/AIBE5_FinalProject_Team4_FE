@@ -18,6 +18,8 @@ interface RecommendProductDetailModalProps {
     onWishlistToggle?: () => void
     onDislike?: () => void
     dislikeSubmitting?: boolean
+    onPurchaseConfirm?: () => Promise<boolean>
+    purchaseConfirmSubmitting?: boolean
 }
 
 function ColorSwatch({ color }: { color: RecommendColorChip }) {
@@ -69,7 +71,10 @@ export default function RecommendProductDetailModal({
                                                         onWishlistToggle,
                                                         onDislike,
                                                         dislikeSubmitting = false,
+                                                        onPurchaseConfirm,
+                                                        purchaseConfirmSubmitting = false,
                                                     }: RecommendProductDetailModalProps) {
+    const { showToast } = useToast()
     if (!open || !item) return null
 
     const categoryLabel = item.categoryLabel
@@ -81,7 +86,6 @@ export default function RecommendProductDetailModal({
     ]
     const canToggleWishlist = !item.isAnchor && item.clothesId != null && onWishlistToggle
 
-    const { showToast } = useToast()
     const resolvedUserId = getUserIdFromAccessToken()
 
     const callFeedback = async (type: RecommendationFeedbackType) => {
@@ -107,6 +111,15 @@ export default function RecommendProductDetailModal({
             }
         } catch {
             showToast('error', '요청에 실패했습니다.')
+        }
+    }
+
+    const handlePurchaseClick = async (e: React.MouseEvent<HTMLAnchorElement>) => {
+        if (!onPurchaseConfirm) return
+        e.preventDefault()
+        const confirmed = await onPurchaseConfirm()
+        if (confirmed) {
+            window.open(item.purchaseUrl!, '_blank', 'noopener,noreferrer')
         }
     }
 
@@ -216,11 +229,10 @@ export default function RecommendProductDetailModal({
                 {item.hasDirectPurchaseUrl && item.purchaseUrl && item.purchaseUrl !== '#' && (
                     <a
                         href={item.purchaseUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex w-full h-11 items-center justify-center rounded-2xl bg-[#03C75A] text-white text-sm font-black hover:bg-[#02b351] transition-colors cursor-pointer"
+                        onClick={handlePurchaseClick}
+                        className={`flex w-full h-11 items-center justify-center rounded-2xl bg-[#03C75A] text-white text-sm font-black hover:bg-[#02b351] transition-colors cursor-pointer ${purchaseConfirmSubmitting ? 'opacity-60 cursor-not-allowed' : ''}`}
                     >
-                        네이버쇼핑에서 구매하기
+                        {purchaseConfirmSubmitting ? '처리 중...' : '네이버쇼핑에서 구매하기'}
                     </a>
                 )}
 

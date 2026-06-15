@@ -59,7 +59,7 @@ export async function fetchClothesRecommendations(
  */
 export async function fetchWardrobeRecommendations(
   wardrobeId: number,
-  currentTemp?: number,
+  currentTemp: number = 20,
 ): Promise<RecommendedClothesItem[]> {
   return unwrap(
     api.get<BeApiResponse<RecommendedClothesItem[]>>(
@@ -75,7 +75,7 @@ export async function fetchWardrobeRecommendations(
  */
 export async function fetchOotdRecommendations(
   wardrobeId: number,
-  currentTemp?: number,
+  currentTemp: number = 20,
 ): Promise<any> {
   return unwrap(
     api.get<BeApiResponse<any>>(
