@@ -454,7 +454,6 @@ export default function HomeTab({
     color: item.color || '기본',
     colorHex: undefined,
     secondaryColors: [],
-    price: item.price,
     matchRate: item.matchRate,
     imageUrl: item.imageUrl,
     reason: item.reason,
