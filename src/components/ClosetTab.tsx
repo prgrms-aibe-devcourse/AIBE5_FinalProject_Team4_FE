@@ -473,13 +473,6 @@ export default function ClosetTab({
                     ) : (
                       <span className="text-4xl filter drop-shadow-sm select-none">👚</span>
                     )}
-
-                    {/* Quick indicator check on favorited */}
-                    {item.isFavorite && (
-                      <span className="absolute bottom-2 left-2 bg-gradient-to-r from-rose-500 to-pink-500 text-white text-[8px] font-black tracking-wider px-2 py-0.5 rounded-full shadow-2xs">
-                        즐겨찾기 ⭐️
-                      </span>
-                    )}
                   </div>
 
                   {/* Descriptions texts */}
