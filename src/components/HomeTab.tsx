@@ -8,7 +8,6 @@ import {
   postRecommendationFeedback,
 } from "@/api/recommendations";
 import { fetchWardrobeMeta } from '@/api/wardrobe'
-import { fetchOutfitBooks } from '@/api/outfits'
 import { fetchWeather } from '@/api/weather'
 import { AlertCircle, Shirt } from "./icons";
 import { Garment } from "@/types/index";
@@ -28,6 +27,7 @@ import SimilarProductRecommendations from "@/components/SimilarProductRecommenda
 import AiMdRecommendations from "@/components/AiMdRecommendations";
 import RecommendProductDetailModal from '@/components/RecommendProductDetailModal';
 import OutfitDetailModal from '@/components/OutfitDetailModal';
+import {fetchMyOutfitBook} from "@/api/outfits.ts";
 
 interface HomeTabProps {
   clothes: Garment[];
@@ -209,9 +209,9 @@ export default function HomeTab({
         // Fetch bookId once
         if (!bookId) {
           try {
-            const books = await fetchOutfitBooks();
-            if (books && books.length > 0) {
-              setBookId(books[0].id || books[0].bookId);
+            const book = await fetchMyOutfitBook();
+            if (book?.outfitBookId) {
+              setBookId(book.outfitBookId);
             }
           } catch (e) {
             console.error('Failed to fetch outfit books:', e);

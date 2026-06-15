@@ -114,12 +114,12 @@ export default function RecommendProductDetailModal({
         }
     }
 
-    const handlePurchaseClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
-        // e.preventDefault()를 제거하여 새 탭으로 링크가 열리게 함
-        // window.open(item.purchaseUrl!, '_blank') 대신 <a> 태그 기본 동작 활용
-        if (onPurchaseConfirm) {
-            // 비동기로 구매 확인 로직 실행 (보통 "구매하셨나요?" 팝업 등을 띄움)
-            void onPurchaseConfirm()
+    const handlePurchaseClick = async (e: React.MouseEvent<HTMLAnchorElement>) => {
+        if (!onPurchaseConfirm) return  // onPurchaseConfirm 없으면 기본 동작 허용
+        e.preventDefault()              // 있으면 막고
+        const confirmed = await onPurchaseConfirm()
+        if (confirmed) {
+            window.open(item.purchaseUrl!, '_blank', 'noopener,noreferrer')
         }
     }
 
@@ -229,6 +229,8 @@ export default function RecommendProductDetailModal({
                 {item.hasDirectPurchaseUrl && item.purchaseUrl && item.purchaseUrl !== '#' && (
                     <a
                         href={item.purchaseUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         onClick={handlePurchaseClick}
                         className={`flex w-full h-11 items-center justify-center rounded-2xl bg-[#03C75A] text-white text-sm font-black hover:bg-[#02b351] transition-colors cursor-pointer ${purchaseConfirmSubmitting ? 'opacity-60 cursor-not-allowed' : ''}`}
                     >

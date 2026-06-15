@@ -25,10 +25,14 @@ export interface OutfitSavePayload {
   items: OutfitSaveItem[]
 }
 
+export interface OutfitBookResponse {
+  outfitBookId: number
+}
+
 
 /** GET /api/v1/outfit-books */
-export async function fetchOutfitBooks(): Promise<any[]> {
-  return unwrap(api.get<BeApiResponse<any[]>>('/api/v1/outfit-books'))
+export async function fetchMyOutfitBook(): Promise<OutfitBookResponse> {
+  return unwrap(api.get<BeApiResponse<OutfitBookResponse>>('/api/v1/outfit-books'))
 }
 
 /** POST /api/v1/outfit-books/{bookId}/outfits */
