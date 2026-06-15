@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import ClosetWardrobeMascot from '@/components/ClosetWardrobeMascot'
 import AuthenticatedImage from '@/components/common/AuthenticatedImage'
+import BrandDisplay from '@/components/common/BrandDisplay'
 import { Modal, ModalBody, ModalFooter, ModalHeader } from '@/components/common/Modal'
 import { Heart } from '@/components/icons'
 import type { RecommendCardItem, RecommendColorChip } from '@/utils/recommendationMapper'
@@ -33,31 +34,6 @@ function ColorSwatch({ color }: { color: RecommendColorChip }) {
       <span className="text-xs font-bold text-slate-700">{color.label}</span>
     </span>
   )
-}
-
-function BrandDisplay({ label, logoUrl }: { label: string; logoUrl: string | null }) {
-  const [failed, setFailed] = useState(false)
-
-  useEffect(() => {
-    setFailed(false)
-  }, [logoUrl])
-
-  const showLogo = Boolean(logoUrl) && !failed
-
-  if (showLogo) {
-    return (
-      <span className="inline-flex h-9 max-w-[140px] items-center">
-        <img
-          src={logoUrl!}
-          alt={label}
-          className="max-h-9 w-auto max-w-full object-contain"
-          onError={() => setFailed(true)}
-        />
-      </span>
-    )
-  }
-
-  return <p className="text-sm font-black text-slate-900 truncate">{label}</p>
 }
 
 function DetailRow({ label, children }: { label: string; children: React.ReactNode }) {
@@ -172,7 +148,11 @@ export default function RecommendProductDetailModal({
 
           <div className="px-5 py-2">
             <DetailRow label="브랜드">
-              <BrandDisplay label={item.brandLabel} logoUrl={item.brandLogoUrl} />
+              <BrandDisplay
+                label={item.brandLabel}
+                logoUrl={item.brandLogoUrl}
+                size="large"
+              />
             </DetailRow>
 
             <DetailRow label="카테고리">

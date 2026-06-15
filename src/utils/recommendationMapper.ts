@@ -47,7 +47,6 @@ export type RecommendCardItem = {
   color: string
   colorHex?: string
   secondaryColors: RecommendColorChip[]
-  price: string
   matchRate: number
   imageUrl: string
   reason: string
@@ -120,7 +119,6 @@ function mapRecommendedItemToCard(
     color: primaryColor.label,
     colorHex: primaryColor.hex,
     secondaryColors: item.secondaryColors.map((code) => mapColorChip(code)),
-    price: `${item.compatibilityScore}% 어울림`,
     matchRate: item.compatibilityScore,
     imageUrl: resolveClothesDisplayImageUrl(item) ?? '',
     reason: `"${anchorName}"와 ${categoryLabel} 조합`,
@@ -150,7 +148,6 @@ function mapAnchorToCard(anchor: RecommendationAnchorItem): RecommendCardItem | 
     color: primaryColor.label,
     colorHex: primaryColor.hex,
     secondaryColors: [],
-    price: '기준 옷',
     matchRate: 100,
     imageUrl: resolveClothesDisplayImageUrl(anchor) ?? '',
     reason: '내 옷장 보유 옷 · 이 아이템을 기준으로 어울리는 후보를 추천합니다.',
