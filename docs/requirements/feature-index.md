@@ -1,7 +1,7 @@
 ---
 doc_type: shared
 source_of_truth: AIBE5_FinalProject_Team4_BE
-last_updated: 2026-06-10
+last_updated: 2026-06-11
 ---
 
 # 기능 인덱스
@@ -10,7 +10,7 @@ last_updated: 2026-06-10
 
 기능 범위, 우선순위, 세부 설명의 원본은 [requirements-definition.md](./requirements-definition.md)입니다. 이 문서는 별도의 기능 ID를 새로 정의하지 않으며, 요구사항 정의서의 세부기능 ID를 그대로 사용합니다.
 
-구현 진행 상태는 이슈와 PR에서 관리합니다. 테스트용 API나 개발 편의 기능은 공식 사용자 기능으로 보지 않으며, 필요한 경우 [frontend-api-usage.md](../api/frontend-api-usage.md) 또는 [implementation-gaps.md](../frontend/implementation-gaps.md)에서 경계를 명확히 합니다.
+구현 진행 상태는 이슈와 PR에서 관리합니다. 테스트용 API나 개발 편의 기능은 공식 사용자 기능으로 보지 않으며, 필요한 경우 [BE API 계약](https://github.com/prgrms-aibe-devcourse/AIBE5_FinalProject_Team4_BE/blob/develop/docs/api/api-contract.md), [FE 구현 정합성 현황](../frontend/implementation-gaps.md), [BE 구현 정합성 현황](https://github.com/prgrms-aibe-devcourse/AIBE5_FinalProject_Team4_BE/blob/develop/docs/backend/implementation-gaps.md)에서 경계를 명확히 합니다.
 
 ## 기능 연결표
 
@@ -31,7 +31,7 @@ last_updated: 2026-06-10
 | `RECO-001` | 추천 | OOTD 코디 | 사용자 기준 코디 추천. 날씨, 계절, 체감온도는 보조 조건으로 반영 | `GET /api/v1/ootd/{wardrobeId}`, `WeatherCompatibilityTable` | 추천 메인 |
 | `RECO-002` | 추천 | 취향 분석/스타일 기반 추천 | 사용자 취향, 옷장, 지역, 날씨 등 데이터를 추천 근거로 활용 | `GET /api/v1/recommendations/{wardrobeId}`, `USER_STYLES`, `RECOMMENDATION_FEEDBACKS` | 추천 메인 |
 | `RECO-003` | 추천 | 유사 상품 탐색 | 선택한 상품이나 옷과 유사한 상품을 이미지, 카테고리, 색상, 스타일 기준으로 탐색 | `GET /api/v1/users/{userId}/clothes/{clothesId}/similar-products` | 옷 상세, 추천 상세 |
-| `RECO-005` | 추천 | 어울리는 옷 추천 | 사용자 옷장 데이터를 기준으로 함께 입기 좋은 상의, 하의, 아우터, 신발 추천 | `GET /api/v1/users/{userId}/clothes/{clothesId}/recommendations` | 추천 상세 |
+| `RECO-005` | 추천 | 어울리는 옷 추천 | 사용자 옷장 데이터를 기준으로 함께 입기 좋은 상의, 하의, 아우터, 신발 추천 (`limitPerCategory` query, 기본 `5`, 허용 `1`~`50`) | `GET /api/v1/users/{userId}/clothes/{clothesId}/recommendations` | 추천 상세 |
 | `RECO-006` | 추천 | AI MD 추천 | AI가 TPO/드레스코드 코디를 추천하고 이유와 스타일링 설명 제공 | `/api/v1/users/{userId}/recommendations/ai-md/**`, `OUTFITS`, `OUTFIT_ITEMS`, Gemini, 네이버쇼핑 | 추천 상세, 코디북 |
 | `RECO-008`~`RECO-012` | 추천 상세 | 추천 결과 상세/액션 | 추천 상품/코디 상세, 코디 저장, 미보유 저장, 구매 링크 | `OUTFITS`, `OUTFIT_ITEMS`, `POST /api/users/{userId}/wishlist-clothes` | 추천 상세 |
 | `RECO-013`~`RECO-014` | 추천 상세 | 추천 피드백/제외 | 추천 결과에 사용자별 긍정/부정 피드백을 저장하고 추천 정책에 반영 | `POST /api/v1/users/{userId}/recommendations/feedback`, `RECOMMENDATION_FEEDBACKS`, `USER_STYLES.feedback_weight` | 추천 상세 |

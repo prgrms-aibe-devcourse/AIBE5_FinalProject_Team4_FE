@@ -105,7 +105,11 @@
     </tr>
     <tr>
       <td>Runtime</td>
-      <td>Node.js 24.13.0</td>
+      <td>Node.js 24+</td>
+    </tr>
+    <tr>
+      <td>Lint</td>
+      <td>ESLint</td>
     </tr>
   </tbody>
 </table>
@@ -154,7 +158,7 @@
 <h2 align="center"> 🧪 Local Development </h2>
 
 <p align="center">
-  이 프로젝트는 <strong>Node.js v24.13.0</strong>을 사용합니다.
+  이 프로젝트는 <strong>Node.js v24 이상</strong>을 사용합니다.
 </p>
 
 ```bash
