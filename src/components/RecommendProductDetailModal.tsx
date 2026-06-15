@@ -78,6 +78,11 @@ export default function RecommendProductDetailModal({
     const { showToast } = useToast()
     const [purchaseOpened, setPurchaseOpened] = useState(false)
 
+    // 모달이 닫히거나 item이 바뀌면 구매 확인 상태 초기화
+    useEffect(() => {
+        if (!open || !item) setPurchaseOpened(false)
+    }, [open, item?.id])
+
     if (!open || !item) return null
 
     const categoryLabel = item.categoryLabel
