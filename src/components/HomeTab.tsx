@@ -9,6 +9,7 @@ import {
 } from "@/api/recommendations";
 import { fetchWardrobeMeta } from '@/api/wardrobe'
 import { fetchWeather } from '@/api/weather'
+import { formatRecommendBrandLabel, getBrandLogoUrl } from '@/data/brandLogos'
 import { AlertCircle, Shirt } from "./icons";
 import { Garment } from "@/types/index";
 import { extractApiErrorMessage } from "@/utils/apiError";
@@ -266,6 +267,7 @@ export default function HomeTab({
                 matchRate: Math.round((item.totalScore || 0) * 10),
                 imageUrl: (mainItem.imageUrl ?? mainItem.userImageUrl ?? item.imageUrl) || fallbackImages.Top,
                 reason: weatherLabel || item.reason || '',
+                brand: mainItem.brandName ?? '',
                 isAnchor: false,
                 clothesId: mainItem.clothesId ?? null,
                 outfitId: item.outfitId ?? null,
@@ -441,8 +443,8 @@ export default function HomeTab({
     id: item.id,
     clothesId: item.clothesId ?? null,
     title: item.title,
-    brandLabel: item.brand || '추천 상품',
-    brandLogoUrl: null,
+    brandLabel: formatRecommendBrandLabel(item.brand),
+    brandLogoUrl: getBrandLogoUrl(item.brand),
     category: item.category,
     categoryLabel: ({ Top: '상의', Bottom: '하의', Outer: '아우터', Shoes: '신발' } as const)[item.category],
     itemTypeCode: '',
@@ -452,7 +454,6 @@ export default function HomeTab({
     color: item.color || '기본',
     colorHex: undefined,
     secondaryColors: [],
-    price: item.price,
     matchRate: item.matchRate,
     imageUrl: item.imageUrl,
     reason: item.reason,

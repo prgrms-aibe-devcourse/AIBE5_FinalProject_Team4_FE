@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import AuthenticatedImage from '@/components/common/AuthenticatedImage'
+import BrandDisplay from '@/components/common/BrandDisplay'
 import GarmentEditModal, { type GarmentEditDraft } from '@/components/GarmentEditModal'
+import { formatRecommendBrandLabel, getBrandLogoUrl } from '@/data/brandLogos'
 import type { Garment } from '@/types'
 import { UI_CATEGORY_TO_BE } from '@/data/categoryItemTypes'
 import { uploadGarmentPhoto } from '@/api/photoRegistration'
@@ -335,6 +337,9 @@ export default function ClosetGarmentDetail({
   const g = detail ?? garment
   const statusLabel = g.isWishlist ? '미보유 (위시리스트)' : '보유'
   const sizeOnlyEdit = isExternalProductGarment(g)
+  const brandName = g.be?.brandName ?? g.fabricMaterial
+  const brandLabel = formatRecommendBrandLabel(brandName)
+  const brandLogoUrl = getBrandLogoUrl(brandName)
 
   return (
     <>
@@ -377,18 +382,19 @@ export default function ClosetGarmentDetail({
             )}
           </div>
           <h4 className="text-lg font-black text-slate-900 leading-snug">{g.name}</h4>
-          <p className="text-sm text-slate-600 leading-relaxed">
-            브랜드: {g.be?.brandName ?? g.fabricMaterial} · 코드: {g.productCode ?? '—'}
-          </p>
+          <div className="space-y-1">
+            <p className="text-xs font-bold text-slate-500">브랜드</p>
+            <BrandDisplay label={brandLabel} logoUrl={brandLogoUrl} />
+          </div>
           <p className="text-sm text-slate-600 leading-relaxed">
             카테고리: {g.category} · 타입: {g.fitType}
           </p>
           <p className="text-sm text-slate-600 leading-relaxed">
-            색상: {g.color} · 스타일: {g.style}
+            색상: {g.color}
           </p>
-          {(g.size || g.season) && (
+          {g.size && (
             <p className="text-sm text-slate-600 leading-relaxed">
-              사이즈: {g.size ?? '—'} · 시즌: {g.season ?? '—'}
+              사이즈: {g.size}
             </p>
           )}
         </div>
