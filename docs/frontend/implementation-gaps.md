@@ -31,7 +31,7 @@ last_updated: 2026-06-14
 | 영역 | 현재 코드에 남아 있는 형태 | 목표 기준 | 관련 문서 |
 | --- | --- | --- | --- |
 | 인증 유지 | `POST /api/v1/auth/refresh`, `POST /api/v1/auth/logout` 미사용. access token은 `localStorage.token` 중심으로 복구 | `AUTH-005` refresh token 기반 로그인 상태 유지 | [frontend-api-usage.md](../api/frontend-api-usage.md) |
-| 홈 추천 API | `HomeTab`의 OOTD와 취향 기반 라벨은 static/mock. 유사 상품, 어울리는 옷, AI MD 라벨은 BE API 연동. AI MD chat은 `/api/chat-gamyagi` 직접 `fetch` | 남은 OOTD·취향 기반 추천과 AI chat을 BE API 계약 경로 및 공통 API client로 전환 | [home-recommendation.md](../features/home-recommendation.md), [mock-policy.md](mock-policy.md) |
+| 홈 추천 API | AI MD chat은 `/api/chat-gamyagi` 직접 `fetch` | AI chat을 BE API 계약 경로 및 공통 API client로 전환 | [home-recommendation.md](../features/home-recommendation.md), [mock-policy.md](mock-policy.md) |
 | 추천 피드백 | 추천 저장/싫어요/추천 제외 액션이 `feedback` API와 연결되지 않음 | `RECO-013`~`RECO-014` 피드백 API 호출 | [frontend-api-usage.md](../api/frontend-api-usage.md) |
 | 옷 대상 성별 UI | 사진/구매내역 등록, 옷 수정 화면에서 `gender`를 표시하고 직접 수정 | `CLOTHES.gender`는 사용자 화면 비노출, 내부 분류/추천 및 저장 요청용 code | [garment-registration.md](../features/garment-registration.md), [domain-types.md](domain-types.md) |
 | 옷 계절 수정 payload/검증 주석 | 옷 수정 payload builder가 `season`을 포함할 수 있고, 일부 검증 코드 주석이 `WARDROBE_CLOTHES.season` 기준으로 남아 있음 | `CLOTHES.season`은 옷 등록 시 확정하는 공통 옷 정보이며 생성 후 변경하지 않음 | [garment-registration.md](../features/garment-registration.md), [domain-types.md](domain-types.md) |
@@ -51,10 +51,10 @@ last_updated: 2026-06-14
 | `ONBOARD-001`~`ONBOARD-010`, `STYLE-001` | 온보딩, 마이페이지 | `OnboardingPage.tsx`, `ProfileEditTab.tsx`, `App.tsx` | [feature-index.md](../requirements/feature-index.md), [catalog.md](../domain/catalog.md) | local state와 일부 하드코딩 스타일 값 사용. 공식 style code 및 사용자 스타일 API 연동 확인 필요 |
 | `WARDROBE-002` | `closet` tab 요약 | `ClosetTab.tsx` | [feature-index.md](../requirements/feature-index.md), [wardrobe.md](../features/wardrobe.md) | 옷장 전체 요약 기준과 현재 BE 통계 API 범위가 다르게 읽힐 수 있음 |
 | `WARDROBE-011`~`WARDROBE-030`, 옷 수정 | 옷 등록/수정 modal | `PhotoGarmentRegisterModal.tsx`, `PurchaseGarmentRegisterModal.tsx`, `GarmentEditModal.tsx` | [garment-registration.md](../features/garment-registration.md), [domain-types.md](domain-types.md) | 등록/수정 API 연동 자체가 아니라, 옷 대상 성별 UI 노출과 `season` 수정 payload/검증 주석 확인 필요 |
-| `RECO-001` | `home` tab `ootd` 라벨 | `HomeTab.tsx` | [home-recommendation.md](../features/home-recommendation.md) | static/mock. BE `GET /api/v1/ootd/{wardrobeId}` 미연동 |
-| `RECO-002` | `home` tab `style` 라벨 | `HomeTab.tsx` | [home-recommendation.md](../features/home-recommendation.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | static/mock. BE `GET /api/v1/recommendations/{wardrobeId}` 미연동 |
+| `RECO-001` | `home` tab `ootd` 라벨 | `HomeTab.tsx` | [home-recommendation.md](../features/home-recommendation.md) | BE `GET /api/v1/ootd/{wardrobeId}` 연동 |
+| `RECO-002` | `home` tab `style` 라벨 | `HomeTab.tsx` | [home-recommendation.md](../features/home-recommendation.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | BE `GET /api/v1/recommendations/{wardrobeId}` 연동 |
 | `RECO-005` | `home` tab `match` 라벨 | `HomeTab.tsx`, `MatchRecommendationByCategory.tsx`, `src/api/recommendations.ts` | [home-recommendation.md](../features/home-recommendation.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | BE recommendations API 연동. 기본 `limitPerCategory=50` (BE 허용 `1`~`50`). 추천 피드백 API와 별개로 동작 |
-| `RECO-013`~`RECO-014` | 추천 카드 액션 | `HomeTab.tsx`, 추천 카드 UI | [home-recommendation.md](../features/home-recommendation.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | 추천 저장/싫어요/추천 제외 피드백 API 미연동 |
+| `RECO-013`~`RECO-014` | 추천 카드 액션 | `HomeTab.tsx`, 추천 카드 UI | [home-recommendation.md](../features/home-recommendation.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | 추천 저장/싫어요/추천 제외 피드백 API 연동 |
 | `FEED-001` | `feed` tab | `App.tsx` 내부 feed section | [feature-index.md](../requirements/feature-index.md), [routing.md](routing.md) | static feed mock |
 
 ## FE 코드와 공식 기준 확인 필요
@@ -75,16 +75,14 @@ BE develop 기준으로 refresh token 기반 인증 유지 API가 반영되어 �
 - 기존 `localStorage.token` 저장/복구 흐름과 access token 재발급 흐름의 역할 분리 필요
 - 로그아웃 시 local token 제거, 서버 logout 호출, 화면 이동 순서 확정 필요
 
-### 홈 추천 static/mock 잔여 범위
+### 홈 추천 연동 상태
 
-현재 `HomeTab.tsx`는 OOTD와 취향 기반 라벨에만 static/mock 추천 데이터를 사용합니다. 유사 상품(`RECO-003`), 어울리는 옷(`RECO-005`), AI MD(`RECO-006`) 라벨은 공통 API client를 통해 BE API를 호출합니다.
+현재 `HomeTab.tsx`는 OOTD, 취향 기반, 유사 상품, 어울리는 옷, AI MD 모든 라벨이 공통 API client를 통해 BE API를 호출합니다.
 
 남은 gap:
 
-- `RECO-001` OOTD: BE `GET /api/v1/ootd/{wardrobeId}` 미연동
-- `RECO-002` 취향 기반 상품 추천: BE `GET /api/v1/recommendations/{wardrobeId}` 미연동
-- `RECO-013`~`RECO-014` 추천 피드백/제외: BE feedback API 미연동
-- OOTD와 취향 기반 추천을 BE API로 전환할 때 static 데이터 제거와 계약 정합 필요
+- `RECO-013`~`RECO-014` 추천 피드백/제외: AI MD 채팅 내 액션 등 세부 연동 확인 필요
+- AI MD 채팅(`RECO-007`): `/api/chat-gamyagi` mock 경로 사용 중. `/api/v1/users/{userId}/recommendations/ai-md/personas/{personaId}/chat` 계약으로 전환 필요
 
 ### `RECO-005` 추천 상세 — 구매 후 보유 옷장 등록
 
