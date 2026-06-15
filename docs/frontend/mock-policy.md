@@ -38,10 +38,9 @@ last_updated: 2026-06-12
 
 ### 홈 추천
 
-- 현재 구현: `HomeTab.tsx`의 OOTD(`RECO-001`)와 취향 기반(`RECO-002`) 라벨만 static/mock입니다.
-- 유사 상품(`RECO-003`), 어울리는 옷(`RECO-005`), AI MD(`RECO-006`) 라벨은 BE API를 호출하며 mock이 아닙니다.
-- `RECO-001`, `RECO-002`, `RECO-013`~`RECO-014`는 BE API 계약이 있으므로 FE 연동 시 static/mock 또는 미연동 액션을 해당 API 호출로 대체해야 합니다.
-- API 실패 시 fallback 데이터는 가능하지만, 실패 상태가 사용자에게 숨겨지지 않아야 합니다.
+- 현재 구현: `HomeTab.tsx`의 OOTD(`RECO-001`), 취향 기반(`RECO-002`), 유사 상품(`RECO-003`), 어울리는 옷(`RECO-005`), AI MD(`RECO-006`) 라벨 모두 BE API를 호출합니다.
+- `RECO-013`~`RECO-014` 추천 피드백/제외 API 연동이 완료되었습니다.
+- API 실패 시 fallback 데이터(static)가 사용되지만, 에러 메시지를 통해 사용자에게 실패 상태가 노출됩니다.
 
 ### 옷장
 
@@ -78,7 +77,7 @@ mock을 사용하는 화면은 관련 기능 문서에 아래를 적습니다.
 
 | 경로 / 데이터 | 기준 |
 | --- | --- |
-| `HomeTab.tsx` OOTD·스타일 static 추천 | 해당 라벨용 **로컬 mock**. 네트워크 호출 없음. BE 추천 API 연동 시 대체 대상입니다. |
+| `HomeTab.tsx` OOTD·스타일 API 연동 | **BE 추천 API 연동**. API 실패 시에만 static 데이터를 fallback으로 사용하며 에러를 표시합니다. |
 | `HomeTab.tsx` `match` 탭 (`RECO-005`) | **BE `recommendations` API 연동**. mock/static이 아닙니다. |
 | `HomeTab.tsx` `similar` 탭 (`RECO-003`) | **BE `similar-products` API 연동**. 기준 옷은 `OWNED`만 사용합니다. |
 | `HomeTab.tsx` `aimd` 탭 (`RECO-006`) | **BE AI MD API 연동**. MD 목록, 코디·상품 추천, 코디 저장을 사용합니다. |
