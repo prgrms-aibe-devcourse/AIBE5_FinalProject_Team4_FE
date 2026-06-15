@@ -207,11 +207,13 @@ export default function HomeTab({
         const wardrobeId = meta.wardrobeId;
 
         // Fetch bookId once
-        if (!bookId) {
+        let currentBookId = bookId;
+        if (!currentBookId) {
           try {
             const book = await fetchMyOutfitBook();
             if (book?.outfitBookId) {
-              setBookId(book.outfitBookId);
+              currentBookId = book.outfitBookId;
+              setBookId(currentBookId);
             }
           } catch (e) {
             console.error('Failed to fetch outfit books:', e);
@@ -248,7 +250,7 @@ export default function HomeTab({
               totalScore: item.totalScore ?? null,
               weatherLabel: weatherLabel || item.weatherLabel,
               outfitId: item.outfitId ?? null,
-              bookId: bookId || wardrobeId,
+              bookId: currentBookId || wardrobeId,
             }));
 
             const mapped = outfits.map((item: any, idx: number) => {
@@ -267,7 +269,7 @@ export default function HomeTab({
                 isAnchor: false,
                 clothesId: mainItem.clothesId ?? null,
                 outfitId: item.outfitId ?? null,
-                bookId: bookId || wardrobeId,
+                bookId: currentBookId || wardrobeId,
               } as RecommendItem;
             });
             setOotdCombinations(combos);

@@ -114,13 +114,11 @@ export default function RecommendProductDetailModal({
         }
     }
 
-    const handlePurchaseClick = async (e: React.MouseEvent<HTMLAnchorElement>) => {
-        if (!onPurchaseConfirm) return  // onPurchaseConfirm 없으면 기본 동작 허용
-        e.preventDefault()              // 있으면 막고
-        const confirmed = await onPurchaseConfirm()
-        if (confirmed) {
-            window.open(item.purchaseUrl!, '_blank', 'noopener,noreferrer')
-        }
+    const handlePurchaseClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+        if (!onPurchaseConfirm) return
+        e.preventDefault()
+        window.open(item.purchaseUrl!, '_blank', 'noopener,noreferrer')
+        // onPurchaseConfirm 호출 제거 — 구매 확인은 사용자가 별도로 트리거
     }
 
     return (
