@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import AuthenticatedImage from "@/components/common/AuthenticatedImage";
 import RecommendProductDetailModal from "@/components/RecommendProductDetailModal";
-import { ChevronRight, Heart, Sparkle } from "@/components/icons";
-import { MAX_TOP_RANK_LABEL } from "@/api/recommendations";
+import { ChevronRight, Heart, Sparkle, ThumbsDown } from "@/components/icons";
+import { MAX_TOP_RANK_LABEL, postRecommendationFeedback } from "@/api/recommendations";
 import { useRecommendWishlistToggle } from "@/hooks/useRecommendWishlistToggle";
 import type { Garment } from "@/types";
 import type {
@@ -282,6 +282,7 @@ export default function MatchRecommendationByCategory({
     new Set(),
   );
   const [selectedItem, setSelectedItem] = useState<RecommendCardItem | null>(null);
+  const [isDisliking, setIsDisliking] = useState(false);
 
   useEffect(() => {
     setExpandedCategories(new Set());
@@ -336,6 +337,23 @@ export default function MatchRecommendationByCategory({
     });
   }, []);
 
+  const handleDislike = useCallback(async () => {
+    if (!userId || !selectedItem || !selectedItem.clothesId) return;
+    setIsDisliking(true);
+    try {
+      await postRecommendationFeedback(userId, {
+        feedbackType: "DISLIKE",
+        clothesId: selectedItem.clothesId,
+      });
+      setSelectedItem(null);
+      if (onWishlistAdded) onWishlistAdded();
+    } catch (error) {
+      console.error("Feedback failed:", error);
+    } finally {
+      setIsDisliking(false);
+    }
+  }, [userId, selectedItem, onWishlistAdded]);
+
   if (groups.length === 0) return null;
 
   return (
@@ -385,6 +403,8 @@ export default function MatchRecommendationByCategory({
         purchaseConfirmSubmitting={
           selectedItem ? isSubmitting(selectedItem.clothesId) : false
         }
+        onDislike={selectedItem?.clothesId ? handleDislike : undefined}
+        dislikeSubmitting={isDisliking}
       />
     </>
   );
