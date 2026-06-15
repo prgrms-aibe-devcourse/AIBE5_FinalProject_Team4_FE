@@ -2,14 +2,21 @@ import api from '@/api'
 import type { BeApiResponse } from '@/types/be'
 import type { ClothesRecommendationResponse, RecommendedClothesItem } from '@/types/recommendations'
 
-/** BE `@Max(10)` — 카테고리당 추천 상품 수 상한 */
-export const MAX_RECOMMENDATIONS_PER_CATEGORY = 10
+/** BE `@Max(50)` — 카테고리당 추천 상품 수 상한 (BE PR #105 merge/배포 필요) */
+export const MAX_RECOMMENDATIONS_PER_CATEGORY = 50
 
-/** BE 기본값 5. UI 가로 스크롤을 위해 10 사용 */
-export const DEFAULT_RECOMMENDATIONS_PER_CATEGORY = 10
+/**
+ * FE 기본 요청값 — 카테고리당 50건.
+ * BE develop(구 `@Max(10)`)만 배포된 환경에서는 validation 400이 납니다.
+ * FE 배포 전 BE PR #105 및 API 계약 문서 갱신이 먼저 반영되어야 합니다.
+ */
+export const DEFAULT_RECOMMENDATIONS_PER_CATEGORY = 50
+
+/** 카드에 TOP N 뱃지를 붙이는 최대 순위 */
+export const MAX_TOP_RANK_LABEL = 10
 
 export interface FetchClothesRecommendationsOptions {
-  /** 카테고리당 최대 추천 수 (1~10, BE 기본 5) */
+  /** 카테고리당 최대 추천 수 (1~50) */
   limitPerCategory?: number
 }
 

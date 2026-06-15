@@ -1,18 +1,20 @@
-
 import { useEffect, useState } from 'react'
 
-import { Heart } from '@/components/icons'
-import { Modal, ModalBody, ModalFooter, ModalHeader } from '@/components/common/Modal'
+
+
 import AuthenticatedImage from '@/components/common/AuthenticatedImage'
 
 
 
+import { Modal, ModalBody, ModalFooter, ModalHeader } from '@/components/common/Modal'
+
+
+
+import { Heart } from '@/components/icons'
+
+
+
 import type { RecommendCardItem, RecommendColorChip } from '@/utils/recommendationMapper'
-import { useToast } from './Toast'
-import { postRecommendationFeedback, RecommendationFeedbackType } from '@/api/recommendations'
-import { createWishlistClothes } from '@/api/wardrobe'
-import { buildWishlistPayloadFromRecommendedItem } from '@/utils/recommendWishlistPayload'
-import { getUserIdFromAccessToken } from '@/utils/authUser'
 
 
 
@@ -255,6 +257,9 @@ export default function RecommendProductDetailModal({
 
 
   const categoryLabel = item.categoryLabel
+
+
+
     ?? ({ Top: '상의', Bottom: '하의', Outer: '아우터', Shoes: '신발' } as const)[item.category]
 
 
@@ -280,38 +285,6 @@ export default function RecommendProductDetailModal({
 
 
   const canToggleWishlist = !item.isAnchor && item.clothesId != null && onWishlistToggle
-
-  const { showToast } = useToast()
-  const resolvedUserId = getUserIdFromAccessToken()
-
-  const callFeedback = async (type: RecommendationFeedbackType) => {
-    const uid = resolvedUserId
-    if (!uid) {
-      showToast('error', '로그인이 필요한 작업입니다.')
-      return
-    }
-    try {
-      if (type === 'SAVED') {
-        // 저장하기: 추천 상품을 미보유->위시리스트(옷장 저장 흐름)으로 보냄
-        if (!item.source) {
-          // fallback: still send feedback if no source
-          await postRecommendationFeedback(uid, { feedbackType: type, clothesId: item.clothesId ?? undefined })
-          showToast('success', '추천을 저장했습니다.')
-        } else {
-          await createWishlistClothes(uid, buildWishlistPayloadFromRecommendedItem(item.source))
-          showToast('success', '위시리스트에 저장했습니다.')
-        }
-        onClose()
-      } else {
-        await postRecommendationFeedback(uid, { feedbackType: type, clothesId: item.clothesId ?? undefined })
-        if (type === 'DISLIKE') showToast('success', '싫어요로 등록했습니다.')
-        else showToast('success', '해당 상품을 추천에서 제외했습니다.')
-        onClose()
-      }
-    } catch (err) {
-      showToast('error', '요청에 실패했습니다.')
-    }
-  }
 
 
 
@@ -684,11 +657,6 @@ export default function RecommendProductDetailModal({
 
 
       <ModalFooter className="px-5 py-4 space-y-2">
-        <div className="grid grid-cols-3 gap-2 mb-2">
-          <button type="button" onClick={() => callFeedback('SAVED')} className="h-10 rounded-2xl bg-emerald-600 text-white font-black text-sm">저장하기</button>
-          <button type="button" onClick={() => callFeedback('DISLIKE')} className="h-10 rounded-2xl bg-rose-500 text-white font-black text-sm">싫어요</button>
-          <button type="button" onClick={() => callFeedback('EXCLUDE')} className="h-10 rounded-2xl border border-slate-200 bg-white text-slate-700 font-black text-sm">추천 제외</button>
-        </div>
 
 
 

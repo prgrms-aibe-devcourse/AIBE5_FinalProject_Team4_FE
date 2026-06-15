@@ -71,3 +71,16 @@ export function findWishlistGarmentForRecommendation(
         garment.productCode === productCode),
   )
 }
+
+export function findOwnedGarmentForRecommendation(
+  recommendationClothesId: number,
+  existingGarments: Garment[],
+): Garment | undefined {
+  const productCode = recommendationWishlistProductCode(recommendationClothesId)
+  return existingGarments.find(
+    (garment) =>
+      !garment.isWishlist &&
+      (garment.id === String(recommendationClothesId) ||
+        garment.productCode === productCode),
+  )
+}

@@ -1,7 +1,7 @@
 ---
 doc_type: fe_feature_home_recommendation
 source_of_truth: AIBE5_FinalProject_Team4_FE
-last_updated: 2026-06-10
+last_updated: 2026-06-14
 ---
 
 # 홈 추천 화면 기준
@@ -44,7 +44,8 @@ last_updated: 2026-06-10
 - 상품명, 브랜드명(`brandName`), 카테고리, 타입, 계절 code, 색상, 스타일
 - 외부 구매 링크(`externalProductUrl`) 또는 대체 구매 검색 링크
 - 추천 상품 또는 코디 상세 진입 액션
-- 미보유 옷 저장 액션
+- 미보유 옷 저장 액션 (위시리스트 토글)
+- 구매 링크 이동 후 보유 옷장 등록 확인 액션 (`match` 상세)
 - 싫어요 또는 추천 제외 액션
 
 ## API 반영 기준
@@ -58,6 +59,48 @@ last_updated: 2026-06-10
 - 추천 상품 카드에서 `brandName`, `season`, `externalProductUrl`을 사용하는 경우 BE 응답 필드명을 그대로 기준으로 삼습니다.
 - `season`은 `CLOTHES.season` code이며 사용자별 옷장 정보로 해석하지 않습니다.
 - 옷 대상 성별(`gender`)은 내부 분류/추천 제외 기준으로만 사용하고, 사용자 화면에 표시하거나 필터로 노출하지 않습니다.
+
+## 어울리는 옷 추천 (`match`, `RECO-005`)
+
+현재 FE는 `HomeTab` `match` 라벨에서 아래 흐름을 사용합니다.
+
+- 기준 옷: 사용자 보유 옷(`OWNED`) 중 카테고리·성별 필터를 통과한 항목
+- API: `GET /api/v1/users/{userId}/clothes/{clothesId}/recommendations?limitPerCategory={n}`
+- FE 기본 요청: `limitPerCategory=50` (`src/api/recommendations.ts`)
+- UI: 카테고리(상의/하의/아우터/신발)별 섹션, `TOP 1`~`TOP 10` 뱃지만 표시, 접기/더보기 그리드
+- 카드 액션: 상세 모달, 위시리스트 토글(`POST /api/users/{userId}/wishlist-clothes`)
+
+### 어울리는 옷 추천 요청 수 (`limitPerCategory`)
+
+FE는 카테고리당 최대 50건을 요청합니다. BE API 계약도 `limitPerCategory` 허용 범위를 `1`~`50`으로 봅니다.
+
+| 항목 | 기준 |
+| --- | --- |
+| 기본 요청값 | `50` |
+| 허용 범위 | `1`~`50` |
+| 화면 표시 | 카테고리별 `TOP 1`~`TOP 10` 우선 표시, 더보기로 추가 후보 확인 |
+
+## 추천 상세 — 구매 후 보유 옷장 등록 (`match`)
+
+`RecommendProductDetailModal`에서 네이버쇼핑 구매 링크 클릭 시 FE 전용 확인 흐름을 사용합니다.
+
+1. `externalProductUrl` 또는 상품명 기반 구매 URL을 새 탭으로 연다.
+2. 확인 모달: 제목 「옷이 마음에 드셨나요?」, 본문 「구매하셨다면 옷장에 추가해 드리겠습니다」
+3. **샀어요** 선택 시 보유 옷장(`OWNED`) 등록을 시도한다.
+4. **안 샀어요** 선택 시 모달만 닫는다.
+
+**샀어요** BE 호출 순서:
+
+1. 위시리스트에 없으면 `POST /api/users/{userId}/wishlist-clothes` (추천 item body, `REC-{clothesId}` productCode)
+2. `PATCH /api/clothes/{clothesId}/convert-to-owned` 로 `WISHLIST` → `OWNED` 전환
+
+이미 보유 옷장에 있으면 API 호출 없이 안내 토스트만 표시합니다. 성공 시 옷장 목록 refresh 콜백(`onRefreshWardrobe`)을 호출합니다.
+
+관련 코드:
+
+- `src/components/RecommendProductDetailModal.tsx`
+- `src/hooks/useRecommendWishlistToggle.ts` (`addPurchasedToCloset`)
+- `src/utils/recommendWishlistPayload.ts`
 
 ## 미보유 옷 저장
 
@@ -89,6 +132,7 @@ last_updated: 2026-06-10
 - 홈 추천 결과 선택은 상품 상세 또는 코디 상세 진입으로 이어집니다.
 - API 응답을 받은 추천 영역은 정적 mock보다 API 데이터를 우선 표시합니다.
 - 미보유 옷 저장 액션은 옷장 미보유 상태와 연결합니다.
+- `match` 상세의 **샀어요** 액션은 위시리스트 생성(필요 시) 후 보유 옷장 전환 API와 연결합니다.
 - 추천 제외와 싫어요는 서버 상태 또는 피드백 정책과 연결합니다.
 - 추천 목록은 loading, success, empty, error 상태를 구분합니다.
 - 추천 목록, 상세 진입, 저장 액션, 피드백 정책, API 연동 기준이 바뀌면 이 문서를 같은 PR에서 수정합니다.
