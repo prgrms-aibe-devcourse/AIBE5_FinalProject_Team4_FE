@@ -114,11 +114,12 @@ export default function RecommendProductDetailModal({
         }
     }
 
+    const [purchaseOpened, setPurchaseOpened] = useState(false)
+
     const handlePurchaseClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
-        if (!onPurchaseConfirm) return
         e.preventDefault()
         window.open(item.purchaseUrl!, '_blank', 'noopener,noreferrer')
-        // onPurchaseConfirm 호출 제거 — 구매 확인은 사용자가 별도로 트리거
+        if (onPurchaseConfirm) setPurchaseOpened(true) // 샀어요 버튼 노출
     }
 
     return (
@@ -234,6 +235,16 @@ export default function RecommendProductDetailModal({
                     >
                         {purchaseConfirmSubmitting ? '처리 중...' : '네이버쇼핑에서 구매하기'}
                     </a>
+                )}
+                {purchaseOpened && onPurchaseConfirm && (
+                    <button
+                        type="button"
+                        onClick={() => { void onPurchaseConfirm(); setPurchaseOpened(false) }}
+                        disabled={purchaseConfirmSubmitting}
+                        className="w-full h-11 rounded-2xl bg-emerald-600 text-white font-black text-sm"
+                    >
+                        {purchaseConfirmSubmitting ? '처리 중...' : '샀어요! 옷장에 추가하기'}
+                    </button>
                 )}
 
                 {/* 싫어요 버튼 (외부 핸들러) */}

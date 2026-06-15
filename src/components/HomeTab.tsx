@@ -250,7 +250,7 @@ export default function HomeTab({
               totalScore: item.totalScore ?? null,
               weatherLabel: weatherLabel || item.weatherLabel,
               outfitId: item.outfitId ?? null,
-              bookId: currentBookId || wardrobeId,
+              bookId: currentBookId || null,
             }));
 
             const mapped = outfits.map((item: any, idx: number) => {
@@ -269,7 +269,7 @@ export default function HomeTab({
                 isAnchor: false,
                 clothesId: mainItem.clothesId ?? null,
                 outfitId: item.outfitId ?? null,
-                bookId: currentBookId || wardrobeId,
+                bookId: currentBookId || null,
               } as RecommendItem;
             });
             setOotdCombinations(combos);

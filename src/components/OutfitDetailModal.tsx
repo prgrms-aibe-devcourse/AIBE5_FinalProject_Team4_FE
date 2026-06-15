@@ -79,7 +79,6 @@ export default function OutfitDetailModal({ open, combination, onClose, onSaved,
       setSaving(false)
     }
   }
-
   const handleDislike = async () => {
     if (!userId) return
     // 코디 구성 옷들 전체에 DISLIKE 피드백
