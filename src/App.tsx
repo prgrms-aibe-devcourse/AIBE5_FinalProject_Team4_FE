@@ -304,8 +304,8 @@ export default function App() {
               {/* TAB 1.5: OUTFIT BOOK (My saved outfits) */}
               {/* ========================================================= */}
               {currentTab === "outfit-book" && authUserId != null && (
-                <OutfitBookTab 
-                  userId={authUserId} 
+                <OutfitBookTab
+                  userId={authUserId}
                   clothes={clothes}
                 />
               )}
@@ -503,8 +503,8 @@ export default function App() {
                 <span className="text-[9px] font-extrabold mt-1">옷장</span>
               </button>
 
-              <button 
-                id="nav-outfit-book" 
+              <button
+                id="nav-outfit-book"
                 onClick={() => {
                   if(!requireLogin()) return;
                   setCurrentTab("outfit-book")
@@ -515,8 +515,8 @@ export default function App() {
                 <span className="text-[9px] font-extrabold mt-1">코디북</span>
               </button>
 
-              <button 
-                id="nav-feed" 
+              <button
+                id="nav-feed"
                 onClick={() => setCurrentTab("feed")}
                 className={`flex flex-col items-center justify-center flex-1 py-1 transition ${currentTab === "feed" ? "text-[#1E3A8A]" : "text-slate-400 hover:text-slate-600"}`}
               >
