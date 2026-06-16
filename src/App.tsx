@@ -117,13 +117,14 @@ export default function App() {
                 const userId = res.data.data.userId;
                 const nickname = res.data.data.nickname;
                 const onboarded = res.data.data.onboarded;
+                const regionName = res.data.data.regionName  // 추가
 
                 if(onboarded){
                     // 온보딩 완료 유저: nickname + onboarded: true
-                    setProfile(prev => ({ ...prev, nickname, onboarded: true }));
+                    setProfile(prev => ({ ...prev, nickname, onboarded: true,region: regionName || undefined }));
                 } else if(nickname){
                     // 온보딩 미완료지만 OAuth 닉네임 존재: 기본값으로만 활용
-                    setProfile(prev => ({ ...prev, nickname, onboarded: false }));
+                    setProfile(prev => ({ ...prev, nickname, onboarded: false,region: regionName || undefined }));
                 }
                 setAuthUserId(userId);
                 setIsLoggedIn(true);
@@ -134,7 +135,6 @@ export default function App() {
                 setAuthReady(true);
             });
     }, []);
-
 
     const scrollAppToTop = () => {
         const viewport = document.getElementById("app-viewport");
@@ -169,6 +169,8 @@ export default function App() {
         api.post('/api/v1/auth/logout')
             .finally(() => resetAuthState());
     }
+
+    const regionLabel = REGIONS.find(r => r.code === profile.region)?.label ?? '서울'
 
     return (
         <div id="root-container" className="min-h-screen bg-[#F1F5F9] font-sans antialiased text-slate-800 flex flex-col justify-between py-4 px-3 md:py-6 md:px-6 font-sans">
@@ -297,6 +299,7 @@ export default function App() {
                                 onRefreshWardrobe={() => void refreshWardrobe()}
                                 onGoToCloset={() => setCurrentTab("closet")}
                                 authReady={authReady}
+                                region={regionLabel}
                             />
                         )}
 

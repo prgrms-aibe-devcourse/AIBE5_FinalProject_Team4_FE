@@ -46,6 +46,7 @@ interface HomeTabProps {
   resetSignal?: number;
   onRefreshWardrobe?: () => void;
   onGoToCloset?: () => void;
+  region?: string;
 }
 
 type RecommendationLabel = "ootd" | "style" | "similar" | "match" | "aimd";
@@ -103,6 +104,7 @@ export default function HomeTab({
                                   onRefreshWardrobe,
                                   onAddWishlistItem,
                                   onGoToCloset,
+                                  region = '서울',
                                 }: HomeTabProps) {
   const [activeLabel, setActiveLabel] = useState<RecommendationLabel>("ootd");
   const [showStickyLabels, setShowStickyLabels] = useState(false);
@@ -224,8 +226,8 @@ export default function HomeTab({
           setOotdLoading(true);
           try {
             let currentTemp: number | undefined = undefined;
-            try {
-              const weather = await fetchWeather();
+              try {
+              const weather = await fetchWeather(region || '서울');
               if (Array.isArray(weather) && weather.length > 0) {
                 const raw = weather[0].temp as string;
                 const parsed = parseFloat(raw.replace(/°\s*C/i, '').trim());
