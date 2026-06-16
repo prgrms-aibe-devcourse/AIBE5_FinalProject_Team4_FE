@@ -2,9 +2,18 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { RegionCode } from "@/types/index";
 import { REGIONS } from '@/data/regions';
+import LegalConsentGroup from "@/components/legal/LegalConsentGroup";
 
 interface OnboardingPageProps {
-    onComplete: (nickname: string, birthday: string, gender: "Male" | "Female" | "None", styles: string[], region: RegionCode | '', openModal: boolean) => void;
+    onComplete: (
+        nickname: string,
+        birthday: string,
+        gender: "Male" | "Female" | "None",
+        styles: string[],
+        region: RegionCode | '',
+        openModal: boolean,
+        marketingAgreed: boolean
+    ) => void | Promise<void>;
     defaultNickname?: string;
 }
 
@@ -28,7 +37,18 @@ export default function OnboardingPage({ onComplete, defaultNickname = "" }: Onb
     const [genderError, setGenderError] = useState("");
 
     const [styles, setStyles] = useState<string[]>([]);
+    const [termsAgreed, setTermsAgreed] = useState(false);
+    const [privacyAgreed, setPrivacyAgreed] = useState(false);
+    const [marketingAgreed, setMarketingAgreed] = useState(false);
     const navigate = useNavigate();
+
+    const canProceedStep1 =
+        nickname !== "" &&
+        birthday !== "" &&
+        gender !== "None" &&
+        region !== "" &&
+        termsAgreed &&
+        privacyAgreed;
 
     const handleNext = () => {
         let hasError = false;
@@ -38,6 +58,7 @@ export default function OnboardingPage({ onComplete, defaultNickname = "" }: Onb
         else setBirthdayError("");
         if (gender === "None") { setGenderError("성별을 선택해주세요"); hasError = true; }
         else setGenderError("");
+        if (!termsAgreed || !privacyAgreed) hasError = true;
         if (!hasError) setStep(2);
     };
 
@@ -45,6 +66,11 @@ export default function OnboardingPage({ onComplete, defaultNickname = "" }: Onb
         setStyles(prev =>
             prev.includes(style) ? prev.filter(s => s !== style) : [...prev, style]
         );
+    };
+
+    const handleComplete = async (openModal: boolean) => {
+        await onComplete(nickname, birthday, gender, styles, region, openModal, marketingAgreed);
+        navigate("/");
     };
 
     return (
@@ -133,9 +159,18 @@ export default function OnboardingPage({ onComplete, defaultNickname = "" }: Onb
                                 ))}
                             </select>
                         </div>
+                        <LegalConsentGroup
+                            termsAgreed={termsAgreed}
+                            privacyAgreed={privacyAgreed}
+                            marketingAgreed={marketingAgreed}
+                            onTermsChange={setTermsAgreed}
+                            onPrivacyChange={setPrivacyAgreed}
+                            onMarketingChange={setMarketingAgreed}
+                        />
+
                         <button
                             onClick={handleNext}
-                            disabled={nickname === "" || birthday === "" || gender === "None" || region === ""}
+                            disabled={!canProceedStep1}
                             className="w-full h-12 rounded-xl bg-[#111827] text-white font-bold text-sm transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer mt-2"
                         >
                             다음
@@ -206,13 +241,13 @@ export default function OnboardingPage({ onComplete, defaultNickname = "" }: Onb
 
                         <div className="grid grid-cols-1 gap-3">
                             <button
-                                onClick={() => { onComplete(nickname, birthday, gender, styles, region, true); navigate("/"); }}
+                                onClick={() => { void handleComplete(true); }}
                                 className="w-full h-14 rounded-xl bg-[#111827] text-white font-bold text-sm cursor-pointer hover:bg-[#1f2937] transition"
                             >
                                 👕 지금 옷 등록하기
                             </button>
                             <button
-                                onClick={() => { onComplete(nickname, birthday, gender, styles, region, false); navigate("/"); }}
+                                onClick={() => { void handleComplete(false); }}
                                 className="w-full h-12 rounded-xl border border-[#e5e7eb] text-[#73737a] font-semibold text-sm cursor-pointer hover:bg-[#f5f5f5] transition"
                             >
                                 나중에 등록할게요
