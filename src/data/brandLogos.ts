@@ -310,7 +310,9 @@ const BRAND_LOGO_DOMAINS: Record<string, string> = {
   // 스포츠·아웃도어·글로벌 (확장)
   LULULEMON: 'lululemon.com',
   룰루레몬: 'lululemon.com',
-  NBA: 'nbathings.co.kr',
+  NBA: 'nba.com',
+  NBA키즈: 'nba.com',
+  'NBA KIDS': 'nba.com',
   MLB: 'mlb-korea.com',
   MLB키즈: 'mlb-korea.com',
   'MLB KIDS': 'mlb-korea.com',

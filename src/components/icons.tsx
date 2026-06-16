@@ -89,6 +89,33 @@ export const MessageSquare = (props: IconProps) => (
   </Icon>
 );
 
+export const Send = (props: IconProps) => (
+  <Icon {...props}>
+    <path d="m22 2-7 20-4-9-9-4Z" />
+    <path d="M22 2 11 13" />
+  </Icon>
+);
+
+export const Bookmark = (props: IconProps) => (
+  <Icon {...props}>
+    <path d="M7 3h10v18-5-3-5 3V3Z" />
+  </Icon>
+);
+
+export const MoreHorizontal = (props: IconProps) => (
+  <Icon {...props}>
+    <circle cx="5" cy="12" r="1.5" fill="currentColor" stroke="none" />
+    <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
+    <circle cx="19" cy="12" r="1.5" fill="currentColor" stroke="none" />
+  </Icon>
+);
+
+export const ChevronLeft = (props: IconProps) => (
+  <Icon {...props}>
+    <path d="m15 18-6-6 6-6" />
+  </Icon>
+);
+
 export const ChevronRight = (props: IconProps) => (
   <Icon {...props}>
     <path d="m9 18 6-6-6-6" />

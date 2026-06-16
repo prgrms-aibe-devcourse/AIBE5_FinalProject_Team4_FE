@@ -1,0 +1,506 @@
+import { useCallback, useEffect, useState } from 'react'
+import {
+  createFeedComment,
+  deleteFeedComment,
+  deleteFeedPost,
+  fetchFeedComments,
+  fetchFeedPost,
+  toggleFeedLike,
+  toggleFeedSave,
+  toggleFollow,
+} from '@/api/feed'
+import AuthenticatedImage from '@/components/common/AuthenticatedImage'
+import { Modal, ModalBody, ModalFooter, ModalHeader } from '@/components/common/Modal'
+import Spinner from '@/components/common/Spinner'
+import { Heart, MessageSquare, ShoppingBag, User } from '@/components/icons'
+import { useToast } from '@/components/Toast'
+import type { FeedComment, FeedPost } from '@/types/feed'
+import { extractApiErrorMessage } from '@/utils/apiError'
+
+function formatFeedDate(value: string): string {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return date.toLocaleString('ko-KR', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+function CommentItem({
+  comment,
+  onReply,
+  onDelete,
+  canDelete,
+}: {
+  comment: FeedComment
+  onReply: (commentId: number) => void
+  onDelete: (commentId: number) => void
+  canDelete: boolean
+}) {
+  return (
+    <div className="space-y-2">
+      <div className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2.5">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="text-xs font-black text-slate-900">{comment.author.nickname}</p>
+            <p className="mt-1 text-xs font-bold text-slate-600 leading-relaxed whitespace-pre-wrap">
+              {comment.content}
+            </p>
+            <p className="mt-1 text-[10px] font-bold text-slate-400">
+              {formatFeedDate(comment.createdAt)}
+            </p>
+          </div>
+          <div className="flex shrink-0 gap-1">
+            <button
+              type="button"
+              onClick={() => onReply(comment.feedCommentId)}
+              className="text-[10px] font-black text-[#1E3A8A] cursor-pointer"
+            >
+              답글
+            </button>
+            {canDelete ? (
+              <button
+                type="button"
+                onClick={() => onDelete(comment.feedCommentId)}
+                className="text-[10px] font-black text-red-500 cursor-pointer"
+              >
+                삭제
+              </button>
+            ) : null}
+          </div>
+        </div>
+      </div>
+      {comment.replies.length > 0 ? (
+        <div className="ml-4 space-y-2 border-l-2 border-slate-100 pl-3">
+          {comment.replies.map((reply) => (
+            <div
+              key={reply.feedCommentId}
+              className="rounded-xl border border-slate-100 bg-white px-3 py-2.5"
+            >
+              <p className="text-xs font-black text-slate-900">{reply.author.nickname}</p>
+              <p className="mt-1 text-xs font-bold text-slate-600 leading-relaxed whitespace-pre-wrap">
+                {reply.content}
+              </p>
+              <p className="mt-1 text-[10px] font-bold text-slate-400">
+                {formatFeedDate(reply.createdAt)}
+              </p>
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+interface FeedPostDetailModalProps {
+  open: boolean
+  postId: number | null
+  userId: number
+  onClose: () => void
+  onPostUpdated: (post: FeedPost) => void
+  onPostDeleted: (postId: number) => void
+}
+
+export default function FeedPostDetailModal({
+  open,
+  postId,
+  userId,
+  onClose,
+  onPostUpdated,
+  onPostDeleted,
+}: FeedPostDetailModalProps) {
+  const { showToast } = useToast()
+  const [post, setPost] = useState<FeedPost | null>(null)
+  const [comments, setComments] = useState<FeedComment[]>([])
+  const [loading, setLoading] = useState(false)
+  const [commentsLoading, setCommentsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [commentDraft, setCommentDraft] = useState('')
+  const [replyToCommentId, setReplyToCommentId] = useState<number | null>(null)
+  const [commentSubmitting, setCommentSubmitting] = useState(false)
+  const [interactionSubmitting, setInteractionSubmitting] = useState(false)
+  const [following, setFollowing] = useState(false)
+  const [followSubmitting, setFollowSubmitting] = useState(false)
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false)
+
+  const loadDetail = useCallback(async (id: number) => {
+    setLoading(true)
+    setError(null)
+    try {
+      const detail = await fetchFeedPost(id)
+      setPost(detail)
+    } catch (loadError) {
+      setError(extractApiErrorMessage(loadError, '피드 상세를 불러오지 못했습니다.'))
+      setPost(null)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  const loadComments = useCallback(async (id: number) => {
+    setCommentsLoading(true)
+    try {
+      const data = await fetchFeedComments(id)
+      setComments(data)
+    } catch {
+      setComments([])
+    } finally {
+      setCommentsLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!open || postId == null) {
+      setPost(null)
+      setComments([])
+      setCommentDraft('')
+      setReplyToCommentId(null)
+      setFollowing(false)
+      setError(null)
+      return
+    }
+
+    void loadDetail(postId)
+    void loadComments(postId)
+  }, [open, postId, loadDetail, loadComments])
+
+  const syncPost = (next: FeedPost) => {
+    setPost(next)
+    onPostUpdated(next)
+  }
+
+  const handleToggleLike = async () => {
+    if (!post || interactionSubmitting) return
+    setInteractionSubmitting(true)
+    try {
+      const result = await toggleFeedLike(post.feedPostId)
+      syncPost({
+        ...post,
+        likedByMe: result.active,
+        likeCount: result.count,
+      })
+    } catch (toggleError) {
+      setError(extractApiErrorMessage(toggleError, '좋아요 처리에 실패했습니다.'))
+    } finally {
+      setInteractionSubmitting(false)
+    }
+  }
+
+  const handleToggleSave = async () => {
+    if (!post || interactionSubmitting) return
+    if (!post.outfit) {
+      showToast('error', '연결된 코디가 없어 저장할 수 없습니다.')
+      return
+    }
+    setInteractionSubmitting(true)
+    try {
+      const result = await toggleFeedSave(post.feedPostId)
+      syncPost({
+        ...post,
+        savedByMe: result.active,
+      })
+      showToast(
+        'success',
+        result.active ? '코디북에 저장했어요.' : '코디북 저장을 취소했어요.',
+      )
+    } catch (toggleError) {
+      const message = extractApiErrorMessage(toggleError, '저장 처리에 실패했습니다.')
+      setError(message)
+      showToast('error', message)
+    } finally {
+      setInteractionSubmitting(false)
+    }
+  }
+
+  const handleToggleFollow = async () => {
+    if (!post || followSubmitting || post.author.userId === userId) return
+    setFollowSubmitting(true)
+    try {
+      const result = await toggleFollow(post.author.userId)
+      setFollowing(result.active)
+    } catch (toggleError) {
+      setError(extractApiErrorMessage(toggleError, '팔로우 처리에 실패했습니다.'))
+    } finally {
+      setFollowSubmitting(false)
+    }
+  }
+
+  const handleSubmitComment = async () => {
+    if (!post || commentSubmitting) return
+    const content = commentDraft.trim()
+    if (!content) return
+
+    setCommentSubmitting(true)
+    setError(null)
+    try {
+      await createFeedComment(post.feedPostId, {
+        content,
+        parentCommentId: replyToCommentId,
+      })
+      setCommentDraft('')
+      setReplyToCommentId(null)
+      await loadComments(post.feedPostId)
+      syncPost({
+        ...post,
+        commentCount: post.commentCount + 1,
+      })
+    } catch (submitError) {
+      setError(extractApiErrorMessage(submitError, '댓글 작성에 실패했습니다.'))
+    } finally {
+      setCommentSubmitting(false)
+    }
+  }
+
+  const handleDeleteComment = async (commentId: number) => {
+    if (!post) return
+    try {
+      await deleteFeedComment(post.feedPostId, commentId)
+      await loadComments(post.feedPostId)
+      syncPost({
+        ...post,
+        commentCount: Math.max(0, post.commentCount - 1),
+      })
+    } catch (deleteError) {
+      setError(extractApiErrorMessage(deleteError, '댓글 삭제에 실패했습니다.'))
+    }
+  }
+
+  const handleDeletePost = async () => {
+    if (!post || deleteSubmitting) return
+    if (!confirm('이 피드를 삭제할까요?')) return
+
+    setDeleteSubmitting(true)
+    try {
+      await deleteFeedPost(post.feedPostId)
+      onPostDeleted(post.feedPostId)
+      onClose()
+    } catch (deleteError) {
+      setError(extractApiErrorMessage(deleteError, '피드 삭제에 실패했습니다.'))
+    } finally {
+      setDeleteSubmitting(false)
+    }
+  }
+
+  if (!open) return null
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      titleId="feed-detail-title"
+      size="md"
+      placement="sheet"
+      zIndex={110}
+      closeOnBackdrop={!commentSubmitting && !deleteSubmitting}
+      panelClassName="max-h-[92vh]"
+    >
+      <ModalHeader
+        eyebrow="코디 공유 상세"
+        title={post?.author.nickname ?? '룩피드'}
+        titleId="feed-detail-title"
+        className="[&_h3]:text-lg [&_h3]:font-black"
+      />
+
+      <ModalBody className="px-0 py-0">
+        {loading ? (
+          <div className="flex items-center justify-center py-16">
+            <Spinner />
+          </div>
+        ) : post ? (
+          <div className="space-y-0">
+            <div className="aspect-[4/5] w-full bg-slate-50">
+              {post.images[0] ? (
+                <AuthenticatedImage
+                  src={post.images[0].imageUrl}
+                  alt={post.caption ?? '피드 이미지'}
+                  className="h-full w-full object-cover"
+                />
+              ) : null}
+            </div>
+
+            <div className="space-y-4 px-5 py-4">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-black text-slate-900">{post.author.nickname}</p>
+                  <p className="text-[10px] font-bold text-slate-400">
+                    {formatFeedDate(post.createdAt)}
+                  </p>
+                </div>
+                {post.author.userId !== userId ? (
+                  <button
+                    type="button"
+                    onClick={() => void handleToggleFollow()}
+                    disabled={followSubmitting}
+                    className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-[10px] font-black transition-colors cursor-pointer disabled:opacity-60 ${
+                      following
+                        ? 'border-[#1E3A8A]/20 bg-[#BBF7D0]/30 text-[#1E3A8A]'
+                        : 'border-slate-200 bg-white text-slate-600 hover:border-[#1E3A8A]/20'
+                    }`}
+                  >
+                    <User className="h-3.5 w-3.5" />
+                    {following ? '팔로잉' : '팔로우'}
+                  </button>
+                ) : null}
+              </div>
+
+              {post.caption ? (
+                <p className="text-sm font-bold text-slate-700 leading-relaxed whitespace-pre-wrap">
+                  {post.caption}
+                </p>
+              ) : null}
+
+              {post.outfit ? (
+                <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 space-y-3">
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400">연결 코디</p>
+                    <p className="text-sm font-black text-[#1E3A8A]">{post.outfit.title}</p>
+                    {post.outfit.description ? (
+                      <p className="mt-1 text-xs font-bold text-slate-600">
+                        {post.outfit.description}
+                      </p>
+                    ) : null}
+                  </div>
+                  {post.outfit.items.length > 0 ? (
+                    <div className="flex gap-2 overflow-x-auto pb-1">
+                      {post.outfit.items.map((item) => (
+                        <div
+                          key={item.outfitItemId}
+                          className="shrink-0 w-16 space-y-1 text-center"
+                        >
+                          <div className="aspect-square overflow-hidden rounded-xl border border-slate-200 bg-white">
+                            <AuthenticatedImage
+                              src={item.clothes.userImageUrl ?? item.clothes.imageUrl}
+                              alt={item.clothes.name}
+                              className="h-full w-full object-contain p-1"
+                            />
+                          </div>
+                          <p className="line-clamp-2 text-[9px] font-bold text-slate-600">
+                            {item.clothes.name}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => void handleToggleLike()}
+                  disabled={interactionSubmitting}
+                  className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-black transition-colors cursor-pointer disabled:opacity-60 ${
+                    post.likedByMe
+                      ? 'border-rose-200 bg-rose-50 text-rose-500'
+                      : 'border-slate-200 bg-white text-slate-600'
+                  }`}
+                >
+                  <Heart className={`h-4 w-4 ${post.likedByMe ? 'fill-rose-500' : ''}`} />
+                  {post.likeCount}
+                </button>
+                <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-black text-slate-600">
+                  <MessageSquare className="h-4 w-4" />
+                  {post.commentCount}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => void handleToggleSave()}
+                  disabled={interactionSubmitting || !post.outfit}
+                  title={post.outfit ? '코디북에 저장' : '연결된 코디가 없습니다'}
+                  className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-black transition-colors cursor-pointer disabled:opacity-40 ${
+                    post.savedByMe
+                      ? 'border-[#1E3A8A]/20 bg-[#BBF7D0]/30 text-[#1E3A8A]'
+                      : 'border-slate-200 bg-white text-slate-600'
+                  }`}
+                >
+                  <ShoppingBag className="h-4 w-4" />
+                  저장
+                </button>
+              </div>
+
+              <div className="space-y-3 border-t border-slate-100 pt-4">
+                <p className="text-xs font-black text-slate-500">댓글</p>
+                {commentsLoading ? (
+                  <p className="text-xs font-bold text-slate-400">댓글 불러오는 중…</p>
+                ) : comments.length > 0 ? (
+                  <div className="space-y-3">
+                    {comments.map((comment) => (
+                      <CommentItem
+                        key={comment.feedCommentId}
+                        comment={comment}
+                        onReply={setReplyToCommentId}
+                        onDelete={(commentId) => void handleDeleteComment(commentId)}
+                        canDelete={comment.author.userId === userId}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs font-bold text-slate-400">첫 댓글을 남겨보세요.</p>
+                )}
+
+                {replyToCommentId ? (
+                  <p className="text-[10px] font-black text-[#1E3A8A]">
+                    답글 작성 중
+                    <button
+                      type="button"
+                      onClick={() => setReplyToCommentId(null)}
+                      className="ml-2 text-slate-400 cursor-pointer"
+                    >
+                      취소
+                    </button>
+                  </p>
+                ) : null}
+
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={commentDraft}
+                    onChange={(event) => setCommentDraft(event.target.value)}
+                    placeholder={replyToCommentId ? '답글을 입력하세요' : '댓글을 입력하세요'}
+                    className="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-800"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => void handleSubmitComment()}
+                    disabled={commentSubmitting || !commentDraft.trim()}
+                    className="shrink-0 rounded-xl bg-[#1E3A8A] px-4 py-2 text-xs font-black text-[#BBF7D0] cursor-pointer disabled:opacity-60"
+                  >
+                    등록
+                  </button>
+                </div>
+              </div>
+
+              {error ? <p className="text-xs font-bold text-red-600">{error}</p> : null}
+            </div>
+          </div>
+        ) : (
+          <div className="px-5 py-10 text-center text-sm font-bold text-slate-500">
+            {error ?? '피드를 불러오지 못했습니다.'}
+          </div>
+        )}
+      </ModalBody>
+
+      <ModalFooter className="px-5 py-4 flex gap-2">
+        {post?.mine ? (
+          <button
+            type="button"
+            onClick={() => void handleDeletePost()}
+            disabled={deleteSubmitting}
+            className="flex-1 h-11 rounded-2xl border border-red-200 bg-white text-sm font-black text-red-500 hover:bg-red-50 transition-colors cursor-pointer disabled:opacity-60"
+          >
+            {deleteSubmitting ? '삭제 중…' : '삭제'}
+          </button>
+        ) : null}
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex-1 h-11 rounded-2xl border border-slate-200 bg-white text-sm font-black text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
+        >
+          닫기
+        </button>
+      </ModalFooter>
+    </Modal>
+  )
+}

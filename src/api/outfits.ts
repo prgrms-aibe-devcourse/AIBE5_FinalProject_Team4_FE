@@ -25,8 +25,34 @@ export interface OutfitSavePayload {
   items: OutfitSaveItem[]
 }
 
+export interface OutfitItemResponse {
+  outfitItemId: number
+  itemRole: string
+  layerOrder: number | null
+  clothes: import('@/types/be').ClothesResponse
+}
+
+export interface OutfitResponse {
+  outfitId: number
+  outfitBookId: number
+  title: string
+  description: string
+  thumbnailUrl: string | null
+  situation: string | null
+  season: string | null
+  favorite: boolean
+  items: OutfitItemResponse[]
+  createdAt: string
+  updatedAt: string
+}
+
 export interface OutfitBookResponse {
   outfitBookId: number
+  userId: number
+  outfitCount: number
+  outfits: OutfitResponse[]
+  createdAt: string | null
+  updatedAt: string | null
 }
 
 
@@ -36,6 +62,14 @@ export async function fetchMyOutfitBook(): Promise<OutfitBookResponse> {
 }
 
 /** POST /api/v1/outfit-books/{bookId}/outfits */
-export async function createOutfit(bookId: number, payload: OutfitSavePayload): Promise<void> {
-  await unwrap(api.post(`/api/v1/outfit-books/${bookId}/outfits`, payload))
+export async function createOutfit(
+  bookId: number,
+  payload: OutfitSavePayload,
+): Promise<OutfitResponse> {
+  return unwrap(
+    api.post<BeApiResponse<OutfitResponse>>(
+      `/api/v1/outfit-books/${bookId}/outfits`,
+      payload,
+    ),
+  )
 }
