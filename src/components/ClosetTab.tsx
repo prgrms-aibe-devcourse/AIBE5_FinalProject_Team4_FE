@@ -283,7 +283,7 @@ export default function ClosetTab({
   const filteredOutfits = useMemo(() => {
     if (closetTab !== "outfits") return [];
     if (!outfitSearchTerm.trim()) return outfits;
-    return outfits.filter(of => 
+    return outfits.filter(of =>
       of.title.toLowerCase().includes(outfitSearchTerm.toLowerCase())
     );
   }, [outfits, outfitSearchTerm, closetTab]);
@@ -368,7 +368,7 @@ export default function ClosetTab({
         {/* Left: 탭 · 필터 · 컬렉션 */}
         <div className="lg:col-span-3 space-y-4 text-left order-2 lg:order-1">
       {/* TAB + 즐겨찾기 (한 줄) */}
-      <div className="grid grid-cols-3 gap-2 bg-slate-100 p-1.5 rounded-2xl select-none w-full">
+      <div className="grid grid-cols-4 gap-2 bg-slate-100 p-1.5 rounded-2xl select-none w-full">
         <button
           onClick={() => {
             setClosetTab("owned");
@@ -566,7 +566,7 @@ export default function ClosetTab({
         ) : (
           filteredClothes.map((item) => {
             const isSelected = selectedGarment?.id === item.id;
-            
+
             // Custom pastel colors to map nicely
             let cardBg = "from-sky-50 to-white";
             if (item.category === "Top") cardBg = "from-[#ECF5FD] to-white";
@@ -579,8 +579,8 @@ export default function ClosetTab({
                 key={item.id}
                 onClick={() => setSelectedGarment(item)}
                 className={`aspect-square bg-gradient-to-tr ${cardBg} rounded-[24px] border-2 transition-all duration-300 relative p-3 text-left cursor-pointer group hover:scale-101 flex flex-col overflow-hidden ${
-                  isSelected 
-                    ? "border-[#1E3A8A] ring-4 ring-[#1E3A8A]/10 shadow-md" 
+                  isSelected
+                    ? "border-[#1E3A8A] ring-4 ring-[#1E3A8A]/10 shadow-md"
                     : "border-slate-100 hover:border-slate-300 shadow-3xs"
                 }`}
               >
@@ -624,7 +624,7 @@ export default function ClosetTab({
                 {/* Descriptions texts */}
                 <div className="shrink-0 pt-2 space-y-1">
                   <h4 className="text-[12px] sm:text-[13px] font-black text-slate-800 tracking-tight leading-snug line-clamp-1 group-hover:text-[#1E3A8A] transition">{item.name}</h4>
-                  
+
                   <div className="flex items-center gap-1 flex-wrap text-[9px] text-slate-400 font-bold select-none">
                     <span className="bg-slate-100 hover:bg-slate-200/60 px-1.5 py-0.5 rounded-md text-slate-500 transition">{item.color}</span>
                     <span className="bg-slate-100 hover:bg-slate-200/60 px-1.5 py-0.5 rounded-md text-slate-500 transition line-clamp-1 truncate max-w-[72px]">{item.fitType}</span>

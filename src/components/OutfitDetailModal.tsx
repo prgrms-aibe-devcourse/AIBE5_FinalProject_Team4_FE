@@ -36,11 +36,11 @@ interface OutfitDetailModalProps {
   clothes?: Garment[] // 아이템 변경용
 }
 
-export default function OutfitDetailModal({ 
-  open, 
-  combination, 
-  onClose, 
-  onSaved, 
+export default function OutfitDetailModal({
+  open,
+  combination,
+  onClose,
+  onSaved,
   userId,
   clothes = []
 }: OutfitDetailModalProps) {
@@ -49,7 +49,7 @@ export default function OutfitDetailModal({
   const [disliking, setDisliking] = useState(false)
   const [isEditMode, setIsEditMode] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  
+
   // 편집 상태
   const [editCombo, setEditCombo] = useState<any>(null)
   const [showSelectModal, setShowSelectModal] = useState<{ open: boolean; category: string; title: string }>({
@@ -111,7 +111,7 @@ export default function OutfitDetailModal({
         await createOutfit(editCombo.bookId, payload)
         showToast('success', '코디가 저장되었습니다.')
       }
-      
+
       onSaved?.()
       onClose()
     } catch {
@@ -128,7 +128,7 @@ export default function OutfitDetailModal({
 
   const confirmDelete = async () => {
     if (!editCombo.bookId || !editCombo.outfitId) return
-    
+
     setDeleting(true)
     try {
       await deleteOutfit(editCombo.bookId, editCombo.outfitId)
@@ -198,8 +198,8 @@ export default function OutfitDetailModal({
 
   return (
     <>
-    <Modal open={open} onClose={onClose} titleId="outfit-detail-title" size="md" placement="center" zIndex={100} closeOnBackdrop>
-      <ModalHeader
+      <Modal open={open} onClose={onClose} titleId="outfit-detail-title" size="md" placement="center" zIndex={100} closeOnBackdrop>
+        <ModalHeader
         onClose={onClose}
         title={editCombo.outfitId ? '코디 편집' : '코디 상세'}
         titleId="outfit-detail-title"
@@ -209,9 +209,9 @@ export default function OutfitDetailModal({
           {editCombo.outfitId && (
             <div className="space-y-2">
               <label className="text-xs font-black text-slate-400 uppercase">코디 이름</label>
-              <input 
-                type="text" 
-                value={editCombo.title || ''} 
+              <input
+                type="text"
+                value={editCombo.title || ''}
                 onChange={e => setEditCombo({...editCombo, title: e.target.value})}
                 className="w-full h-11 px-4 bg-slate-50 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-[#1E3A8A] outline-none"
                 placeholder="코디 이름을 입력하세요"
@@ -240,9 +240,9 @@ export default function OutfitDetailModal({
                       )
                     })()}
                   </div>
-                  
+
                   {/* 아이템 변경 버튼 */}
-                  <button 
+                  <button
                     onClick={() => handleItemReplace(role)}
                     className="absolute inset-0 bg-black/40 opacity-0 group-hover/item:opacity-100 transition-opacity flex items-center justify-center rounded-xl"
                   >
@@ -282,7 +282,7 @@ export default function OutfitDetailModal({
           >
             {saving ? '처리 중…' : editCombo.outfitId ? '코디 수정하기' : '코디 저장하기'}
           </button>
-          
+
           {editCombo.outfitId ? (
             <button
               type="button"
@@ -308,7 +308,7 @@ export default function OutfitDetailModal({
       </ModalFooter>
     </Modal>
 
-    <ClothesSelectModal 
+    <ClothesSelectModal
       open={showSelectModal.open}
       onClose={() => setShowSelectModal({ ...showSelectModal, open: false })}
       category={showSelectModal.category}
@@ -318,17 +318,17 @@ export default function OutfitDetailModal({
     />
 
     {/* 삭제 확인 모달 */}
-    <Modal 
-      open={showDeleteConfirm} 
-      onClose={() => !deleting && setShowDeleteConfirm(false)} 
-      size="sm" 
-      placement="center" 
+    <Modal
+      open={showDeleteConfirm}
+      onClose={() => !deleting && setShowDeleteConfirm(false)}
+      size="sm"
+      placement="center"
       zIndex={110}
       closeOnBackdrop={!deleting}
     >
-      <ModalHeader 
-        title="코디 삭제" 
-        onClose={() => !deleting && setShowDeleteConfirm(false)} 
+      <ModalHeader
+        title="코디 삭제"
+        onClose={() => !deleting && setShowDeleteConfirm(false)}
       />
       <ModalBody className="p-6 text-center">
         <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
