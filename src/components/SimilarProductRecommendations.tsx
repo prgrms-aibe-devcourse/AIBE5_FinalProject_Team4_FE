@@ -5,6 +5,7 @@ import { createWishlistClothes } from '@/api/wardrobe'
 import AuthenticatedImage from '@/components/common/AuthenticatedImage'
 import { Modal, ModalBody, ModalFooter, ModalHeader } from '@/components/common/Modal'
 import { Check, ShoppingBag } from '@/components/icons'
+import { useToast } from './Toast'
 import {
   BE_CATEGORY_TO_UI,
   CATEGORY_ITEM_TYPES,
@@ -82,6 +83,7 @@ export default function SimilarProductRecommendations({
   onWishlistAdded,
   onGoToCloset,
 }: SimilarProductRecommendationsProps) {
+  const { showToast } = useToast() || { showToast: () => {} }
   const [ownedClothes, setOwnedClothes] = useState<ClothesResponse[]>([])
   const [ownedLoading, setOwnedLoading] = useState(true)
   const [ownedError, setOwnedError] = useState<string | null>(null)
@@ -98,7 +100,6 @@ export default function SimilarProductRecommendations({
   const [saveForm, setSaveForm] = useState<SimilarProductSaveForm | null>(null)
   const [saveOpen, setSaveOpen] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [toast, setToast] = useState<string | null>(null)
 
   const loadOwnedClothes = useCallback(async () => {
     if (userId == null) {
@@ -131,12 +132,6 @@ export default function SimilarProductRecommendations({
   useEffect(() => {
     void loadOwnedClothes()
   }, [loadOwnedClothes])
-
-  useEffect(() => {
-    if (!toast) return
-    const timer = window.setTimeout(() => setToast(null), 3200)
-    return () => window.clearTimeout(timer)
-  }, [toast])
 
   const requestSimilarProducts = async (clothesId: number) => {
     if (userId == null || recommendLoading) return
@@ -299,7 +294,8 @@ export default function SimilarProductRecommendations({
     setSaving(false)
     setSaveOpen(false)
     setSelectedProducts(new Set())
-    setToast(
+    showToast(
+      failedCount ? 'error' : 'success',
       failedCount
         ? `${successCount}개 저장, ${failedCount}개는 저장하지 못했어요.`
         : `${successCount}개 상품을 미보유 옷으로 저장했어요.`,
@@ -854,12 +850,6 @@ export default function SimilarProductRecommendations({
           </button>
         </ModalFooter>
       </Modal>
-
-      {toast && (
-        <div className="fixed left-1/2 bottom-24 -translate-x-1/2 z-50 rounded-full bg-[#111827] text-white px-4 py-2.5 text-xs font-black shadow-xl whitespace-nowrap">
-          {toast}
-        </div>
-      )}
     </div>
   )
 }
