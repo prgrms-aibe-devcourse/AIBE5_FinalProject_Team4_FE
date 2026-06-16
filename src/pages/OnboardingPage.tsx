@@ -41,6 +41,12 @@ export default function OnboardingPage({ onComplete, defaultNickname = "" }: Onb
     const [privacyAgreed, setPrivacyAgreed] = useState(false);
     const [marketingAgreed, setMarketingAgreed] = useState(false);
     const navigate = useNavigate();
+    const canProceedStep1 =
+        nickname !== "" &&
+        birthday !== "" &&
+        gender !== "None" &&
+        termsAgreed &&
+        privacyAgreed;
 
     const canProceedStep1 =
         nickname !== "" &&
