@@ -33,6 +33,8 @@ import {
   loadUserProfile,
   saveUserProfile,
 } from "@/utils/userProfileStorage";
+import { updateMarketingConsent } from "@/api/marketingConsent";
+import MarketingConsentSetting from "@/components/legal/MarketingConsentSetting";
 // 기존 상수 data ( TRIGGER_PRODUCTS 는 사용을 하지않아 우선 주석처리함 )
 // import { TRIGGER_PRODUCTS } from "@/data/triggerProducts";
 
@@ -175,10 +177,9 @@ export default function App() {
       {/* 2. ONBOARDING PROFILE FLOWS */}
       {/* ========================================================= */}
       {isLoggedIn && !profile.onboarded && (
-          <OnboardingPage defaultNickname={profile.nickname} onComplete={async (nickname, birthday, gender, styles, region, openModal) => {
+          <OnboardingPage defaultNickname={profile.nickname} onComplete={async (nickname, birthday, gender, styles, region, openModal, marketingAgreed) => {
             try {
               const regionData = REGIONS.find(r => r.code === region);
-
               const patchRes = await api.patch('/api/v1/users/profile', {
                 nickname,
                 birthDate: birthday,
@@ -187,11 +188,14 @@ export default function App() {
                 regionCode: region || '',
               });
               const serverOnboarded: boolean = patchRes.data.data.onboarded ?? true;
-
-              await api.post('/api/v1/users/styles', {
-                styleCodes: styles,
-              });
-
+              await api.post('/api/v1/users/styles', { styleCodes: styles });
+              if (authUserId != null) {
+                try {
+                  await updateMarketingConsent(authUserId, { marketingAgreed });
+                } catch {
+                  alert("마케팅 정보 수신 동의 저장에 실패했습니다. 마이페이지에서 다시 변경할 수 있습니다.");
+                }
+              }
               persistProfile({ nickname, birthday, gender, styles, region: region || undefined, onboarded: serverOnboarded });
               if (openModal) openGarmentRegister();
             } catch {
@@ -409,6 +413,11 @@ export default function App() {
                       </span>
                     </div>
                   </div>
+
+                  <MarketingConsentSetting
+                    userId={authUserId}
+                    enabled={authReady && authUserId != null}
+                  />
 
                   {/* Logout Button */}
                   <button
