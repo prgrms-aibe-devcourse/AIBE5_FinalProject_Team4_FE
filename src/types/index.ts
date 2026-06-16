@@ -7,12 +7,33 @@ export interface ApiResponse<T> {
   status: number
 }
 
+export type RegionCode =
+  | 'SEOUL'
+  | 'BUSAN'
+  | 'DAEGU'
+  | 'INCHEON'
+  | 'GWANGJU'
+  | 'DAEJEON'
+  | 'ULSAN'
+  | 'SEJONG'
+  | 'GYEONGGI'
+  | 'GANGWON'
+  | 'CHUNGBUK'
+  | 'CHUNGNAM'
+  | 'JEONBUK'
+  | 'JEONNAM'
+  | 'GYEONGBUK'
+  | 'GYEONGNAM'
+  | 'JEJU'
+
+
 export interface UserProfile {
   nickname: string;
   gender: "Male" | "Female" | "None";
   styles: string[]; // Casual, Minimal, Street, Amekaji, Gorpcore
   onboarded: boolean;
   birthday: string; // 사용자 연령에 따른 추천에 활용
+  region?: RegionCode;
 }
 
 export interface Recommendation {
