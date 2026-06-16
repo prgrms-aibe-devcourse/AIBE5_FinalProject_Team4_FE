@@ -584,7 +584,6 @@ export default function ClosetTab({
                     : "border-slate-100 hover:border-slate-300 shadow-3xs"
                 }`}
               >
-                
                 {/* Absolute category badge hanger icon floating left */}
                 <div className="absolute top-2 left-2 bg-white/95 px-2 py-1 rounded-lg border border-slate-150/40 text-[9px] font-extrabold text-slate-500 font-mono tracking-tight shadow-3xs z-5 flex items-center gap-1">
                   <span>
