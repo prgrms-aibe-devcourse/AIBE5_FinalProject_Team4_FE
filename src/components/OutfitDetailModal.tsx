@@ -89,7 +89,7 @@ export default function OutfitDetailModal({
         description: editCombo.description || editCombo.weatherLabel || '추천 코디',
         thumbnailUrl: editCombo.top?.imageUrl || editCombo.top?.userImageUrl || editCombo.bottom?.imageUrl || editCombo.bottom?.userImageUrl || editCombo.outer?.imageUrl || editCombo.outer?.userImageUrl || '',
         situation: '일상',
-        season: 'ALL',
+        season: 'ALL_SEASON',
         favorite: false,
         items: [
           { item: editCombo.top, itemRole: 'TOP', layerOrder: 1 },
@@ -182,7 +182,7 @@ export default function OutfitDetailModal({
       [roleKey]: {
         clothesId: Number(garment.id),
         name: garment.name,
-        brand: garment.brand,
+        brand: garment.be?.brandName,
         imageUrl: garment.thumbnailUrl,
         category: garment.category
       }

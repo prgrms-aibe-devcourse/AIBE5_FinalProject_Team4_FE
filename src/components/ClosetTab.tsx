@@ -651,7 +651,7 @@ export default function ClosetTab({
         )}
 
             {/* Empty view status fallbacks */}
-            {filteredClothes.length === 0 && (
+            {filteredClothes.length === 0 && closetTab !== "outfits" && (
               <div className="col-span-full text-center py-12 px-6 bg-white rounded-3xl border-2 border-dashed border-slate-200 select-none">
                 <span className="text-4xl block mb-2">📦</span>
                 <p className="text-xs text-slate-500 font-bold">선택하신 카테고리의 의상이 비어있습니다.</p>

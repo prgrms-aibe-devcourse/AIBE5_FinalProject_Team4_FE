@@ -27,9 +27,9 @@ export interface OutfitSavePayload {
 
 export interface OutfitBookResponse {
   outfitBookId: number
-  userId?: number
-  outfitCount?: number
-  outfits: OutfitResponse[]  // 추가
+  userId: number
+  outfitCount: number
+  outfits: OutfitResponse[]
 }
 
 /** GET /api/v1/outfit-books — 코디북 + 코디 목록 한번에 조회 */
@@ -54,7 +54,7 @@ export interface OutfitResponse {
     outfitItemId: number
     itemRole: string
     layerOrder: number
-    clothes: {         // 추가
+    clothes: {
       clothesId: number
       wardrobeClothesId: number
       name?: string
@@ -64,14 +64,6 @@ export interface OutfitResponse {
     }
   }>
 }
-
-export interface OutfitBookResponse {
-  outfitBookId: number
-  userId: number
-  outfitCount: number
-  outfits: OutfitResponse[]  // 추가
-}
-
 
 /** GET /api/v1/outfit-books/{bookId}/outfits */
 export async function fetchOutfits(bookId: number): Promise<OutfitResponse[]> {
