@@ -95,12 +95,14 @@ export default function RecommendProductDetailModal({
             if (type === 'SAVED') {
                 if (onWishlistToggle) {
                     await onWishlistToggle()
-                } else if (!item.source) {
-                    await postRecommendationFeedback(uid, { feedbackType: type, clothesId: item.clothesId ?? undefined })
-                    showToast('success', '추천을 저장했습니다.')
                 } else {
-                    await createWishlistClothes(uid, buildWishlistPayloadFromRecommendedItem(item.source))
-                    showToast('success', '위시리스트에 저장했습니다.')
+                    if (!item.source) {
+                        await postRecommendationFeedback(uid, { feedbackType: type, clothesId: item.clothesId ?? undefined })
+                        showToast('success', '추천을 저장했습니다.')
+                    } else {
+                        await createWishlistClothes(uid, buildWishlistPayloadFromRecommendedItem(item.source))
+                        showToast('success', '위시리스트에 저장했습니다.')
+                    }
                 }
                 if (!onWishlistToggle) onClose()
             } else if (type === 'EXCLUDE') {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AuthenticatedImage from "@/components/common/AuthenticatedImage";
 import {
   fetchClothesRecommendations,
@@ -123,6 +123,8 @@ export default function HomeTab({
   const [isDisliking, setIsDisliking] = useState(false);
   const labelSectionRef = useRef<HTMLElement | null>(null);
 
+  const [refreshSignal, setRefreshSignal] = useState(0);
+
   const {
     isWishlisted,
     isSubmitting: isWishlistSubmitting,
@@ -135,13 +137,41 @@ export default function HomeTab({
     existingGarments: clothes,
     onWishlistChanged: () => {
       onRefreshWardrobe?.();
+      // 위시리스트 상태가 변경되면 현재 보고 있는 추천 목록을 초기화합니다.
+      // useEffect의 의존성에 refreshSignal을 추가하여 즉시 다시 불러오게 합니다.
       if (activeLabel === 'style') {
         setStyleItems([]);
+        setStyleLoading(true); // 로딩 상태 강제 설정
       } else if (activeLabel === 'ootd') {
         setOotdItems([]);
+        setOotdLoading(true); // 로딩 상태 강제 설정
+      } else if (activeLabel === 'match') {
+        // match의 경우 anchorClothesId가 바뀔 때 useEffect에서 처리되지만,
+        // refreshSignal을 통해 강제로 새로고침되도록 유도합니다.
+        setMatchRecommendationGroups([]);
+        setMatchLoading(true); // 로딩 상태 강제 설정
       }
+      setRefreshSignal(prev => prev + 1);
     },
   });
+
+  // 추천 목록에서 중복된 clothesId를 제거하는 헬퍼
+  const uniqueItems = useCallback(<T extends { clothesId?: number | null; id: string }>(items: T[]): T[] => {
+    const seen = new Set();
+    return items.filter(item => {
+      // clothesId가 있으면 그것을 키로 쓰고, 없으면 id를 키로 씀
+      const key = item.clothesId != null ? String(item.clothesId) : item.id;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, []);
+
+  const selectedRecommendations = useMemo(() => {
+    if (activeLabel === "match" || activeLabel === "similar" || activeLabel === "aimd") return [];
+    const items = activeLabel === "ootd" ? ootdItems : styleItems;
+    return uniqueItems(items);
+  }, [activeLabel, ootdItems, styleItems, uniqueItems]);
 
   const ownedClothes = useMemo(() => clothes.filter((item) => !item.isWishlist), [clothes]);
   const matchEligibleOwnedClothes = useMemo(
@@ -293,7 +323,7 @@ export default function HomeTab({
     })();
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeLabel, userId, authReady]);
+  }, [activeLabel, userId, authReady, refreshSignal]);
 
   useEffect(() => {
     if (activeLabel !== "match" || !userId || !authReady || anchorClothesIdNumeric == null) {
@@ -323,14 +353,7 @@ export default function HomeTab({
       }
     })();
     return () => { cancelled = true; };
-  }, [activeLabel, anchorClothesIdNumeric, gender, userId, authReady]);
-
-  const selectedRecommendations = useMemo(() => {
-    if (activeLabel === "match" || activeLabel === "similar" || activeLabel === "aimd") return [];
-    if (activeLabel === "ootd") return ootdItems;
-    if (activeLabel === "style") return styleItems;
-    return [];
-  }, [activeLabel, ootdItems, styleItems]);
+  }, [activeLabel, anchorClothesIdNumeric, gender, userId, authReady, refreshSignal]);
 
   const matchRecommendationCount = useMemo(
       () => matchRecommendationGroups.reduce((sum, group) => sum + group.items.length, 0),
@@ -461,6 +484,14 @@ export default function HomeTab({
             </div>
         )}
 
+        {hasRecommendationData && activeLabel !== "match" && (activeLabel === 'ootd' ? ootdLoading : styleLoading) && (
+            <div className={`grid gap-4 ${activeLabel === "ootd" ? "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3" : "grid-cols-2 lg:grid-cols-3"} mb-6`}>
+              {Array.from({ length: 6 }).map((_, idx) => (
+                  <div key={idx} className="h-44 sm:h-52 lg:h-72 rounded-[24px] bg-slate-100 animate-pulse" />
+              ))}
+            </div>
+        )}
+
         {activeLabel === "match" && wardrobeLoading && matchEligibleOwnedClothes.length === 0 && (
             <div className="mb-5 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-10 text-center">
               <p className="text-sm font-black text-slate-500">옷장 데이터를 불러오는 중…</p>
@@ -528,10 +559,12 @@ export default function HomeTab({
                     </button>
                   </div>
               ) : selectedRecommendations.length === 0 ? (
-                  <div className="col-span-full rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-5 py-10 text-center">
-                    <p className="text-sm font-black text-slate-700">추천 결과가 없습니다.</p>
-                    <p className="text-xs text-slate-400 font-bold mt-2">옷장에 아이템을 더 등록하거나 나중에 다시 시도해 주세요.</p>
-                  </div>
+                  !(activeLabel === 'ootd' ? ootdLoading : styleLoading) && (
+                      <div className="col-span-full rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-5 py-10 text-center">
+                        <p className="text-sm font-black text-slate-700">추천 결과가 없습니다.</p>
+                        <p className="text-xs text-slate-400 font-bold mt-2">옷장에 아이템을 더 등록하거나 나중에 다시 시도해 주세요.</p>
+                      </div>
+                  )
               ) : (
                   selectedRecommendations.map((item) => (
                       <article
