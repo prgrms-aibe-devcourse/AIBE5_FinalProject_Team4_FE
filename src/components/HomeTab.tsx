@@ -33,6 +33,7 @@ interface HomeTabProps {
   userId: number | null;
   gender: UserGender;
   wardrobeLoading?: boolean;
+  authReady?: boolean;
   onAddWishlistItem: (item: {
     name: string;
     category: "Top" | "Bottom" | "Outer" | "Shoes";
@@ -98,6 +99,7 @@ export default function HomeTab({
                                   wardrobeLoading = false,
                                   insightGlow: _insightGlow = false,
                                   resetSignal = 0,
+                                  authReady = false,
                                   onRefreshWardrobe,
                                   onAddWishlistItem,
                                   onGoToCloset,
@@ -124,11 +126,18 @@ export default function HomeTab({
   const {
     isWishlisted,
     isSubmitting: isWishlistSubmitting,
+    isFeedbackSubmitting,
     toggleWishlist,
+    handleFeedback,
+    toastMessage,
   } = useRecommendWishlistToggle({
     userId,
     existingGarments: clothes,
-    onWishlistChanged: onRefreshWardrobe,
+    onWishlistChanged: () => {
+      onRefreshWardrobe?.();
+      setStyleItems([]);
+      setOotdItems([]);
+    },
   });
 
   const ownedClothes = useMemo(() => clothes.filter((item) => !item.isWishlist), [clothes]);
@@ -144,17 +153,8 @@ export default function HomeTab({
   const hasRecommendationData = registeredCount > 0;
 
   const handleDislike = async () => {
-    if (!userId || !selectedItem?.clothesId) return;
-    setIsDisliking(true);
-    try {
-      await postRecommendationFeedback(userId, { feedbackType: "DISLIKE", clothesId: selectedItem.clothesId });
-      setSelectedItem(null);
-      onRefreshWardrobe?.();
-    } catch (error) {
-      console.error("Feedback failed:", error);
-    } finally {
-      setIsDisliking(false);
-    }
+    if (!selectedItem?.clothesId) return;
+    await handleFeedback(toCardItem(selectedItem), 'DISLIKE');
   };
 
   useEffect(() => {
@@ -165,7 +165,7 @@ export default function HomeTab({
   }, [matchEligibleOwnedClothes, anchorClothesId]);
 
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || !authReady) return;
     let cancelled = false;
     void (async () => {
       try {
@@ -290,10 +290,10 @@ export default function HomeTab({
     })();
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeLabel, userId]);
+  }, [activeLabel, userId, authReady]);
 
   useEffect(() => {
-    if (activeLabel !== "match" || !userId || anchorClothesIdNumeric == null) {
+    if (activeLabel !== "match" || !userId || !authReady || anchorClothesIdNumeric == null) {
       setMatchRecommendationGroups([]);
       setMatchError(null);
       setMatchLoading(false);
@@ -320,7 +320,7 @@ export default function HomeTab({
       }
     })();
     return () => { cancelled = true; };
-  }, [activeLabel, anchorClothesIdNumeric, gender, userId]);
+  }, [activeLabel, anchorClothesIdNumeric, gender, userId, authReady]);
 
   const selectedRecommendations = useMemo(() => {
     if (activeLabel === "match" || activeLabel === "similar" || activeLabel === "aimd") return [];
@@ -607,10 +607,10 @@ export default function HomeTab({
           onClose={() => setSelectedItem(null)}
           wishlisted={selectedItem ? isWishlisted(selectedItem.clothesId) : false}
           wishlistSubmitting={selectedItem ? isWishlistSubmitting(selectedItem.clothesId) : false}
-          onWishlistToggle={() => {
+          onWishlistToggle={async () => {
             if (selectedItem) {
               if (selectedItem.clothesId) {
-                void toggleWishlist(toCardItem(selectedItem));
+                await toggleWishlist(toCardItem(selectedItem));
               } else {
                 onAddWishlistItem({
                   name: selectedItem.title,
@@ -622,8 +622,11 @@ export default function HomeTab({
               }
             }
           }}
+          onExclude={selectedItem?.clothesId ? async () => {
+            await handleFeedback(toCardItem(selectedItem), 'EXCLUDE');
+          } : undefined}
           onDislike={selectedItem?.clothesId ? handleDislike : undefined}
-          dislikeSubmitting={isDisliking}
+          dislikeSubmitting={selectedItem ? isFeedbackSubmitting(selectedItem.clothesId) : false}
       />
 
       <OutfitDetailModal

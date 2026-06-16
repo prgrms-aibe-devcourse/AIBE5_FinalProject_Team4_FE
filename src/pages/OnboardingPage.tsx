@@ -45,13 +45,6 @@ export default function OnboardingPage({ onComplete, defaultNickname = "" }: Onb
         nickname !== "" &&
         birthday !== "" &&
         gender !== "None" &&
-        termsAgreed &&
-        privacyAgreed;
-
-    const canProceedStep1 =
-        nickname !== "" &&
-        birthday !== "" &&
-        gender !== "None" &&
         region !== "" &&
         termsAgreed &&
         privacyAgreed;

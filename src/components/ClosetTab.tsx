@@ -174,13 +174,18 @@ export default function ClosetTab({
   // Categories count for dynamic charts or labels
   const categoriesCount = useMemo(() => {
     const counts = { Top: 0, Bottom: 0, Outer: 0, Shoes: 0 };
-    clothes.forEach(c => {
-      if (!c.isWishlist) {
-        counts[c.category] = (counts[c.category] || 0) + 1;
-      }
+    const list =
+      closetTab === "owned"
+        ? ownedList
+        : closetTab === "wishlist"
+          ? wishlistList
+          : favoritesList;
+
+    list.forEach(c => {
+      counts[c.category as keyof typeof counts] = (counts[c.category as keyof typeof counts] || 0) + 1;
     });
     return counts;
-  }, [clothes]);
+  }, [closetTab, ownedList, wishlistList, favoritesList]);
 
   const STYLE_STATS_TOP_N = 5;
 

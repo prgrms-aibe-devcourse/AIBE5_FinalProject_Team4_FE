@@ -6,15 +6,18 @@ import {
   ChevronRight,
   Layout,
 } from "./icons";
+import { Garment } from "@/types";
 import { fetchMyOutfitBook, type OutfitResponse } from "@/api/outfits";
 import OutfitDetailModal from "./OutfitDetailModal";
 
 interface OutfitBookTabProps {
   userId: number;
+  clothes: Garment[];
 }
 
 export default function OutfitBookTab({
   userId,
+  clothes,
 }: OutfitBookTabProps) {
   // 코디북 상태
   const [outfits, setOutfits] = useState<OutfitResponse[]>([]);
@@ -165,6 +168,7 @@ export default function OutfitBookTab({
           }}
           onClose={() => setSelectedOutfit(null)}
           onSaved={loadOutfits}
+          clothes={clothes}
         />
       )}
     </div>

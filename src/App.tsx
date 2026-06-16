@@ -11,11 +11,13 @@ import {
   ChevronRight,
   Activity, 
   Layers,
+  Layout,
 } from "./components/icons";
 import { UserProfile } from "@/types/index";
 import { REGIONS } from "@/data/regions";
 import HomeTab from "./components/HomeTab";
 import ClosetTab from "./components/ClosetTab";
+import OutfitBookTab from "./components/OutfitBookTab";
 import GarmentRegisterMethodModal from "./components/GarmentRegisterMethodModal";
 import PhotoGarmentRegisterModal from "./components/PhotoGarmentRegisterModal";
 import PurchaseGarmentRegisterModal from "./components/PurchaseGarmentRegisterModal";
@@ -101,8 +103,8 @@ export default function App() {
     setSelectedGarment,
   });
 
-  // Navigation state: 'home' | 'closet' | 'feed' | 'profile'
-  const [currentTab, setCurrentTab] = useState<"home" | "closet" | "feed" | "profile">("home");
+  // Navigation state: 'home' | 'closet' | 'outfit-book' | 'feed' | 'profile'
+  const [currentTab, setCurrentTab] = useState<"home" | "closet" | "outfit-book" | "feed" | "profile">("home");
   const [homeResetSignal, setHomeResetSignal] = useState<number>(0);
   const [isPhotoRegisterOpen, setIsPhotoRegisterOpen] = useState(false);
   const [isPurchaseRegisterOpen, setIsPurchaseRegisterOpen] = useState(false);
@@ -293,6 +295,17 @@ export default function App() {
                   resetSignal={homeResetSignal}
                   onRefreshWardrobe={() => void refreshWardrobe()}
                   onGoToCloset={() => setCurrentTab("closet")}
+                  authReady={authReady}
+                />
+              )}
+
+              {/* ========================================================= */}
+              {/* TAB 1.5: OUTFIT BOOK (My saved outfits) */}
+              {/* ========================================================= */}
+              {currentTab === "outfit-book" && authUserId != null && (
+                <OutfitBookTab 
+                  userId={authUserId} 
+                  clothes={clothes}
                 />
               )}
 
@@ -487,6 +500,18 @@ export default function App() {
               >
                 <Layers className="w-5 h-5" />
                 <span className="text-[9px] font-extrabold mt-1">옷장</span>
+              </button>
+
+              <button 
+                id="nav-outfit-book" 
+                onClick={() => {
+                  if(!requireLogin()) return;
+                  setCurrentTab("outfit-book")
+                }}
+                className={`flex flex-col items-center justify-center flex-1 py-1 transition ${currentTab === "outfit-book" ? "text-[#1E3A8A]" : "text-slate-400 hover:text-slate-600"}`}
+              >
+                <Layout className="w-5 h-5" />
+                <span className="text-[9px] font-extrabold mt-1">코디북</span>
               </button>
 
               <button 

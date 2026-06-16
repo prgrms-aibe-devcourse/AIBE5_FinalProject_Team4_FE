@@ -148,7 +148,7 @@ export default function OutfitDetailModal({
 
   const handleDislike = async () => {
     if (!userId) return
-    const clothesIds = [editCombo.top, editCombo.bottom, editCombo.outer]
+    const clothesIds = [editCombo.top, editCombo.bottom, editCombo.outer, editCombo.shoes]
       .filter(Boolean)
       .map(item => item?.clothesId)
       .filter(Boolean) as number[]
@@ -171,10 +171,13 @@ export default function OutfitDetailModal({
   }
 
   const handleItemReplace = (category: string) => {
+    const labelMap: Record<string, string> = {
+      TOP: '상의', BOTTOM: '하의', OUTER: '아우터', SHOES: '신발'
+    };
     setShowSelectModal({
       open: true,
       category,
-      title: `${category === 'TOP' ? '상의' : category === 'BOTTOM' ? '하의' : '아우터'} 변경`
+      title: `${labelMap[category] || category} 변경`
     })
   }
 
@@ -222,13 +225,14 @@ export default function OutfitDetailModal({
             </div>
           )}
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 overflow-x-auto pb-2 scrollbar-hide">
             {[
               { role: 'TOP', label: '상의', item: editCombo.top },
               { role: 'BOTTOM', label: '하의', item: editCombo.bottom },
-              { role: 'OUTER', label: '아우터', item: editCombo.outer }
+              { role: 'OUTER', label: '아우터', item: editCombo.outer },
+              { role: 'SHOES', label: '신발', item: editCombo.shoes }
             ].map(({ role, label, item }) => (
-              <div key={role} className="w-1/3 text-center">
+              <div key={role} className="flex-none w-1/3 text-center">
                 <div className="relative group/item">
                   <div className="aspect-[4/5] bg-slate-50 rounded-xl overflow-hidden mb-2 flex items-center justify-center border border-slate-100">
                     {(() => {

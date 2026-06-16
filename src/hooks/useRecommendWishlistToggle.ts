@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useToast } from '@/components/Toast'
 import {
   convertWishlistToOwned,
   createWishlistClothes,
@@ -18,6 +19,10 @@ import {
   findWishlistGarmentForRecommendation,
   recommendationWishlistProductCode,
 } from '@/utils/recommendWishlistPayload'
+import {
+  postRecommendationFeedback,
+  type RecommendationFeedbackType,
+} from '@/api/recommendations'
 
 interface UseRecommendWishlistToggleOptions {
   userId: number | null
@@ -30,8 +35,10 @@ export function useRecommendWishlistToggle({
   existingGarments,
   onWishlistChanged,
 }: UseRecommendWishlistToggleOptions) {
+  const { showToast } = useToast() || { showToast: () => {} }
   const [toastMessage, setToastMessage] = useState<string | null>(null)
   const [submittingClothesId, setSubmittingClothesId] = useState<number | null>(null)
+  const [feedbackSubmittingId, setFeedbackSubmittingId] = useState<number | null>(null)
   const [overrides, setOverrides] = useState<Map<number, boolean>>(new Map())
 
   useEffect(() => {
@@ -59,13 +66,21 @@ export function useRecommendWishlistToggle({
     [submittingClothesId],
   )
 
+  const triggerToast = useCallback(
+    (message: string, type: 'success' | 'info' | 'error' = 'success') => {
+      setToastMessage(message)
+      showToast(type === 'info' ? 'info' : type === 'error' ? 'error' : 'success', message)
+    },
+    [showToast],
+  )
+
   const toggleWishlist = useCallback(
     async (item: RecommendCardItem) => {
       const clothesId = item.clothesId
       if (clothesId == null || item.isAnchor) return
 
       if (userId == null) {
-        setToastMessage('로그인 후 위시리스트에 추가할 수 있어요')
+        triggerToast('로그인 후 위시리스트에 추가할 수 있어요', 'error')
         return
       }
       if (submittingClothesId != null) return
@@ -81,7 +96,7 @@ export function useRecommendWishlistToggle({
           )
           await deleteClothes(Number(linked?.id ?? clothesId))
           setOverrides((prev) => new Map(prev).set(clothesId, false))
-          setToastMessage('위시리스트에서 제거했어요')
+          triggerToast('위시리스트에서 제거했어요')
         } else {
           if (item.source) {
             await createWishlistClothes(
@@ -96,14 +111,14 @@ export function useRecommendWishlistToggle({
             )
           }
           setOverrides((prev) => new Map(prev).set(clothesId, true))
-          setToastMessage('위시리스트에 추가했어요')
+          triggerToast('위시리스트에 추가했어요')
         }
         onWishlistChanged?.()
       } catch (error) {
         const message =
           normalizeDuplicateRegisterError(extractApiErrorMessage(error)) ??
           extractApiErrorMessage(error)
-        setToastMessage(message)
+        triggerToast(message, 'error')
         if (!currentlyWishlisted && message === DUPLICATE_WISHLIST_MESSAGE) {
           setOverrides((prev) => new Map(prev).set(clothesId, true))
         }
@@ -111,7 +126,51 @@ export function useRecommendWishlistToggle({
         setSubmittingClothesId(null)
       }
     },
-    [existingGarments, isWishlisted, onWishlistChanged, submittingClothesId, userId],
+    [existingGarments, onWishlistChanged, submittingClothesId, triggerToast, userId],
+  )
+
+  const isFeedbackSubmitting = useCallback(
+    (clothesId: number | null | undefined) =>
+      clothesId != null && feedbackSubmittingId === clothesId,
+    [feedbackSubmittingId],
+  )
+
+  const handleFeedback = useCallback(
+    async (item: RecommendCardItem, type: RecommendationFeedbackType) => {
+      const clothesId = item.clothesId
+      if (clothesId == null || item.isAnchor) return
+
+      if (userId == null) {
+        triggerToast('로그인이 필요한 작업입니다.', 'error')
+        return
+      }
+      if (feedbackSubmittingId != null) return
+
+      setFeedbackSubmittingId(clothesId)
+
+      try {
+        await postRecommendationFeedback(userId, {
+          feedbackType: type,
+          clothesId: clothesId,
+        })
+
+        if (type === 'DISLIKE') {
+          triggerToast('해당 추천을 싫어요 처리했습니다.')
+        } else if (type === 'EXCLUDE') {
+          triggerToast('해당 상품을 추천에서 제외했습니다.')
+        }
+
+        onWishlistChanged?.()
+      } catch (error) {
+        triggerToast(
+          extractApiErrorMessage(error, '피드백 처리에 실패했습니다.'),
+          'error',
+        )
+      } finally {
+        setFeedbackSubmittingId(null)
+      }
+    },
+    [userId, feedbackSubmittingId, triggerToast, onWishlistChanged],
   )
 
   const addPurchasedToCloset = useCallback(
@@ -120,13 +179,13 @@ export function useRecommendWishlistToggle({
       if (clothesId == null || item.isAnchor) return false
 
       if (userId == null) {
-        setToastMessage('로그인 후 이용할 수 있어요')
+        triggerToast('로그인 후 이용할 수 있어요', 'error')
         return false
       }
       if (submittingClothesId != null) return false
 
       if (findOwnedGarmentForRecommendation(clothesId, existingGarments)) {
-        setToastMessage('이미 보유 옷장에 있어요')
+        triggerToast('이미 보유 옷장에 있어요', 'info')
         return true
       }
 
@@ -151,7 +210,7 @@ export function useRecommendWishlistToggle({
         const imageUrl =
           garment.userImageUrl ?? garment.thumbnailUrl ?? item.imageUrl
         if (!imageUrl?.startsWith('http')) {
-          setToastMessage('옷장 추가에 필요한 이미지 URL이 없습니다.')
+          triggerToast('옷장 추가에 필요한 이미지 URL이 없습니다.', 'error')
           return false
         }
 
@@ -164,26 +223,29 @@ export function useRecommendWishlistToggle({
         })
 
         setOverrides((prev) => new Map(prev).set(clothesId, false))
-        setToastMessage('보유 옷장에 추가했어요')
+        triggerToast('보유 옷장에 추가했어요')
         onWishlistChanged?.()
         return true
       } catch (error) {
-        setToastMessage(
+        triggerToast(
           extractApiErrorMessage(error, '옷장 추가에 실패했습니다.'),
+          'error',
         )
         return false
       } finally {
         setSubmittingClothesId(null)
       }
     },
-    [existingGarments, onWishlistChanged, submittingClothesId, userId],
+    [existingGarments, onWishlistChanged, submittingClothesId, triggerToast, userId],
   )
 
   return {
     toastMessage,
     isWishlisted,
     isSubmitting,
+    isFeedbackSubmitting,
     toggleWishlist,
+    handleFeedback,
     addPurchasedToCloset,
   }
 }

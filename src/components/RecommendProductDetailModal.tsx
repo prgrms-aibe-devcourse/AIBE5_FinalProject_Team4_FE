@@ -17,6 +17,7 @@ interface RecommendProductDetailModalProps {
     wishlisted?: boolean
     wishlistSubmitting?: boolean
     onWishlistToggle?: () => void
+    onExclude?: () => void
     onDislike?: () => void
     dislikeSubmitting?: boolean
     onPurchaseConfirm?: () => Promise<boolean>
@@ -56,6 +57,7 @@ export default function RecommendProductDetailModal({
                                                         wishlisted = false,
                                                         wishlistSubmitting = false,
                                                         onWishlistToggle,
+                                                        onExclude,
                                                         onDislike,
                                                         dislikeSubmitting = false,
                                                         onPurchaseConfirm,
@@ -91,17 +93,23 @@ export default function RecommendProductDetailModal({
         }
         try {
             if (type === 'SAVED') {
-                if (!item.source) {
+                if (onWishlistToggle) {
+                    await onWishlistToggle()
+                } else if (!item.source) {
                     await postRecommendationFeedback(uid, { feedbackType: type, clothesId: item.clothesId ?? undefined })
                     showToast('success', '추천을 저장했습니다.')
                 } else {
                     await createWishlistClothes(uid, buildWishlistPayloadFromRecommendedItem(item.source))
                     showToast('success', '위시리스트에 저장했습니다.')
                 }
-                onClose()
+                if (!onWishlistToggle) onClose()
             } else if (type === 'EXCLUDE') {
-                await postRecommendationFeedback(uid, { feedbackType: type, clothesId: item.clothesId ?? undefined })
-                showToast('success', '해당 상품을 추천에서 제외했습니다.')
+                if (onExclude) {
+                    await onExclude()
+                } else {
+                    await postRecommendationFeedback(uid, { feedbackType: type, clothesId: item.clothesId ?? undefined })
+                    showToast('success', '해당 상품을 추천에서 제외했습니다.')
+                }
                 onClose()
             }
         } catch {
@@ -204,14 +212,16 @@ export default function RecommendProductDetailModal({
                     <button
                         type="button"
                         onClick={() => callFeedback('SAVED')}
-                        className="h-10 rounded-2xl bg-[#111827] text-white font-black text-sm hover:bg-slate-800 transition-colors"
+                        disabled={wishlistSubmitting}
+                        className={`h-10 rounded-2xl bg-[#111827] text-white font-black text-sm hover:bg-slate-800 transition-colors ${wishlistSubmitting ? 'opacity-60 cursor-not-allowed' : ''}`}
                     >
-                        저장하기
+                        {wishlistSubmitting ? '처리 중…' : wishlisted ? '저장됨' : '저장하기'}
                     </button>
                     <button
                         type="button"
                         onClick={() => callFeedback('EXCLUDE')}
-                        className="h-10 rounded-2xl border border-slate-200 bg-white text-slate-600 font-black text-sm hover:bg-slate-50 transition-colors"
+                        disabled={dislikeSubmitting}
+                        className="h-10 rounded-2xl border border-slate-200 bg-white text-slate-600 font-black text-sm hover:bg-slate-50 transition-colors disabled:opacity-60"
                     >
                         추천 제외
                     </button>
