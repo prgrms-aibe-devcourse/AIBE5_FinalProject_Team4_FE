@@ -8,12 +8,13 @@ import { useToast } from './Toast'
 import { postRecommendationFeedback, RecommendationFeedbackType } from '@/api/recommendations'
 import { createWishlistClothes } from '@/api/wardrobe'
 import { buildWishlistPayloadFromRecommendedItem } from '@/utils/recommendWishlistPayload'
-import { getUserIdFromAccessToken } from '@/utils/authUser'
+
 
 interface RecommendProductDetailModalProps {
     open: boolean
     item: RecommendCardItem | null
     onClose: () => void
+    userId: number | null
     wishlisted?: boolean
     wishlistSubmitting?: boolean
     onWishlistToggle?: () => void
@@ -54,6 +55,7 @@ export default function RecommendProductDetailModal({
                                                         open,
                                                         item,
                                                         onClose,
+                                                        userId,
                                                         wishlisted = false,
                                                         wishlistSubmitting = false,
                                                         onWishlistToggle,
@@ -83,10 +85,8 @@ export default function RecommendProductDetailModal({
     ]
     const canToggleWishlist = !item.isAnchor && item.clothesId != null && onWishlistToggle
 
-    const resolvedUserId = getUserIdFromAccessToken()
-
-    const callFeedback = async (type: RecommendationFeedbackType) => {
-        const uid = resolvedUserId
+    const handleFeedback = async (type: RecommendationFeedbackType) => {
+        const uid = userId
         if (!uid) {
             showToast('error', '로그인이 필요한 작업입니다.')
             return
@@ -211,7 +211,7 @@ export default function RecommendProductDetailModal({
                 <div className="grid grid-cols-2 gap-2">
                     <button
                         type="button"
-                        onClick={() => callFeedback('SAVED')}
+                        onClick={() => handleFeedback('SAVED')}
                         disabled={wishlistSubmitting}
                         className={`h-10 rounded-2xl bg-[#111827] text-white font-black text-sm hover:bg-slate-800 transition-colors ${wishlistSubmitting ? 'opacity-60 cursor-not-allowed' : ''}`}
                     >
@@ -219,7 +219,7 @@ export default function RecommendProductDetailModal({
                     </button>
                     <button
                         type="button"
-                        onClick={() => callFeedback('EXCLUDE')}
+                        onClick={() => handleFeedback('EXCLUDE')}
                         disabled={dislikeSubmitting}
                         className="h-10 rounded-2xl border border-slate-200 bg-white text-slate-600 font-black text-sm hover:bg-slate-50 transition-colors disabled:opacity-60"
                     >

@@ -20,8 +20,7 @@ api.interceptors.response.use(
     const originalConfig = error.config;
       // 401 처리 (refresh 로직)
       if (error.response?.status === 401) {
-          if (originalConfig._retry) {
-              // 이미 재시도했음 → 포기
+          if (originalConfig.url?.includes('/api/v1/auth/refresh') || originalConfig._retry) {
               return Promise.reject(error);
           }
 
@@ -31,11 +30,12 @@ api.interceptors.response.use(
               await api.post('/api/v1/auth/refresh');
               return api(originalConfig);
           } catch {
-              window.location.href = '/login';
+              if (!import.meta.env.DEV) {
+                window.location.href = '/login';
+              }
               return Promise.reject(error);
           }
       }
-
       // 401 이외 에러 처리
       const skipRedirect =
           import.meta.env.DEV ||
