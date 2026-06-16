@@ -18,6 +18,7 @@ interface RecommendProductDetailModalProps {
     wishlisted?: boolean
     wishlistSubmitting?: boolean
     onWishlistToggle?: () => void
+    onExclude?: () => void
     onDislike?: () => void
     dislikeSubmitting?: boolean
     onPurchaseConfirm?: () => Promise<boolean>
@@ -58,12 +59,13 @@ export default function RecommendProductDetailModal({
                                                         wishlisted = false,
                                                         wishlistSubmitting = false,
                                                         onWishlistToggle,
+                                                        onExclude,
                                                         onDislike,
                                                         dislikeSubmitting = false,
                                                         onPurchaseConfirm,
                                                         purchaseConfirmSubmitting = false,
                                                     }: RecommendProductDetailModalProps) {
-    // ✅ 모든 Hook을 early return 전에 선언
+    // 모든 Hook은 early return 전에 선언
     const { showToast } = useToast()
     const [purchaseOpened, setPurchaseOpened] = useState(false)
 
@@ -76,34 +78,40 @@ export default function RecommendProductDetailModal({
 
     const categoryLabel = item.categoryLabel
         ?? ({ Top: '상의', Bottom: '하의', Outer: '아우터', Shoes: '신발' } as const)[item.category]
-    const styles = item.styles.length > 0 ? item.styles : item.style !== '—' ? [item.style] : []
+    const styles = item.styles.length > 0 ? item.styles : item.style !== '-' ? [item.style] : []
     const allColors: RecommendColorChip[] = [
         { label: item.color, hex: item.colorHex },
         ...item.secondaryColors,
     ]
     const canToggleWishlist = !item.isAnchor && item.clothesId != null && onWishlistToggle
 
-    const resolvedUserId = userId
-
-    const callFeedback = async (type: RecommendationFeedbackType) => {
-        const uid = resolvedUserId
+    const handleFeedback = async (type: RecommendationFeedbackType) => {
+        const uid = userId
         if (!uid) {
             showToast('error', '로그인이 필요한 작업입니다.')
             return
         }
         try {
             if (type === 'SAVED') {
-                if (!item.source) {
-                    await postRecommendationFeedback(uid, { feedbackType: type, clothesId: item.clothesId ?? undefined })
-                    showToast('success', '추천을 저장했습니다.')
+                if (onWishlistToggle) {
+                    await onWishlistToggle()
                 } else {
-                    await createWishlistClothes(uid, buildWishlistPayloadFromRecommendedItem(item.source))
-                    showToast('success', '위시리스트에 저장했습니다.')
+                    if (!item.source) {
+                        await postRecommendationFeedback(uid, { feedbackType: type, clothesId: item.clothesId ?? undefined })
+                        showToast('success', '추천을 저장했습니다.')
+                    } else {
+                        await createWishlistClothes(uid, buildWishlistPayloadFromRecommendedItem(item.source))
+                        showToast('success', '위시리스트에 저장했습니다.')
+                    }
                 }
-                onClose()
+                if (!onWishlistToggle) onClose()
             } else if (type === 'EXCLUDE') {
-                await postRecommendationFeedback(uid, { feedbackType: type, clothesId: item.clothesId ?? undefined })
-                showToast('success', '해당 상품을 추천에서 제외했습니다.')
+                if (onExclude) {
+                    await onExclude()
+                } else {
+                    await postRecommendationFeedback(uid, { feedbackType: type, clothesId: item.clothesId ?? undefined })
+                    showToast('success', '해당 상품을 추천에서 제외했습니다.')
+                }
                 onClose()
             }
         } catch {
@@ -187,7 +195,7 @@ export default function RecommendProductDetailModal({
                                 ))}
                             </div>
                         ) : (
-                            <p className="text-sm font-bold text-slate-400">—</p>
+                            <p className="text-sm font-bold text-slate-400">-</p>
                         )}
                     </DetailRow>
                     <DetailRow label="컬러">
@@ -205,21 +213,23 @@ export default function RecommendProductDetailModal({
                 <div className="grid grid-cols-2 gap-2">
                     <button
                         type="button"
-                        onClick={() => callFeedback('SAVED')}
-                        className="h-10 rounded-2xl bg-[#111827] text-white font-black text-sm hover:bg-slate-800 transition-colors"
+                        onClick={() => handleFeedback('SAVED')}
+                        disabled={wishlistSubmitting}
+                        className={`h-10 rounded-2xl bg-[#111827] text-white font-black text-sm hover:bg-slate-800 transition-colors ${wishlistSubmitting ? 'opacity-60 cursor-not-allowed' : ''}`}
                     >
-                        저장하기
+                        {wishlistSubmitting ? '처리 중...' : wishlisted ? '저장됨' : '저장하기'}
                     </button>
                     <button
                         type="button"
-                        onClick={() => callFeedback('EXCLUDE')}
-                        className="h-10 rounded-2xl border border-slate-200 bg-white text-slate-600 font-black text-sm hover:bg-slate-50 transition-colors"
+                        onClick={() => handleFeedback('EXCLUDE')}
+                        disabled={dislikeSubmitting}
+                        className="h-10 rounded-2xl border border-slate-200 bg-white text-slate-600 font-black text-sm hover:bg-slate-50 transition-colors disabled:opacity-60"
                     >
                         추천 제외
                     </button>
                 </div>
 
-                {/* 구매 링크 — 클릭 시 새 탭으로 열고 샀어요 버튼 노출 */}
+                {/* 구매 링크 클릭 시마다 갱신되고 좋아요 버튼 노출 */}
                 {item.hasDirectPurchaseUrl && item.purchaseUrl && item.purchaseUrl !== '#' && (
                     <a
                         href={item.purchaseUrl}
@@ -232,7 +242,7 @@ export default function RecommendProductDetailModal({
                     </a>
                 )}
 
-                {/* 샀어요 버튼 — 구매 링크 클릭 후 노출, 클릭 시 onPurchaseConfirm 호출 */}
+                {/* 좋아요 버튼은 구매 링크 클릭 시 노출, 클릭 시 onPurchaseConfirm 호출 */}
                 {purchaseOpened && onPurchaseConfirm && (
                     <button
                         type="button"
@@ -240,11 +250,11 @@ export default function RecommendProductDetailModal({
                         disabled={purchaseConfirmSubmitting}
                         className="w-full h-11 rounded-2xl bg-emerald-600 text-white font-black text-sm hover:bg-emerald-700 transition-colors disabled:opacity-60"
                     >
-                        {purchaseConfirmSubmitting ? '처리 중...' : '샀어요! 옷장에 추가하기'}
+                        {purchaseConfirmSubmitting ? '처리 중...' : '좋아요! 옷장에 추가하기' }
                     </button>
                 )}
 
-                {/* 싫어요 버튼 (외부 핸들러) */}
+                {/* 싫어요 버튼 (현재 핸들러) */}
                 {onDislike && (
                     <button
                         type="button"
@@ -252,7 +262,7 @@ export default function RecommendProductDetailModal({
                         disabled={dislikeSubmitting}
                         className="flex w-full h-11 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white text-slate-500 text-sm font-black hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-colors cursor-pointer disabled:opacity-60"
                     >
-                        {dislikeSubmitting ? '정리 중…' : '해당 추천 싫어요'}
+                        {dislikeSubmitting ? '처리 중...' : '이런 추천 싫어요'}
                     </button>
                 )}
 

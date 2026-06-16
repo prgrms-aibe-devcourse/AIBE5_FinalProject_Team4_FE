@@ -292,7 +292,9 @@ export default function MatchRecommendationByCategory({
     toastMessage,
     isWishlisted,
     isSubmitting,
+    isFeedbackSubmitting,
     toggleWishlist,
+    handleFeedback,
     addPurchasedToCloset,
   } = useRecommendWishlistToggle({
     userId,
@@ -342,21 +344,10 @@ export default function MatchRecommendationByCategory({
   }, []);
 
   const handleDislike = useCallback(async () => {
-    if (!userId || !selectedItem || !selectedItem.clothesId) return;
-    setIsDisliking(true);
-    try {
-      await postRecommendationFeedback(userId, {
-        feedbackType: "DISLIKE",
-        clothesId: selectedItem.clothesId,
-      });
-      setSelectedItem(null);
-      if (onWishlistAdded) onWishlistAdded();
-    } catch (error) {
-      console.error("Feedback failed:", error);
-    } finally {
-      setIsDisliking(false);
-    }
-  }, [userId, selectedItem, onWishlistAdded]);
+    if (!selectedItem) return;
+    await handleFeedback(selectedItem, 'DISLIKE');
+    setSelectedItem(null);
+  }, [handleFeedback, selectedItem]);
 
   if (groups.length === 0) return null;
 
@@ -397,7 +388,12 @@ export default function MatchRecommendationByCategory({
         wishlistSubmitting={selectedItem ? isSubmitting(selectedItem.clothesId) : false}
         onWishlistToggle={
           selectedItem?.clothesId != null && !selectedItem.isAnchor
-            ? () => void toggleWishlist(selectedItem)
+            ? async () => { await toggleWishlist(selectedItem) }
+            : undefined
+        }
+        onExclude={
+          selectedItem?.clothesId != null && !selectedItem.isAnchor
+            ? async () => { await handleFeedback(selectedItem, 'EXCLUDE'); setSelectedItem(null); }
             : undefined
         }
         onPurchaseConfirm={
@@ -409,7 +405,7 @@ export default function MatchRecommendationByCategory({
           selectedItem ? isSubmitting(selectedItem.clothesId) : false
         }
         onDislike={selectedItem?.clothesId ? handleDislike : undefined}
-        dislikeSubmitting={isDisliking}
+        dislikeSubmitting={selectedItem ? isFeedbackSubmitting(selectedItem.clothesId) : false}
       />
     </>
   );

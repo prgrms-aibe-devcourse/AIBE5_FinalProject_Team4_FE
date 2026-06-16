@@ -33,7 +33,7 @@ last_updated: 2026-06-14
 | 코디북 상세 | GET | `/api/v1/outfit-books/{bookId}` | 코디북 상세와 저장 코디 목록 표시 |
 | 코디 저장 | POST | `/api/v1/outfit-books/{bookId}/outfits` | 코디북에 코디 저장 |
 | 코디 상세 | GET | `/api/v1/outfit-books/{bookId}/outfits/{outfitId}` | 저장 코디 구성 옷과 스타일 상세 표시 |
-| 코디 수정 | PUT | `/api/v1/outfit-books/{bookId}/outfits/{outfitId}` | 저장 코디 수정 |
+| 코디 수정 | PATCH | `/api/v1/outfit-books/{bookId}/outfits/{outfitId}` | 저장 코디 수정 |
 | 코디 삭제 | DELETE | `/api/v1/outfit-books/{bookId}/outfits/{outfitId}` | 코디북에서 코디 제거 |
 
 `OutfitResponse.items[]`는 저장 코디를 구성하는 옷 목록을 표시하는 기준 필드입니다. 상세 필드 원본은 BE API 계약을 따릅니다.

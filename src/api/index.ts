@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 const api = axios.create({
-  // 개발: Vite 프록시(/api → BE). 운영: VITE_API_BASE_URL 직접 호출
+  // 개발: Vite 프록시(/api -> BE). 운영: VITE_API_BASE_URL 직접 호출
   baseURL: import.meta.env.DEV
     ? ''
     : (import.meta.env.VITE_API_BASE_URL ?? ''),
@@ -13,15 +13,14 @@ const api = axios.create({
   maxRedirects: 0, withCredentials: true, // 쿠키 자동전송
 })
 
-// 응답 인터셉터 — 개발 중에는 페이지 이동 없이 호출부에서 처리
+// 응답 인터셉터 -- 개발 중에는 페이지 이동 없이 호출부에서 처리
 api.interceptors.response.use(
   (response) => response,
   async(error) => {
     const originalConfig = error.config;
       // 401 처리 (refresh 로직)
       if (error.response?.status === 401) {
-          if (originalConfig.url?.includes('/auth/refresh') || originalConfig._retry) {
-
+          if (originalConfig.url?.includes('/api/v1/auth/refresh') || originalConfig._retry) {
               return Promise.reject(error);
           }
 
@@ -31,6 +30,9 @@ api.interceptors.response.use(
               await api.post('/api/v1/auth/refresh');
               return api(originalConfig);
           } catch {
+              if (!import.meta.env.DEV) {
+                window.location.href = '/login';
+              }
               return Promise.reject(error);
           }
       }
