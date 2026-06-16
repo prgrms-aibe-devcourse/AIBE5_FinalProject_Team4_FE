@@ -128,7 +128,7 @@ export default function App() {
         })
         .catch(() => {
           setIsLoggedIn(false);
-          setAuthReady(false);
+          setAuthReady(true);
         });
   }, []);
 
@@ -155,6 +155,7 @@ export default function App() {
 
   const resetAuthState = () => {
     setIsLoggedIn(false);
+    setAuthUserId(null);
     clearUserProfile();
     setProfile({ nickname: "", gender: "None", styles: [], onboarded: false, birthday: "" });
     setCurrentTab("home");
@@ -438,15 +439,7 @@ export default function App() {
                     <button
                       onClick={() => {
                         if (confirm("초기 온보딩으로 되돌아가시겠습니까?")) {
-                          setIsLoggedIn(false);
-                          clearUserProfile();
-                          setProfile({
-                            nickname: "",
-                            gender: "None",
-                            styles: [],
-                            onboarded: false,
-                            birthday: "",
-                          });
+                         resetAuthState();
                         }
                       }}
                       className="text-[11px] font-bold text-red-500 hover:underline block"

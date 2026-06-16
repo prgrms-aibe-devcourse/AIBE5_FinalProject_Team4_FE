@@ -392,6 +392,7 @@ export default function MatchRecommendationByCategory({
         open={selectedItem != null}
         item={selectedItem}
         onClose={() => setSelectedItem(null)}
+        userId={userId}
         wishlisted={selectedItem ? isWishlisted(selectedItem.clothesId) : false}
         wishlistSubmitting={selectedItem ? isSubmitting(selectedItem.clothesId) : false}
         onWishlistToggle={
