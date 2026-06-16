@@ -604,6 +604,7 @@ export default function HomeTab({
       <RecommendProductDetailModal
           open={selectedItem !== null}
           item={selectedItem ? toCardItem(selectedItem) : null}
+          userId={userId}
           onClose={() => setSelectedItem(null)}
           wishlisted={selectedItem ? isWishlisted(selectedItem.clothesId) : false}
           wishlistSubmitting={selectedItem ? isWishlistSubmitting(selectedItem.clothesId) : false}
