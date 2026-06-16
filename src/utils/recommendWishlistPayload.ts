@@ -42,6 +42,12 @@ export function buildWishlistPayloadFromRecommendedItem(
     item.externalProductUrl,
   )
 
+  const finalProductUrl =
+    externalProductUrl &&
+    (externalProductUrl.startsWith('http://') || externalProductUrl.startsWith('https://'))
+      ? externalProductUrl
+      : ''
+
   return {
     name: item.name.trim(),
     brandName: (item.brandName?.trim() || 'UNKNOWN').slice(0, 100),
@@ -57,7 +63,7 @@ export function buildWishlistPayloadFromRecommendedItem(
     season: item.season ?? undefined,
     externalSource: 'NAVER_SHOPPING',
     externalProductId: String(item.clothesId),
-    externalProductUrl,
+    externalProductUrl: finalProductUrl,
   }
 }
 
@@ -69,7 +75,11 @@ export function buildWishlistPayloadFromCardItem(
     throw new Error('위시리스트 저장에 필요한 이미지 URL이 없습니다.')
   }
 
-  const externalProductUrl = item.purchaseUrl ?? ''
+  const externalProductUrl =
+    item.purchaseUrl &&
+    (item.purchaseUrl.startsWith('http://') || item.purchaseUrl.startsWith('https://'))
+      ? item.purchaseUrl
+      : ''
 
   const productCode =
     item.clothesId != null ? recommendationWishlistProductCode(item.clothesId) : `STYLE-${item.id}`

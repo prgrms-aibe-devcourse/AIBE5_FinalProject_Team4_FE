@@ -135,8 +135,11 @@ export default function HomeTab({
     existingGarments: clothes,
     onWishlistChanged: () => {
       onRefreshWardrobe?.();
-      setStyleItems([]);
-      setOotdItems([]);
+      if (activeLabel === 'style') {
+        setStyleItems([]);
+      } else if (activeLabel === 'ootd') {
+        setOotdItems([]);
+      }
     },
   });
 
