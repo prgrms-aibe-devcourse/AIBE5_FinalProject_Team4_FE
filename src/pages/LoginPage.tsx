@@ -1,5 +1,6 @@
 import { Activity, Sparkle } from "../components/icons";
 import type { OAuthProvider } from "@/utils/authLogin";
+import LegalLinks from "@/components/legal/LegalLinks";
 
 interface LoginPageProps {
   onSocialLogin: (provider: OAuthProvider) => void | Promise<void>;
@@ -57,6 +58,8 @@ export default function LoginPage({ onSocialLogin, isModal, onClose }: LoginPage
                     <span>Google 계정으로 인증</span>
                 </button>
             </div>
+
+            <LegalLinks />
         </div>
     );
 

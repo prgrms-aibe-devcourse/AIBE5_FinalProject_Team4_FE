@@ -2,7 +2,7 @@
 doc_type: fe_api_usage
 source_of_truth: AIBE5_FinalProject_Team4_FE
 api_contract_source_of_truth: AIBE5_FinalProject_Team4_BE/docs/api/api-contract.md
-last_updated: 2026-06-14
+last_updated: 2026-06-15
 ---
 
 # API 사용 기준
@@ -150,6 +150,8 @@ API를 호출하는 화면은 아래 상태를 구분합니다.
 | OAuth 로그인 | GET | `/oauth2/authorization/{provider}` | 로그인 시작 |
 | 내 프로필 | GET | `/api/v1/users/profile` | 로그인 사용자 본인의 마이페이지 정보 표시 |
 | 사용자 프로필 | GET | `/api/v1/users/profile/{userId}` | 타 사용자 프로필 또는 룩피드 프로필 표시 |
+| 마케팅 동의 | GET | `/api/v1/users/{userId}/marketing-consent` | 마이페이지에서 마케팅 정보 수신 동의 상태 표시 |
+| 마케팅 동의 | PATCH | `/api/v1/users/{userId}/marketing-consent` | 온보딩 또는 마이페이지에서 마케팅 정보 수신 동의/철회 반영 |
 | 카탈로그 | GET | `/api/v1/categories` | 카테고리, 타입, 색상, 스타일 선택지 렌더링 |
 | 카탈로그 | GET | `/api/v1/categories/guide` | 카테고리 사용 가이드 표시 |
 | 카탈로그 | GET | `/api/v1/categories/ai-guide` | AI 분석용 카탈로그 가이드 확인 |

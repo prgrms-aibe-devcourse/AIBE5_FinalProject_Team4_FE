@@ -1,8 +1,20 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import type { RegionCode } from "@/types/index";
+import { REGIONS } from '@/data/regions';
+import LegalConsentGroup from "@/components/legal/LegalConsentGroup";
 
 interface OnboardingPageProps {
-    onComplete: (nickname: string, birthday: string, gender: "Male" | "Female" | "None", styles: string[], openModal: boolean) => void;
+    onComplete: (
+        nickname: string,
+        birthday: string,
+        gender: "Male" | "Female" | "None",
+        styles: string[],
+        region: RegionCode | '',
+        openModal: boolean,
+        marketingAgreed: boolean
+    ) => void | Promise<void>;
+    defaultNickname?: string;
 }
 
 const STYLE_OPTIONS = [
@@ -13,28 +25,41 @@ const STYLE_OPTIONS = [
     { key: "Gorpcore", emoji: "🥾", label: "고프코어", desc: "아웃도어 장비를 일상에서 착용" },
 ];
 
-export default function OnboardingPage({ onComplete }: OnboardingPageProps) {
+export default function OnboardingPage({ onComplete, defaultNickname = "" }: OnboardingPageProps) {
     const [step, setStep] = useState(1);
-    const [nickname, setNickname] = useState("");
+    const [nickname, setNickname] = useState(defaultNickname);
     const [birthday, setBirthday] = useState("");
     const [gender, setGender] = useState<"Male" | "Female" | "None">("None");
+    const [region, setRegion] = useState<RegionCode | ''>('');
 
     const [nicknameError, setNicknameError] = useState("");
     const [birthdayError, setBirthdayError] = useState("");
     const [genderError, setGenderError] = useState("");
 
     const [styles, setStyles] = useState<string[]>([]);
+    const [termsAgreed, setTermsAgreed] = useState(false);
+    const [privacyAgreed, setPrivacyAgreed] = useState(false);
+    const [marketingAgreed, setMarketingAgreed] = useState(false);
     const navigate = useNavigate();
+    const canProceedStep1 =
+        nickname !== "" &&
+        birthday !== "" &&
+        gender !== "None" &&
+        region !== "" &&
+        termsAgreed &&
+        privacyAgreed;
 
     const handleNext = () => {
-        let hasError = false;
-        if (nickname === "") { setNicknameError("닉네임을 입력해주세요"); hasError = true; }
-        else setNicknameError("");
-        if (birthday === "") { setBirthdayError("생년월일을 입력해주세요"); hasError = true; }
-        else setBirthdayError("");
-        if (gender === "None") { setGenderError("성별을 선택해주세요"); hasError = true; }
-        else setGenderError("");
-        if (!hasError) setStep(2);
+        if (!canProceedStep1) {
+            if (nickname === "") setNicknameError("닉네임을 입력해주세요");
+            if (birthday === "") setBirthdayError("생년월일을 입력해주세요");
+            if (gender === "None") setGenderError("성별을 선택해주세요");
+            return;
+        }
+        setNicknameError("");
+        setBirthdayError("");
+        setGenderError("");
+        setStep(2);
     };
 
     const handleStyleToggle = (style: string) => {
@@ -43,9 +68,21 @@ export default function OnboardingPage({ onComplete }: OnboardingPageProps) {
         );
     };
 
+    const handleComplete = async (openModal: boolean) => {
+        await onComplete(nickname, birthday, gender, styles, region, openModal, marketingAgreed);
+        navigate("/");
+    };
+
     return (
         <div className="min-h-screen bg-[#f4f4f5] flex items-center justify-center px-4 py-12">
             <div className="w-full max-w-md bg-white rounded-[28px] shadow-2xl p-8 flex flex-col gap-6">
+                {/* ← 여기에 추가 */}
+                <div className="bg-[#f3e8ff] rounded-2xl px-4 py-3 text-center">
+                    <p className="text-sm font-bold text-[#111827]">🎉 옷장난감에 처음 오셨군요!</p>
+                    <p className="text-xs text-[#73737a] mt-0.5">
+                        스타일 매칭을 위해 간단한 프로필을 설정해드릴게요.
+                    </p>
+                </div>
 
                 {/* 스텝 인디케이터 */}
                 <div className="flex items-center justify-between text-xs">
@@ -59,7 +96,7 @@ export default function OnboardingPage({ onComplete }: OnboardingPageProps) {
                 {step === 1 && (
                     <div className="flex flex-col gap-5">
                         <div>
-                            <h2 className="text-xl font-extrabold text-[#111827]">반가워요! 먼저 알아볼게요</h2>
+                            <h2 className="text-xl font-extrabold text-[#111827]">기본 정보를 입력해주세요</h2>
                             <p className="text-xs text-[#73737a] mt-1">입력하신 정보로 맞춤 스타일을 추천해드려요.</p>
                         </div>
 
@@ -109,9 +146,31 @@ export default function OnboardingPage({ onComplete }: OnboardingPageProps) {
                             {genderError && <p className="text-xs text-red-500">{genderError}</p>}
                         </div>
 
+                        {/* 지역 */}
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-[11px] font-bold text-[#73737a] uppercase tracking-wider">지역</label>
+                            <select
+                                value={region}
+                                onChange={(e) => setRegion(e.target.value as RegionCode)}
+                                className="w-full h-11 px-4 rounded-xl border border-[#e5e7eb] text-sm outline-none focus:border-[#111827] transition bg-white"
+                            ><option value="">지역 선택</option>
+                                {REGIONS.map(({ code, label }) => (
+                                    <option key={code} value={code}>{label}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <LegalConsentGroup
+                            termsAgreed={termsAgreed}
+                            privacyAgreed={privacyAgreed}
+                            marketingAgreed={marketingAgreed}
+                            onTermsChange={setTermsAgreed}
+                            onPrivacyChange={setPrivacyAgreed}
+                            onMarketingChange={setMarketingAgreed}
+                        />
+
                         <button
                             onClick={handleNext}
-                            disabled={nickname === "" || birthday === "" || gender === "None"}
+                            disabled={!canProceedStep1}
                             className="w-full h-12 rounded-xl bg-[#111827] text-white font-bold text-sm transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer mt-2"
                         >
                             다음
@@ -182,13 +241,13 @@ export default function OnboardingPage({ onComplete }: OnboardingPageProps) {
 
                         <div className="grid grid-cols-1 gap-3">
                             <button
-                                onClick={() => { onComplete(nickname, birthday, gender, styles, true); navigate("/"); }}
+                                onClick={() => { void handleComplete(true); }}
                                 className="w-full h-14 rounded-xl bg-[#111827] text-white font-bold text-sm cursor-pointer hover:bg-[#1f2937] transition"
                             >
                                 👕 지금 옷 등록하기
                             </button>
                             <button
-                                onClick={() => { onComplete(nickname, birthday, gender, styles, false); navigate("/"); }}
+                                onClick={() => { void handleComplete(false); }}
                                 className="w-full h-12 rounded-xl border border-[#e5e7eb] text-[#73737a] font-semibold text-sm cursor-pointer hover:bg-[#f5f5f5] transition"
                             >
                                 나중에 등록할게요

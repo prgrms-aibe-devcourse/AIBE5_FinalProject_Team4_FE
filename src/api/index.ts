@@ -10,37 +10,42 @@ const api = axios.create({
     'Content-Type': 'application/json',
     Accept: 'application/json',
   },
-  maxRedirects: 0,
-})
-
-// 요청 인터셉터 (예: 토큰 자동 첨부)
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token')
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-  }
-  return config
+  maxRedirects: 0, withCredentials: true, // 쿠키 자동전송
 })
 
 // 응답 인터셉터 — 개발 중에는 페이지 이동 없이 호출부에서 처리
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    const skipRedirect =
-      import.meta.env.DEV ||
-      error.config?.headers?.['X-Skip-Global-Error-Redirect'] === 'true'
+  async(error) => {
+    const originalConfig = error.config;
+      // 401 처리 (refresh 로직)
+      if (error.response?.status === 401) {
+          if (originalConfig.url?.includes('/auth/refresh') || originalConfig._retry) {
 
-    if (skipRedirect) {
-      return Promise.reject(error)
-    }
+              return Promise.reject(error);
+          }
 
-    if (error.response && error.response.status >= 500) {
-      window.location.href = '/error/server'
-    } else if (!error.response) {
-      window.location.href = '/error/network'
-    }
+          originalConfig._retry = true;
 
-    return Promise.reject(error)
+          try {
+              await api.post('/api/v1/auth/refresh');
+              return api(originalConfig);
+          } catch {
+              return Promise.reject(error);
+          }
+      }
+
+      // 401 이외 에러 처리
+      const skipRedirect =
+          import.meta.env.DEV ||
+          error.config?.headers?.['X-Skip-Global-Error-Redirect'] === 'true';
+
+      if (skipRedirect) return Promise.reject(error);
+
+      if (error.response?.status >= 500) window.location.href = '/error/server';
+      else if (!error.response) window.location.href = '/error/network';
+
+      return Promise.reject(error);
   },
 )
 
