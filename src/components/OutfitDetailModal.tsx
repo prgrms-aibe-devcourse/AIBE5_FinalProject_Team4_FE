@@ -23,6 +23,7 @@ interface OutfitDetailModalProps {
     top?: OutfitItem | null
     bottom?: OutfitItem | null
     outer?: OutfitItem | null
+    shoes?: OutfitItem | null
     totalScore?: number
     weatherLabel?: string
     outfitId?: number
@@ -75,6 +76,7 @@ export default function OutfitDetailModal({
     { key: 'TOP', item: editCombo.top, label: '상의' },
     { key: 'BOTTOM', item: editCombo.bottom, label: '하의' },
     { key: 'OUTER', item: editCombo.outer, label: '아우터' },
+    { key: 'SHOES', item: editCombo.shoes, label: '신발' },
   ].filter(it => it.item != null)
 
   const handleSave = async () => {
@@ -95,6 +97,7 @@ export default function OutfitDetailModal({
           { item: editCombo.top, itemRole: 'TOP', layerOrder: 1 },
           { item: editCombo.bottom, itemRole: 'BOTTOM', layerOrder: 2 },
           { item: editCombo.outer, itemRole: 'OUTER', layerOrder: 3 },
+          { item: editCombo.shoes, itemRole: 'SHOES', layerOrder: 4 },
         ]
             .filter(it => it.item != null && it.item?.clothesId != null)
             .map(it => ({

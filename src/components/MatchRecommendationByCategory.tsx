@@ -396,7 +396,7 @@ export default function MatchRecommendationByCategory({
         wishlistSubmitting={selectedItem ? isSubmitting(selectedItem.clothesId) : false}
         onWishlistToggle={
           selectedItem?.clothesId != null && !selectedItem.isAnchor
-            ? () => void toggleWishlist(selectedItem)
+            ? async () => { await toggleWishlist(selectedItem) }
             : undefined
         }
         onPurchaseConfirm={

@@ -13,6 +13,7 @@ import {
 import type { RecommendCardItem } from '@/utils/recommendationMapper'
 import {
   buildWishlistPayloadFromRecommendedItem,
+  buildWishlistPayloadFromCardItem,
   findOwnedGarmentForRecommendation,
   findWishlistGarmentForRecommendation,
   recommendationWishlistProductCode,
@@ -82,13 +83,18 @@ export function useRecommendWishlistToggle({
           setOverrides((prev) => new Map(prev).set(clothesId, false))
           setToastMessage('위시리스트에서 제거했어요')
         } else {
-          if (!item.source) {
-            throw new Error('위시리스트 저장에 필요한 상품 정보가 없습니다.')
+          if (item.source) {
+            await createWishlistClothes(
+              userId,
+              buildWishlistPayloadFromRecommendedItem(item.source),
+            )
+          } else {
+            // fallback: build payload from card item (style-based or demo items)
+            await createWishlistClothes(
+              userId,
+              buildWishlistPayloadFromCardItem(item),
+            )
           }
-          await createWishlistClothes(
-            userId,
-            buildWishlistPayloadFromRecommendedItem(item.source),
-          )
           setOverrides((prev) => new Map(prev).set(clothesId, true))
           setToastMessage('위시리스트에 추가했어요')
         }

@@ -7,7 +7,7 @@ import type { RecommendCardItem, RecommendColorChip } from '@/utils/recommendati
 import { useToast } from './Toast'
 import { postRecommendationFeedback, RecommendationFeedbackType } from '@/api/recommendations'
 import { createWishlistClothes } from '@/api/wardrobe'
-import { buildWishlistPayloadFromRecommendedItem } from '@/utils/recommendWishlistPayload'
+import { buildWishlistPayloadFromRecommendedItem, WishlistClothesCreatePayload } from '@/utils/recommendWishlistPayload'
 import { getUserIdFromAccessToken } from '@/utils/authUser'
 
 interface RecommendProductDetailModalProps {
@@ -16,7 +16,7 @@ interface RecommendProductDetailModalProps {
     onClose: () => void
     wishlisted?: boolean
     wishlistSubmitting?: boolean
-    onWishlistToggle?: () => void
+    onWishlistToggle?: () => Promise<void>
     onDislike?: () => void
     dislikeSubmitting?: boolean
     onPurchaseConfirm?: () => Promise<boolean>
@@ -91,12 +91,15 @@ export default function RecommendProductDetailModal({
         }
         try {
             if (type === 'SAVED') {
-                if (!item.source) {
-                    await postRecommendationFeedback(uid, { feedbackType: type, clothesId: item.clothesId ?? undefined })
-                    showToast('success', '추천을 저장했습니다.')
-                } else {
+                if (item.source) {
                     await createWishlistClothes(uid, buildWishlistPayloadFromRecommendedItem(item.source))
                     showToast('success', '위시리스트에 저장했습니다.')
+                } else if (item.clothesId) {
+                    await postRecommendationFeedback(uid, { feedbackType: type, clothesId: item.clothesId })
+                    showToast('success', '추천을 저장했습니다.')
+                } else {
+                    showToast('error', '저장할 상품 정보가 없습니다.')
+                    return
                 }
                 onClose()
             } else if (type === 'EXCLUDE') {
@@ -203,10 +206,18 @@ export default function RecommendProductDetailModal({
                 <div className="grid grid-cols-2 gap-2">
                     <button
                         type="button"
-                        onClick={() => callFeedback('SAVED')}
-                        className="h-10 rounded-2xl bg-[#111827] text-white font-black text-sm hover:bg-slate-800 transition-colors"
+                        onClick={async () => {
+                            if (onWishlistToggle) {
+                                await onWishlistToggle()
+                                onClose()
+                            } else {
+                                void callFeedback('SAVED')
+                            }
+                        }}
+                        disabled={wishlistSubmitting}
+                        className="h-10 rounded-2xl bg-[#111827] text-white font-black text-sm hover:bg-slate-800 transition-colors disabled:opacity-60"
                     >
-                        저장하기
+                        {wishlistSubmitting ? '저장 중...' : '저장하기'}
                     </button>
                     <button
                         type="button"

@@ -9,11 +9,13 @@ import {
   X, 
   ChevronRight,
   Activity, 
-  Layers,
+  Layout,
+  Shirt,
 } from "./components/icons";
 import { UserProfile } from "@/types/index";
 import HomeTab from "./components/HomeTab";
 import ClosetTab from "./components/ClosetTab";
+import OutfitBookTab from "./components/OutfitBookTab";
 import GarmentRegisterMethodModal from "./components/GarmentRegisterMethodModal";
 import PhotoGarmentRegisterModal from "./components/PhotoGarmentRegisterModal";
 import PurchaseGarmentRegisterModal from "./components/PurchaseGarmentRegisterModal";
@@ -107,8 +109,8 @@ export default function App() {
     setSelectedGarment,
   });
 
-  // Navigation state: 'home' | 'closet' | 'feed' | 'profile'
-  const [currentTab, setCurrentTab] = useState<"home" | "closet" | "feed" | "profile">("home");
+  // Navigation state: 'home' | 'closet' | 'outfit-book' | 'feed' | 'profile'
+  const [currentTab, setCurrentTab] = useState<"home" | "closet" | "outfit-book" | "feed" | "profile">("home");
   const [homeResetSignal, setHomeResetSignal] = useState<number>(0);
   const [isPhotoRegisterOpen, setIsPhotoRegisterOpen] = useState(false);
   const [isPurchaseRegisterOpen, setIsPurchaseRegisterOpen] = useState(false);
@@ -352,6 +354,13 @@ export default function App() {
               )}
 
               {/* ========================================================= */}
+              {/* TAB 2.5: OUTFIT BOOK (Saved outfits collection) */}
+              {/* ========================================================= */}
+              {currentTab === "outfit-book" && (
+                <OutfitBookTab userId={authUserId ?? 0} />
+              )}
+
+              {/* ========================================================= */}
               {/* TAB 3: STYLE FEED (Mockup curation sandbox) */}
               {/* ========================================================= */}
               {currentTab === "feed" && (
@@ -507,8 +516,19 @@ export default function App() {
                   setCurrentTab("closet")}}
                 className={`flex flex-col items-center justify-center flex-1 py-1 transition ${currentTab === "closet" ? "text-[#1E3A8A]" : "text-slate-400 hover:text-slate-600"}`}
               >
-                <Layers className="w-5 h-5" />
+                <Shirt className="w-5 h-5" />
                 <span className="text-[9px] font-extrabold mt-1">옷장</span>
+              </button>
+
+              <button 
+                id="nav-outfit-book" 
+                onClick={() => {
+                  if(!requireLogin()) return;
+                  setCurrentTab("outfit-book")}}
+                className={`flex flex-col items-center justify-center flex-1 py-1 transition ${currentTab === "outfit-book" ? "text-[#1E3A8A]" : "text-slate-400 hover:text-slate-600"}`}
+              >
+                <Layout className="w-5 h-5" />
+                <span className="text-[9px] font-extrabold mt-1">코디북</span>
               </button>
 
               <button 
