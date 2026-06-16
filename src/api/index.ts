@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 const api = axios.create({
-  // 개발: Vite 프록시(/api → BE). 운영: VITE_API_BASE_URL 직접 호출
+  // 개발: Vite ?�록??/api ??BE). ?�영: VITE_API_BASE_URL 직접 ?�출
   baseURL: import.meta.env.DEV
     ? ''
     : (import.meta.env.VITE_API_BASE_URL ?? ''),
@@ -10,10 +10,10 @@ const api = axios.create({
     'Content-Type': 'application/json',
     Accept: 'application/json',
   },
-  maxRedirects: 0, withCredentials: true, // 쿠키 자동전송
+  maxRedirects: 0, withCredentials: true, // 쿠키 ?�동?�송
 })
 
-// 응답 인터셉터 — 개발 중에는 페이지 이동 없이 호출부에서 처리
+// ?�답 ?�터?�터 ??개발 중에???�이지 ?�동 ?�이 ?�출부?�서 처리
 api.interceptors.response.use(
   (response) => response,
   async(error) => {
@@ -37,7 +37,7 @@ api.interceptors.response.use(
           }
       }
 
-      // 401 이외 에러 처리
+      // 401 ?�외 ?�러 처리
       const skipRedirect =
           import.meta.env.DEV ||
           error.config?.headers?.['X-Skip-Global-Error-Redirect'] === 'true';

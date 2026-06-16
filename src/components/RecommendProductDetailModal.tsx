@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import AuthenticatedImage from '@/components/common/AuthenticatedImage'
 import BrandDisplay from '@/components/common/BrandDisplay'
 import { Modal, ModalBody, ModalFooter, ModalHeader } from '@/components/common/Modal'
