@@ -13,18 +13,23 @@ import { clearDevToken } from "@/utils/ensureDevToken";
 import axios from "axios";
 import ClosetGarmentDetail from "@/components/ClosetGarmentDetail";
 import ClosetWardrobeMascot from "@/components/ClosetWardrobeMascot";
-import { 
-  Heart, 
-  ShoppingBag, 
-  Flame, 
-  Award, 
+import {
+  Heart,
+  ShoppingBag,
+  Flame,
+  Award,
   HeartHandshake,
   Sparkle,
   Plus,
+  Layout,
+  ChevronRight, Shirt,
+  Search,
 } from "./icons";
-import { Garment } from "@/types/index";
+import { fetchMyOutfitBook, type OutfitResponse } from "@/api/outfits";
+import OutfitDetailModal from "./OutfitDetailModal";
+import {Garment} from "@/types";
 
-type ClosetTabView = "owned" | "wishlist" | "favorites";
+type ClosetTabView = "owned" | "wishlist" | "favorites" | "outfits";
 
 interface ClosetTabProps {
   clothes: Garment[];
@@ -51,6 +56,36 @@ export default function ClosetTab({
   const [error, setError] = useState<string | null>(null);
   const [wardrobeStats, setWardrobeStats] = useState<WardrobeStatisticsResponse | null>(null);
   const selectedRef = useRef<Garment | null>(null);
+
+  // 코디북 상태
+  const [outfits, setOutfits] = useState<OutfitResponse[]>([]);
+  const [outfitBookId, setOutfitBookId] = useState<number | null>(null);
+  const [outfitLoading, setOutfitLoading] = useState(false);
+  const [selectedOutfit, setSelectedOutfit] = useState<OutfitResponse | null>(null);
+  const [outfitSearchTerm, setOutfitSearchTerm] = useState<string>("");
+
+  const loadOutfits = useCallback(async () => {
+    setOutfitLoading(true);
+    try {
+      const book = await fetchMyOutfitBook();
+      setOutfitBookId(book.outfitBookId);
+      setOutfits(book.outfits ?? []);
+    } catch (err) {
+      console.error("Failed to load outfits:", err);
+    } finally {
+      setOutfitLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadOutfits();
+  }, []);
+
+  useEffect(() => {
+    if (closetTab === "outfits") {
+      loadOutfits();
+    }
+  }, [closetTab]);
 
   useEffect(() => {
     selectedRef.current = selectedGarment;
@@ -244,6 +279,15 @@ export default function ClosetTab({
     }
   };
 
+  // Filtered outfits
+  const filteredOutfits = useMemo(() => {
+    if (closetTab !== "outfits") return [];
+    if (!outfitSearchTerm.trim()) return outfits;
+    return outfits.filter(of => 
+      of.title.toLowerCase().includes(outfitSearchTerm.toLowerCase())
+    );
+  }, [outfits, outfitSearchTerm, closetTab]);
+
   if (loading) return <Spinner />;
   if (error) {
     return (
@@ -370,39 +414,70 @@ export default function ClosetTab({
           <Heart className={`w-4 h-4 shrink-0 ${closetTab === "favorites" ? "fill-rose-500 text-rose-500" : "text-slate-400"}`} />
           <span className="truncate">즐겨찾기 ({favoritesCount})</span>
         </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setClosetTab("outfits");
+            setSelectedGarment(null);
+          }}
+          className={`py-2.5 px-2 rounded-xl text-xs font-black tracking-tight transition-all duration-300 flex items-center justify-center gap-1.5 cursor-pointer min-w-0 ${
+            closetTab === "outfits"
+              ? "bg-white text-[#1E3A8A] shadow-sm border border-slate-200/50"
+              : "text-slate-500 hover:text-slate-850"
+          }`}
+        >
+          <Layout className={`w-4 h-4 shrink-0 ${closetTab === "outfits" ? "text-indigo-600" : "text-slate-400"}`} />
+          <span className="truncate">내 코디 ({outfits.length})</span>
+        </button>
       </div>
 
-      <div className="grid grid-cols-5 gap-2 w-full select-none text-left">
-        {["All", "Top", "Bottom", "Outer", "Shoes"].map((cat) => {
-          const isSelected = closetFilter === cat;
-          return (
-            <button
-              key={cat}
-              onClick={() => setClosetFilter(cat)}
-              className={`w-full min-w-0 px-2 py-2.5 rounded-full text-[11px] sm:text-xs font-bold transition-all duration-200 border cursor-pointer flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 ${
-                isSelected
-                  ? "bg-[#1E3A8A] text-white border-transparent shadow-xs"
-                  : "bg-white text-slate-500 border-slate-200 hover:border-slate-350"
-              }`}
-            >
-              <span className="text-sm leading-none">
-                {cat === "All" && "📂"}
-                {cat === "Top" && "👕"}
-                {cat === "Bottom" && "👖"}
-                {cat === "Outer" && "🧥"}
-                {cat === "Shoes" && "👟"}
-              </span>
-              <span className="truncate max-w-full text-center">
-                {cat === "All" && "전체"}
-                {cat === "Top" && `상의 (${categoriesCount.Top})`}
-                {cat === "Bottom" && `하의 (${categoriesCount.Bottom})`}
-                {cat === "Outer" && `아우터 (${categoriesCount.Outer})`}
-                {cat === "Shoes" && `신발 (${categoriesCount.Shoes})`}
-              </span>
-            </button>
-          );
-        })}
-      </div>
+      {closetTab === "outfits" ? (
+        <div className="relative w-full">
+          <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+            <Search className="w-4 h-4 text-slate-400" />
+          </div>
+          <input
+            type="text"
+            placeholder="코디 제목으로 검색해 보세요"
+            value={outfitSearchTerm}
+            onChange={(e) => setOutfitSearchTerm(e.target.value)}
+            className="w-full pl-11 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-xs font-bold text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all shadow-3xs"
+          />
+        </div>
+      ) : (
+        <div className="grid grid-cols-5 gap-2 w-full select-none text-left">
+          {["All", "Top", "Bottom", "Outer", "Shoes"].map((cat) => {
+            const isSelected = closetFilter === cat;
+            return (
+              <button
+                key={cat}
+                onClick={() => setClosetFilter(cat)}
+                className={`w-full min-w-0 px-2 py-2.5 rounded-full text-[11px] sm:text-xs font-bold transition-all duration-200 border cursor-pointer flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 ${
+                  isSelected
+                    ? "bg-[#1E3A8A] text-white border-transparent shadow-xs"
+                    : "bg-white text-slate-500 border-slate-200 hover:border-slate-350"
+                }`}
+              >
+                <span className="text-sm leading-none">
+                  {cat === "All" && "📂"}
+                  {cat === "Top" && "👕"}
+                  {cat === "Bottom" && "👖"}
+                  {cat === "Outer" && "🧥"}
+                  {cat === "Shoes" && "👟"}
+                </span>
+                <span className="truncate max-w-full text-center">
+                  {cat === "All" && "전체"}
+                  {cat === "Top" && `상의 (${categoriesCount.Top})`}
+                  {cat === "Bottom" && `하의 (${categoriesCount.Bottom})`}
+                  {cat === "Outer" && `아우터 (${categoriesCount.Outer})`}
+                  {cat === "Shoes" && `신발 (${categoriesCount.Shoes})`}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
           <div className="flex justify-between items-center select-none pb-1.5">
             <h2 className="text-lg font-black text-slate-900 tracking-tight flex items-center space-x-2">
@@ -411,97 +486,169 @@ export default function ClosetTab({
                   ? "보유 컬렉션 목록"
                   : closetTab === "wishlist"
                     ? "스마트 위시 보드"
-                    : "즐겨찾기 컬렉션"}
+                    : closetTab === "favorites"
+                      ? "즐겨찾기 컬렉션"
+                      : "내 코디북"}
               </span>
-              <span className="text-slate-400 font-normal text-xs">({filteredClothes.length}개 발견됨)</span>
+              <span className="text-slate-400 font-normal text-xs">
+                ({closetTab === "outfits" ? filteredOutfits.length : filteredClothes.length}개 발견됨)
+              </span>
             </h2>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {filteredClothes.map((item) => {
-              const isSelected = selectedGarment?.id === item.id;
-              
-              // Custom pastel colors to map nicely
-              let cardBg = "from-sky-50 to-white";
-              if (item.category === "Top") cardBg = "from-[#ECF5FD] to-white";
-              else if (item.category === "Bottom") cardBg = "from-[#EAF9F5] to-white";
-              else if (item.category === "Outer") cardBg = "from-[#FFF5F3] to-white";
-              else if (item.category === "Shoes") cardBg = "from-[#FFFDF0] to-white";
-
-              return (
-                <div
-                  key={item.id}
-                  onClick={() => setSelectedGarment(item)}
-                  className={`aspect-square bg-gradient-to-tr ${cardBg} rounded-[24px] border-2 transition-all duration-300 relative p-3 text-left cursor-pointer group hover:scale-101 flex flex-col overflow-hidden ${
-                    isSelected 
-                      ? "border-[#1E3A8A] ring-4 ring-[#1E3A8A]/10 shadow-md" 
-                      : "border-slate-100 hover:border-slate-300 shadow-3xs"
-                  }`}
-                >
-                  
-                  {/* Absolute category badge hanger icon floating left */}
-                  <div className="absolute top-2 left-2 bg-white/95 px-2 py-1 rounded-lg border border-slate-150/40 text-[9px] font-extrabold text-slate-500 font-mono tracking-tight shadow-3xs z-5 flex items-center gap-1">
-                    <span>
-                      {item.category === "Top" && "👕"}
-                      {item.category === "Bottom" && "👖"}
-                      {item.category === "Outer" && "🧥"}
-                      {item.category === "Shoes" && "👟"}
-                    </span>
-                    <span>{item.category}</span>
-                  </div>
-
-                  {/* Top Heart favorite picker button */}
-                  <button
-                    onClick={(e) => toggleFavorite(item.id, e)}
-                    className="absolute top-2 right-2 p-1.5 rounded-full bg-white/95 hover:bg-white text-rose-500 border border-slate-100 shadow-3xs transition-transform duration-200 active:scale-90 cursor-pointer z-5 hover:rotate-3"
-                    title="즐겨찾기"
-                  >
-                    <Heart className={`w-3.5 h-3.5 transition-colors ${item.isFavorite ? "fill-rose-500 text-rose-500" : "text-slate-350"}`} />
-                  </button>
-
-                  {/* Apparel Display visual slot */}
-                  <div className="flex-1 min-h-0 mt-5 bg-[#F8FAFC]/55 rounded-2xl flex items-center justify-center overflow-hidden border border-slate-50 relative select-none">
-                    {item.thumbnailUrl ? (
-                      <AuthenticatedImage
-                        src={item.thumbnailUrl}
-                        alt={item.name}
-                        className="w-full h-full object-contain p-2 transition-transform duration-500 group-hover:scale-105"
-                        fallback={
-                          <span className="text-4xl filter drop-shadow-sm select-none">👚</span>
-                        }
-                      />
-                    ) : (
-                      <span className="text-4xl filter drop-shadow-sm select-none">👚</span>
-                    )}
-                  </div>
-
-                  {/* Descriptions texts */}
-                  <div className="shrink-0 pt-2 space-y-1">
-                    <h4 className="text-[12px] sm:text-[13px] font-black text-slate-800 tracking-tight leading-snug line-clamp-1 group-hover:text-[#1E3A8A] transition">{item.name}</h4>
-                    
-                    <div className="flex items-center gap-1 flex-wrap text-[9px] text-slate-400 font-bold select-none">
-                      <span className="bg-slate-100 hover:bg-slate-200/60 px-1.5 py-0.5 rounded-md text-slate-500 transition">{item.color}</span>
-                      <span className="bg-slate-100 hover:bg-slate-200/60 px-1.5 py-0.5 rounded-md text-slate-500 transition line-clamp-1 truncate max-w-[72px]">{item.fitType}</span>
-                    </div>
-
-                    {/* Specialized wishlist Promotion button */}
-                    {item.isWishlist && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handlePromoteToOwned(item);
-                        }}
-                        className="w-full mt-1 h-7 text-[9px] font-black rounded-lg bg-orange-100 text-orange-900 border border-orange-250 hover:bg-orange-200 transition-all duration-200 flex items-center justify-center space-x-1 shadow-3xs cursor-pointer focus:ring-2 focus:ring-orange-300 active:scale-95"
+            {closetTab === "outfits" ? (
+                <>
+                  {filteredOutfits.map((of) => (
+                      <div
+                          key={of.outfitId}
+                          onClick={() => setSelectedOutfit(of)}
+                          className="aspect-square bg-gradient-to-tr from-indigo-50 to-white rounded-[24px] border-2 border-slate-100 hover:border-indigo-400 transition-all duration-300 relative p-4 flex flex-col overflow-hidden group shadow-3xs cursor-pointer"
                       >
-                        <HeartHandshake className="w-3 h-3 text-orange-700 animate-pulse" />
-                        <span>옷장입고</span>
-                      </button>
-                    )}
+                        <div className="flex-1 bg-white/40 rounded-2xl overflow-hidden relative mb-2 flex items-center justify-center border border-slate-50">
+                          {(() => {
+                            const top = of.items.find(it => it.itemRole === 'TOP')?.clothes
+                            const bottom = of.items.find(it => it.itemRole === 'BOTTOM')?.clothes
+                            const topImg = (top?.userImageUrl || top?.imageUrl) || undefined
+                            const bottomImg = (bottom?.userImageUrl || bottom?.imageUrl) || undefined
+                            if (topImg && bottomImg) {
+                              return (
+                                  <div className="w-full h-full flex flex-col">
+                                    <div className="flex-1 overflow-hidden border-b border-white/20">
+                                      <AuthenticatedImage src={topImg} alt="상의" className="w-full h-full object-cover object-top" />
+                                    </div>
+                                    <div className="flex-1 overflow-hidden">
+                                      <AuthenticatedImage src={bottomImg} alt="하의" className="w-full h-full object-cover object-top" />
+                                    </div>
+                                  </div>
+                              )
+                            }
+                            const mainImg = topImg ?? bottomImg ?? of.thumbnailUrl
+                            return mainImg
+                                ? <AuthenticatedImage src={mainImg} alt={of.title} className="w-full h-full object-contain p-2" />
+                                : <Shirt className="w-10 h-10 text-slate-200" />
+                          })()}
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors" />
+                        </div>
+                        <h4 className="text-[13px] font-black text-slate-800 truncate">{of.title}</h4>
+                        <p className="text-[10px] text-slate-400 font-bold">{of.items.length}개의 아이템</p>
+                      </div>
+                  ))}
+            {filteredOutfits.length === 0 && !outfitLoading && (
+              <div className="col-span-full text-center py-12 px-6 bg-white rounded-3xl border-2 border-dashed border-slate-200">
+                <span className="text-4xl block mb-2">✨</span>
+                <p className="text-xs text-slate-500 font-bold">
+                  {outfitSearchTerm ? "검색 결과가 없습니다." : "저장된 코디가 없습니다."}
+                </p>
+                <p className="text-[10px] text-slate-400 mt-2 mb-4">
+                  {outfitSearchTerm ? "다른 검색어를 입력해 보세요." : "감각이가 추천해주는 코디를 저장해 보세요!"}
+                </p>
+                {!outfitSearchTerm && (
+                  <button
+                    onClick={() => {
+                      const navHome = document.getElementById("nav-home");
+                      if (navHome) navHome.click();
+                    }}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#1E3A8A] text-white text-[11px] font-black transition active:scale-95"
+                  >
+                    <span>추천 탭으로 이동</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            )}
+            {outfitLoading && (
+              <div className="col-span-full py-20 flex justify-center">
+                <Spinner />
+              </div>
+            )}
+          </>
+        ) : (
+          filteredClothes.map((item) => {
+            const isSelected = selectedGarment?.id === item.id;
+            
+            // Custom pastel colors to map nicely
+            let cardBg = "from-sky-50 to-white";
+            if (item.category === "Top") cardBg = "from-[#ECF5FD] to-white";
+            else if (item.category === "Bottom") cardBg = "from-[#EAF9F5] to-white";
+            else if (item.category === "Outer") cardBg = "from-[#FFF5F3] to-white";
+            else if (item.category === "Shoes") cardBg = "from-[#FFFDF0] to-white";
+
+            return (
+              <div
+                key={item.id}
+                onClick={() => setSelectedGarment(item)}
+                className={`aspect-square bg-gradient-to-tr ${cardBg} rounded-[24px] border-2 transition-all duration-300 relative p-3 text-left cursor-pointer group hover:scale-101 flex flex-col overflow-hidden ${
+                  isSelected 
+                    ? "border-[#1E3A8A] ring-4 ring-[#1E3A8A]/10 shadow-md" 
+                    : "border-slate-100 hover:border-slate-300 shadow-3xs"
+                }`}
+              >
+                
+                {/* Absolute category badge hanger icon floating left */}
+                <div className="absolute top-2 left-2 bg-white/95 px-2 py-1 rounded-lg border border-slate-150/40 text-[9px] font-extrabold text-slate-500 font-mono tracking-tight shadow-3xs z-5 flex items-center gap-1">
+                  <span>
+                    {item.category === "Top" && "👕"}
+                    {item.category === "Bottom" && "👖"}
+                    {item.category === "Outer" && "🧥"}
+                    {item.category === "Shoes" && "👟"}
+                  </span>
+                  <span>{item.category}</span>
+                </div>
+
+                {/* Top Heart favorite picker button */}
+                <button
+                  onClick={(e) => toggleFavorite(item.id, e)}
+                  className="absolute top-2 right-2 p-1.5 rounded-full bg-white/95 hover:bg-white text-rose-500 border border-slate-100 shadow-3xs transition-transform duration-200 active:scale-90 cursor-pointer z-5 hover:rotate-3"
+                  title="즐겨찾기"
+                >
+                  <Heart className={`w-3.5 h-3.5 transition-colors ${item.isFavorite ? "fill-rose-500 text-rose-500" : "text-slate-350"}`} />
+                </button>
+
+                {/* Apparel Display visual slot */}
+                <div className="flex-1 min-h-0 mt-5 bg-[#F8FAFC]/55 rounded-2xl flex items-center justify-center overflow-hidden border border-slate-50 relative select-none">
+                  {item.thumbnailUrl ? (
+                    <AuthenticatedImage
+                      src={item.thumbnailUrl}
+                      alt={item.name}
+                      className="w-full h-full object-contain p-2 transition-transform duration-500 group-hover:scale-105"
+                      fallback={
+                        <span className="text-4xl filter drop-shadow-sm select-none">👚</span>
+                      }
+                    />
+                  ) : (
+                    <span className="text-4xl filter drop-shadow-sm select-none">👚</span>
+                  )}
+                </div>
+
+                {/* Descriptions texts */}
+                <div className="shrink-0 pt-2 space-y-1">
+                  <h4 className="text-[12px] sm:text-[13px] font-black text-slate-800 tracking-tight leading-snug line-clamp-1 group-hover:text-[#1E3A8A] transition">{item.name}</h4>
+                  
+                  <div className="flex items-center gap-1 flex-wrap text-[9px] text-slate-400 font-bold select-none">
+                    <span className="bg-slate-100 hover:bg-slate-200/60 px-1.5 py-0.5 rounded-md text-slate-500 transition">{item.color}</span>
+                    <span className="bg-slate-100 hover:bg-slate-200/60 px-1.5 py-0.5 rounded-md text-slate-500 transition line-clamp-1 truncate max-w-[72px]">{item.fitType}</span>
                   </div>
 
+                  {/* Specialized wishlist Promotion button */}
+                  {item.isWishlist && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handlePromoteToOwned(item);
+                      }}
+                      className="w-full mt-1 h-7 text-[9px] font-black rounded-lg bg-orange-100 text-orange-900 border border-orange-250 hover:bg-orange-200 transition-all duration-200 flex items-center justify-center space-x-1 shadow-3xs cursor-pointer focus:ring-2 focus:ring-orange-300 active:scale-95"
+                    >
+                      <HeartHandshake className="w-3 h-3 text-orange-700 animate-pulse" />
+                      <span>옷장입고</span>
+                    </button>
+                  )}
                 </div>
-              );
-            })}
+
+              </div>
+            )
+          })
+        )}
 
             {/* Empty view status fallbacks */}
             {filteredClothes.length === 0 && (
@@ -572,6 +719,24 @@ export default function ClosetTab({
         </aside>
 
       </div>
+
+      {/* 코디 상세/수정 모달 */}
+      <OutfitDetailModal
+        open={selectedOutfit !== null}
+        combination={selectedOutfit ? {
+          outfitId: selectedOutfit.outfitId,
+          bookId: outfitBookId || 0,
+          title: selectedOutfit.title,
+          description: selectedOutfit.description,
+          top: selectedOutfit.items.find(it => it.itemRole === 'TOP')?.clothes,
+          bottom: selectedOutfit.items.find(it => it.itemRole === 'BOTTOM')?.clothes,
+          outer: selectedOutfit.items.find(it => it.itemRole === 'OUTER')?.clothes,
+        } : null}
+        onClose={() => setSelectedOutfit(null)}
+        onSaved={loadOutfits}
+        userId={userId}
+        clothes={clothes}
+      />
 
       {/* 옷 등록 — 방식 선택 모달 진입 */}
       <div className="fixed bottom-20 left-0 right-0 z-20 flex justify-center px-5 pointer-events-none">
