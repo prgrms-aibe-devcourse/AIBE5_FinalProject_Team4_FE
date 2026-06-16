@@ -51,15 +51,16 @@ export default function OnboardingPage({ onComplete, defaultNickname = "" }: Onb
         privacyAgreed;
 
     const handleNext = () => {
-        let hasError = false;
-        if (nickname === "") { setNicknameError("닉네임을 입력해주세요"); hasError = true; }
-        else setNicknameError("");
-        if (birthday === "") { setBirthdayError("생년월일을 입력해주세요"); hasError = true; }
-        else setBirthdayError("");
-        if (gender === "None") { setGenderError("성별을 선택해주세요"); hasError = true; }
-        else setGenderError("");
-        if (!termsAgreed || !privacyAgreed) hasError = true;
-        if (!hasError) setStep(2);
+        if (!canProceedStep1) {
+            if (nickname === "") setNicknameError("닉네임을 입력해주세요");
+            if (birthday === "") setBirthdayError("생년월일을 입력해주세요");
+            if (gender === "None") setGenderError("성별을 선택해주세요");
+            return;
+        }
+        setNicknameError("");
+        setBirthdayError("");
+        setGenderError("");
+        setStep(2);
     };
 
     const handleStyleToggle = (style: string) => {
