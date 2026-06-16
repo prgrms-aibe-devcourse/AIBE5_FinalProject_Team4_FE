@@ -8,12 +8,13 @@ import { useToast } from './Toast'
 import { postRecommendationFeedback, RecommendationFeedbackType } from '@/api/recommendations'
 import { createWishlistClothes } from '@/api/wardrobe'
 import { buildWishlistPayloadFromRecommendedItem } from '@/utils/recommendWishlistPayload'
-import { getUserIdFromAccessToken } from '@/utils/authUser'
+
 
 interface RecommendProductDetailModalProps {
     open: boolean
     item: RecommendCardItem | null
     onClose: () => void
+    userId: number | null
     wishlisted?: boolean
     wishlistSubmitting?: boolean
     onWishlistToggle?: () => void
@@ -53,6 +54,7 @@ export default function RecommendProductDetailModal({
                                                         open,
                                                         item,
                                                         onClose,
+                                                        userId,
                                                         wishlisted = false,
                                                         wishlistSubmitting = false,
                                                         onWishlistToggle,
@@ -81,7 +83,7 @@ export default function RecommendProductDetailModal({
     ]
     const canToggleWishlist = !item.isAnchor && item.clothesId != null && onWishlistToggle
 
-    const resolvedUserId = getUserIdFromAccessToken()
+    const resolvedUserId = userId
 
     const callFeedback = async (type: RecommendationFeedbackType) => {
         const uid = resolvedUserId
