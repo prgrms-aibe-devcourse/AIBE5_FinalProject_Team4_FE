@@ -1,7 +1,7 @@
 ---
 doc_type: fe_doc_index
 source_of_truth: AIBE5_FinalProject_Team4_FE
-last_updated: 2026-06-14
+last_updated: 2026-06-15
 ---
 
 # 프로젝트 문서
@@ -31,6 +31,10 @@ last_updated: 2026-06-14
 | [domain/invariants.md](./domain/invariants.md) | 공통 | 구현 중 유지해야 하는 핵심 도메인 규칙 |
 | [features/recommendation-policy.md](./features/recommendation-policy.md) | 공통 | 추천 점수, 피드백, 추천 제외, 동점 처리 기준 |
 | [features/garment-registration.md](./features/garment-registration.md) | 공통 | 사진, 구매내역, 외부 상품 기반 옷 등록 흐름 |
+| [legal/terms.md](./legal/terms.md) | 공통 | 서비스 이용약관 |
+| [legal/privacy-policy.md](./legal/privacy-policy.md) | 공통 | 개인정보 처리방침 |
+| [legal/marketing-consent.md](./legal/marketing-consent.md) | 공통 | 마케팅 정보 수신 동의 |
+| [features/auth-and-onboarding.md](./features/auth-and-onboarding.md) | FE | 로그인, 약관 링크, 온보딩, 마케팅 정보 수신 동의 기준 |
 | [architecture/system-architecture.md](./architecture/system-architecture.md) | 공통 | FE, BE, DB, 외부 API, 저장소, 인프라의 전체 연결 구조 |
 | [architecture/information-architecture.md](./architecture/information-architecture.md) | 공통 | 화면, 메뉴, 주요 진입 흐름 |
 | [architecture/sequence-diagrams.md](./architecture/sequence-diagrams.md) | 공통 | 로그인, 옷 등록, 옷장, 추천, 보유 전환, 룩피드 주요 기능 흐름 |
@@ -57,7 +61,7 @@ last_updated: 2026-06-14
 4. [시스템 아키텍처](./architecture/system-architecture.md), [정보 구조도](./architecture/information-architecture.md), [시퀀스 다이어그램](./architecture/sequence-diagrams.md), [기술 스택](./architecture/tech-stack.md)에서 전체 구성, 화면 흐름, 주요 기능 동작 순서, 사용 기술을 확인합니다.
 5. [도메인 용어집](./domain/glossary.md), [카탈로그 사용 가이드](./domain/catalog.md), [도메인 규칙](./domain/invariants.md)에서 데이터 의미와 불변 규칙을 확인합니다.
 6. [FE 구현 정합성 현황](./frontend/implementation-gaps.md)에서 현재 코드와 공식 기준의 차이, mock/static/local state 경계를 확인합니다.
-7. [추천 정책](./features/recommendation-policy.md)과 [옷 등록 플로우](./features/garment-registration.md)에서 주요 기능 정책을 확인합니다.
+7. [이용약관](./legal/terms.md), [개인정보 처리방침](./legal/privacy-policy.md), [마케팅 정보 수신 동의](./legal/marketing-consent.md), [인증과 온보딩](./features/auth-and-onboarding.md), [추천 정책](./features/recommendation-policy.md), [옷 등록 플로우](./features/garment-registration.md)에서 주요 기능 정책을 확인합니다.
 8. [FE 도메인 타입 기준](./frontend/domain-types.md)에서 API code, UI label, view model 변환 기준을 확인합니다.
 9. [FE API 사용 기준](./api/frontend-api-usage.md)에서 API 호출, 응답 parsing, 인증 사용자 ID, 오류 처리 기준을 확인합니다.
 10. [폴더 구조](./frontend/folder-structure.md), [라우팅 기준](./frontend/routing.md), [mock 정책](./frontend/mock-policy.md)에서 FE 코드 구조와 임시 구현 경계를 확인합니다.
