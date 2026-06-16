@@ -105,6 +105,7 @@ BE API는 기본적으로 `ApiResponse<T>` 형식을 사용합니다.
   "data": null,
   "message": "요청 값이 올바르지 않습니다."
 }
+
 ```
 
 | 필드 | 타입 | FE 처리 기준 |
