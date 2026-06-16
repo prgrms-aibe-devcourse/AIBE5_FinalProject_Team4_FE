@@ -36,6 +36,8 @@ import {
   loadUserProfile,
   saveUserProfile,
 } from "@/utils/userProfileStorage";
+import { updateMarketingConsent } from "@/api/marketingConsent";
+import MarketingConsentSetting from "@/components/legal/MarketingConsentSetting";
 // 기존 상수 data ( TRIGGER_PRODUCTS 는 사용을 하지않아 우선 주석처리함 )
 // import { TRIGGER_PRODUCTS } from "@/data/triggerProducts";
 
@@ -204,8 +206,16 @@ export default function App() {
       {/* 2. ONBOARDING PROFILE FLOWS */}
       {/* ========================================================= */}
       {isLoggedIn && !profile.onboarded && (
-          <OnboardingPage onComplete={(nickname, birthday, gender, styles, openModal) => {
+          <OnboardingPage onComplete={async (nickname, birthday, gender, styles, openModal, marketingAgreed) => {
             persistProfile({ nickname, birthday, gender, styles, onboarded: true });
+            const targetUserId = authUserId ?? getUserIdFromAccessToken();
+            if (targetUserId != null) {
+              try {
+                await updateMarketingConsent(targetUserId, { marketingAgreed });
+              } catch {
+                alert("마케팅 정보 수신 동의 저장에 실패했습니다. 마이페이지에서 다시 변경할 수 있습니다.");
+              }
+            }
             if (openModal) openGarmentRegister();
           }} />
       )}
@@ -431,6 +441,11 @@ export default function App() {
                       </span>
                     </div>
                   </div>
+
+                  <MarketingConsentSetting
+                    userId={authUserId}
+                    enabled={authReady && authTokenError == null && authUserId != null}
+                  />
 
                   {/* Reset account Option and info */}
                   <div className="p-4 rounded-xl bg-[#BBF7D0]/10 border border-[#BBF7D0]/20 space-y-1.5">
