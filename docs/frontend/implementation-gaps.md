@@ -1,7 +1,7 @@
 ---
 doc_type: fe_implementation_gaps
 source_of_truth: AIBE5_FinalProject_Team4_FE
-last_updated: 2026-06-14
+last_updated: 2026-06-15
 ---
 
 # FE 구현 정합성 현황
@@ -32,7 +32,7 @@ last_updated: 2026-06-14
 | --- | --- | --- | --- |
 | 인증 유지 | `POST /api/v1/auth/refresh`, `POST /api/v1/auth/logout` 미사용. access token은 `localStorage.token` 중심으로 복구 | `AUTH-005` refresh token 기반 로그인 상태 유지 | [frontend-api-usage.md](../api/frontend-api-usage.md) |
 | 홈 추천 API | AI MD chat은 `/api/chat-gamyagi` 직접 `fetch` | AI chat을 BE API 계약 경로 및 공통 API client로 전환 | [home-recommendation.md](../features/home-recommendation.md), [mock-policy.md](mock-policy.md) |
-| 추천 피드백 | 추천 저장/싫어요/추천 제외 액션이 `feedback` API와 연결되지 않음 | `RECO-013`~`RECO-014` 피드백 API 호출 | [frontend-api-usage.md](../api/frontend-api-usage.md) |
+| 추천 피드백 | 싫어요/추천 제외와 일부 저장 액션은 `feedback` API에 연결되어 있으나, 외부 상품 저장/AI MD 등 일부 액션은 피드백 기록 범위 확인 필요 | `RECO-013`~`RECO-014` 피드백 API 호출 범위 명확화 | [frontend-api-usage.md](../api/frontend-api-usage.md) |
 | 옷 대상 성별 UI | 사진/구매내역 등록, 옷 수정 화면에서 `gender`를 표시하고 직접 수정 | `CLOTHES.gender`는 사용자 화면 비노출, 내부 분류/추천 및 저장 요청용 code | [garment-registration.md](../features/garment-registration.md), [domain-types.md](domain-types.md) |
 | 옷 계절 수정 payload/검증 주석 | 옷 수정 payload builder가 `season`을 포함할 수 있고, 일부 검증 코드 주석이 `WARDROBE_CLOTHES.season` 기준으로 남아 있음 | `CLOTHES.season`은 옷 등록 시 확정하는 공통 옷 정보이며 생성 후 변경하지 않음 | [garment-registration.md](../features/garment-registration.md), [domain-types.md](domain-types.md) |
 | 옷장 통계 범위 | `ClosetTab` local count와 현재 BE `totalOwnedCount`만으로 전체 요약을 해석할 수 있음 | 옷장 전체 요약은 `OWNED`와 `WISHLIST`를 함께 고려 | [wardrobe.md](../features/wardrobe.md) |
@@ -40,6 +40,7 @@ last_updated: 2026-06-14
 | 에러 분기 | `src/api/index.ts`에서 `status >= 500`을 모두 `/error/server`로 이동 | 500 서버 내부 오류와 502 외부 서비스 오류 구분 | [frontend-api-usage.md](../api/frontend-api-usage.md), [common-loading-error.md](../features/common-loading-error.md) |
 | 온보딩/스타일 | 온보딩, 프로필, 스타일 값 일부가 local state와 하드코딩 문자열 중심 | 공식 style code와 사용자 스타일 API 기준 | [catalog.md](../domain/catalog.md), [domain-types.md](domain-types.md) |
 | 피드 | `feed` tab이 static feed mock 중심 | 룩피드 API와 실제 사용자 데이터 기준 | [feature-index.md](../requirements/feature-index.md), [routing.md](routing.md) |
+| 약관 원문 제공 | FE `public/legal/*.md`에 BE 약관 원본과 동기화된 표시용 사본을 둠 | AWS 배포 이후 BE가 약관 원문을 API 또는 정적 경로로 제공하면 FE는 해당 경로를 fetch하고 표시용 사본 제거 | [auth-and-onboarding.md](../features/auth-and-onboarding.md), [legal/README.md](../legal/README.md) |
 | BE 신규 API 타입 | 일부 신규 API 응답/요청 타입이 `src/types/be.ts`에 모두 정리되어 있지 않을 수 있음 | BE develop 기준 API 계약 타입 반영 | [frontend-api-usage.md](../api/frontend-api-usage.md), [domain-types.md](domain-types.md) |
 | 배포/인프라 목표 구조 | GitHub Actions는 lint/build CI를 수행하고, AWS 배포와 CD 자동화는 진행 예정. 공통 시스템 아키텍처는 목표 구조 기준 | FE/BE 배포 구현 시 시스템 아키텍처, 기술 스택, 기획서, gap 문서 동시 갱신 | [system-architecture.md](../architecture/system-architecture.md), [tech-stack.md](../architecture/tech-stack.md) |
 
@@ -54,7 +55,7 @@ last_updated: 2026-06-14
 | `RECO-001` | `home` tab `ootd` 라벨 | `HomeTab.tsx` | [home-recommendation.md](../features/home-recommendation.md) | BE `GET /api/v1/ootd/{wardrobeId}` 연동 |
 | `RECO-002` | `home` tab `style` 라벨 | `HomeTab.tsx` | [home-recommendation.md](../features/home-recommendation.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | BE `GET /api/v1/recommendations/{wardrobeId}` 연동 |
 | `RECO-005` | `home` tab `match` 라벨 | `HomeTab.tsx`, `MatchRecommendationByCategory.tsx`, `src/api/recommendations.ts` | [home-recommendation.md](../features/home-recommendation.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | BE recommendations API 연동. 기본 `limitPerCategory=50` (BE 허용 `1`~`50`). 추천 피드백 API와 별개로 동작 |
-| `RECO-013`~`RECO-014` | 추천 카드 액션 | `HomeTab.tsx`, 추천 카드 UI | [home-recommendation.md](../features/home-recommendation.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | 추천 저장/싫어요/추천 제외 피드백 API 연동 |
+| `RECO-013`~`RECO-014` | 추천 카드 액션 | `HomeTab.tsx`, `MatchRecommendationByCategory.tsx`, `RecommendProductDetailModal.tsx`, `OutfitDetailModal.tsx` | [home-recommendation.md](../features/home-recommendation.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | 싫어요/추천 제외와 일부 저장 액션은 피드백 API에 연결. 외부 상품 저장/AI MD 등 세부 액션의 피드백 기록 범위 확인 필요 |
 | `FEED-001` | `feed` tab | `App.tsx` 내부 feed section | [feature-index.md](../requirements/feature-index.md), [routing.md](routing.md) | static feed mock |
 
 ## FE 코드와 공식 기준 확인 필요
@@ -81,8 +82,8 @@ BE develop 기준으로 refresh token 기반 인증 유지 API가 반영되어 �
 
 남은 gap:
 
-- `RECO-013`~`RECO-014` 추천 피드백/제외: AI MD 채팅 내 액션 등 세부 연동 확인 필요
 - AI MD 채팅(`RECO-007`): `/api/chat-gamyagi` mock 경로 사용 중. `/api/v1/users/{userId}/recommendations/ai-md/personas/{personaId}/chat` 계약으로 전환 필요
+- AI MD 상품/코디 저장, 외부 상품 저장처럼 추천과 연결되는 세부 액션이 `RECO-013`~`RECO-014` 피드백으로도 기록되어야 하는지 기준 확인 필요
 
 ### `RECO-005` 추천 상세 — 구매 후 보유 옷장 등록
 
@@ -93,7 +94,14 @@ BE develop 기준으로 refresh token 기반 인증 유지 API가 반영되어 �
 3. **샀어요**: 필요 시 `POST /api/users/{userId}/wishlist-clothes/{clothesId}` → `PATCH /api/v1/clothes/{id}/convert-to-owned`
 4. **안 샀어요**: 모달만 닫음
 
-기준 문서: [home-recommendation.md](../features/home-recommendation.md) 「추천 상세 — 구매 후 보유 옷장 등록」. 이 흐름은 `RECO-013` 피드백 API와 별개이며, 추천 싫어요/제외 API 미연동 gap과는 독립입니다.
+기준 문서: [home-recommendation.md](../features/home-recommendation.md) 「추천 상세 — 구매 후 보유 옷장 등록」. 이 흐름은 `RECO-013` 피드백 API와 별개이며, 추천 피드백 기록 범위 확인 gap과는 독립입니다.
+
+현재 `HomeTab`, `MatchRecommendationByCategory`, `RecommendProductDetailModal`, `OutfitDetailModal`은 싫어요/추천 제외와 일부 저장 액션에서 `POST /api/v1/users/{userId}/recommendations/feedback`을 호출합니다.
+
+남은 gap:
+
+- 외부 상품을 위시리스트에 저장하는 흐름은 `wishlist-clothes` 저장으로 처리되며, 별도 `SAVED` 피드백 기록 여부는 기준 확인 필요
+- AI MD 상품/코디 저장이 추천 피드백으로도 기록되어야 하는지 기준 확인 필요
 
 ### 옷 대상 성별(`gender`) UI 노출
 
@@ -166,6 +174,24 @@ BE API 계약이 확정되면 [frontend-api-usage.md](../api/frontend-api-usage.
 | --- | --- | --- |
 | `/api/chat-gamyagi` | AI MD 채팅 mock 성격 | BE AI MD API(`/api/v1/users/{userId}/recommendations/ai-md/**`)로 대체 필요 |
 
+### 약관 원문 제공 경로
+
+BE `docs/legal/`이 약관 원본입니다. 다만 현재 BE 애플리케이션에는 약관 markdown 원문을 내려주는 API 또는 정적 리소스 경로가 없습니다.
+
+현재 FE 구현:
+
+- `public/legal/terms.md`
+- `public/legal/privacy-policy.md`
+- `public/legal/marketing-consent.md`
+
+위 파일은 사용자가 약관을 모달로 확인할 수 있게 하기 위한 표시용 사본입니다. 최종 원본 기준은 BE `docs/legal/`이며, AWS 배포 이후 BE가 약관 제공 API 또는 정적 경로를 제공하면 FE는 `/legal/*.md` 정적 사본 대신 BE 제공 경로를 fetch해야 합니다.
+
+남은 gap:
+
+- BE 약관 제공 API 또는 정적 경로 확정 필요
+- FE `LegalDocumentModal`의 `src`를 BE 제공 경로로 변경
+- FE `public/legal/*.md` 표시용 사본 제거
+
 ### `ApiResponse<T>`와 에러 분기
 
 공식 API 기준에서 공통 응답은 `success`, `data`, `message`를 사용합니다.
@@ -224,13 +250,13 @@ FE 배포 또는 CD workflow가 구현되면 [system-architecture.md](../archite
 | 1 | `AUTH-005` refresh/logout 연동 | 로그인 상태 유지와 세션 만료 처리에 직접 영향 |
 | 2 | 옷 대상 성별(`gender`) UI 비노출 전환 | 공통 문서 기준과 현재 등록/수정 UI가 다르게 동작 |
 | 3 | 옷 계절(`season`) 수정 payload/검증 주석 정리 | ERD v2.3 기준과 등록/수정 화면 payload 해석에 영향 |
-| 4 | OOTD·취향 기반 추천 static/mock API 전환 | 사용자가 보는 추천 화면의 실제 데이터 연동 여부에 영향 |
-| 5 | 추천 피드백 API 연동 | 저장/싫어요/추천 제외 정책과 사용자 스타일 점수에 영향 |
+| 4 | AI MD 채팅 mock API 전환 | 사용자가 보는 AI MD 채팅의 실제 데이터 연동 여부에 영향 |
+| 5 | 추천 피드백 기록 범위 확정 | 저장/싫어요/추천 제외 정책과 사용자 스타일 점수에 영향 |
 | 6 | `ApiResponse<T>` 타입과 500/502 에러 분기 | 모든 API parsing과 공통 error handling에 영향 |
 | 7 | BE 신규 API 타입 정리 | 추천/OOTD/코디/인증 유지 API 연동 시 타입 안정성에 영향 |
 | 8 | `WARDROBE-002` 옷장 통계 범위 | 옷장 전체 요약과 보유 옷 통계 해석에 영향 |
 | 9 | 온보딩/스타일/피드 local·static 데이터 경계 | 실제 사용자 데이터와 mock/local 데이터 구분에 영향 |
-| 10 | `/api/chat-gamyagi` mock API 경계 | AI MD 실제 API 연동 여부 판단에 영향 |
+| 10 | 약관 원문 제공 경로 전환 | AWS 배포 이후 BE 제공 경로와 FE 표시용 사본 정리에 영향 |
 | 11 | 배포/인프라 목표 구조와 현재 FE/CI 상태 | AWS 배포 및 CD 구현 시 공통 시스템 문서와 실제 FE 레포 설정 정합성에 영향 |
 
 ## 문서 변경 기준

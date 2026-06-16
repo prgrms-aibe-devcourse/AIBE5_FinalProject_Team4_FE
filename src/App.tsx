@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import api from "@/api/index";
 import { useState, useEffect } from "react";
 import { 
   Home, 
@@ -12,16 +13,12 @@ import {
   Layers,
 } from "./components/icons";
 import { UserProfile } from "@/types/index";
+import { REGIONS } from "@/data/regions";
 import HomeTab from "./components/HomeTab";
 import ClosetTab from "./components/ClosetTab";
 import GarmentRegisterMethodModal from "./components/GarmentRegisterMethodModal";
 import PhotoGarmentRegisterModal from "./components/PhotoGarmentRegisterModal";
 import PurchaseGarmentRegisterModal from "./components/PurchaseGarmentRegisterModal";
-import {
-  captureOAuthTokenFromUrl,
-  getUserIdFromAccessToken,
-} from "@/utils/authUser";
-import { ensureDevToken, DEFAULT_DEV_USER_ID } from "@/utils/ensureDevToken";
 import {
   redirectToOAuthLogin,
   type OAuthProvider,
@@ -36,31 +33,31 @@ import {
   loadUserProfile,
   saveUserProfile,
 } from "@/utils/userProfileStorage";
+import { updateMarketingConsent } from "@/api/marketingConsent";
+import { resolveGarmentStyleCode } from "@/data/garmentStyles";
+import MarketingConsentSetting from "@/components/legal/MarketingConsentSetting";
 // 기존 상수 data ( TRIGGER_PRODUCTS 는 사용을 하지않아 우선 주석처리함 )
 // import { TRIGGER_PRODUCTS } from "@/data/triggerProducts";
 
 export default function App() {
   // Login State
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(
-    () => getUserIdFromAccessToken() != null,
-  );
-  const [authUserId, setAuthUserId] = useState<number | null>(
-    getUserIdFromAccessToken,
-  );
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  const [authUserId, setAuthUserId] = useState<number | null>(null);
   // 로그인 모달 열림 여부
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [pendingTab, setPendingTab] = useState<"closet" | "profile" | null>(null);
 
   // 비로그인 상태면 모달을 열고 false를 반환, 로그인 상태면 true를 반환
-  const requireLogin = (): boolean => {
+  const requireLogin = (destination?: "closet" | "profile"): boolean => {
     if(!isLoggedIn){
+      if(destination) setPendingTab(destination);
       setIsLoginModalOpen(true);
       return false;
     }
     return true;
   }
-  /** 온보딩 후 dev mock-token 등 인증 동기화 완료 */
+  /** 쿠키 기반 인증 확인 완료 여부 */
   const [authReady, setAuthReady] = useState(false);
-  const [authTokenError, setAuthTokenError] = useState<string | null>(null);
   
   // User Profile Setup State
   const [profile, setProfile] = useState<UserProfile>(() => {
@@ -111,51 +108,31 @@ export default function App() {
   const [isPhotoRegisterOpen, setIsPhotoRegisterOpen] = useState(false);
   const [isPurchaseRegisterOpen, setIsPurchaseRegisterOpen] = useState(false);
 
-  // OAuth 콜백(?token=): URL에서 토큰 추출 후 상태 반영
+  // 앱 시작 시 쿠키인증 상태 확인
   useEffect(() => {
-    if (captureOAuthTokenFromUrl()) {
-      const uid = getUserIdFromAccessToken();
-      setAuthUserId(uid);
-      setIsLoggedIn(uid != null);
-    }
+    api.get('/api/v1/users/profile')
+        .then((res) => {
+          const userId = res.data.data.userId;
+          const nickname = res.data.data.nickname;
+          const onboarded = res.data.data.onboarded;
+
+          if(onboarded){
+            // 온보딩 완료 유저: nickname + onboarded: true
+            setProfile(prev => ({ ...prev, nickname, onboarded: true }));
+          } else if(nickname){
+            // 온보딩 미완료지만 OAuth 닉네임 존재: 기본값으로만 활용
+            setProfile(prev => ({ ...prev, nickname, onboarded: false }));
+          }
+          setAuthUserId(userId);
+          setIsLoggedIn(true);
+          setAuthReady(true);
+        })
+        .catch(() => {
+          setIsLoggedIn(false);
+          setAuthReady(false);
+        });
   }, []);
 
-  useEffect(() => {
-    if (!isLoggedIn) {
-      setAuthUserId(null);
-      setAuthReady(false);
-      setAuthTokenError(null);
-      return;
-    }
-
-    let cancelled = false;
-    setAuthReady(false);
-    setAuthTokenError(null);
-
-    (async () => {
-      let tokenError: string | null = null;
-      if (import.meta.env.DEV && !getUserIdFromAccessToken()) {
-        try {
-          await ensureDevToken(DEFAULT_DEV_USER_ID, { forceRefresh: false });
-        } catch (err) {
-          tokenError =
-            err instanceof Error
-              ? err.message
-              : "개발용 토큰 발급에 실패했습니다.";
-          console.warn("[dev] mock-token 발급 실패:", err);
-        }
-      }
-
-      if (cancelled) return;
-      setAuthUserId(getUserIdFromAccessToken());
-      setAuthTokenError(tokenError);
-      setAuthReady(true);
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [isLoggedIn, profile.onboarded]);
 
   const scrollAppToTop = () => {
     const viewport = document.getElementById("app-viewport");
@@ -174,23 +151,21 @@ export default function App() {
   };
 
   const handleSocialLogin = async (platform: OAuthProvider) => {
-    //if (import.meta.env.DEV) {
-    if (import.meta.env.DEV && import.meta.env.VITE_USE_REAL_AUTH !== "true") {
-      try {
-        await ensureDevToken(DEFAULT_DEV_USER_ID, { forceRefresh: true });
-        setIsLoggedIn(true);
-        setIsLoginModalOpen(false);
-      } catch (err) {
-        const msg =
-          err instanceof Error
-            ? err.message
-            : "개발용 토큰 발급에 실패했습니다.";
-        alert(`${msg}\n\nBE(local:8080) 실행 여부를 확인해 주세요.`);
-      }
-      return;
-    }
     redirectToOAuthLogin(platform);
   };
+
+  const resetAuthState = () => {
+    setIsLoggedIn(false);
+    clearUserProfile();
+    setProfile({ nickname: "", gender: "None", styles: [], onboarded: false, birthday: "" });
+    setCurrentTab("home");
+    setAuthReady(false);
+  };
+
+  const handleLogout = () => {
+    api.post('/api/v1/auth/logout')
+        .finally(() => resetAuthState());
+  }
 
   return (
     <div id="root-container" className="min-h-screen bg-[#F1F5F9] font-sans antialiased text-slate-800 flex flex-col justify-between py-4 px-3 md:py-6 md:px-6 font-sans">
@@ -200,13 +175,33 @@ export default function App() {
       {/* ========================================================= */}
       {isLoginModalOpen && (<LoginPage isModal onClose={() => setIsLoginModalOpen(false)} onSocialLogin={handleSocialLogin} />)}
 
-      {/* ========================================================= */}
       {/* 2. ONBOARDING PROFILE FLOWS */}
       {/* ========================================================= */}
       {isLoggedIn && !profile.onboarded && (
-          <OnboardingPage onComplete={(nickname, birthday, gender, styles, openModal) => {
-            persistProfile({ nickname, birthday, gender, styles, onboarded: true });
-            if (openModal) openGarmentRegister();
+          <OnboardingPage defaultNickname={profile.nickname} onComplete={async (nickname, birthday, gender, styles, region, openModal, marketingAgreed) => {
+            try {
+              const regionData = REGIONS.find(r => r.code === region);
+              const patchRes = await api.patch('/api/v1/users/profile', {
+                nickname,
+                birthDate: birthday,
+                gender: gender === 'Male' ? 'MALE' : 'FEMALE',
+                regionName: regionData?.label ?? '',
+                regionCode: region || '',
+              });
+              const serverOnboarded: boolean = patchRes.data.data.onboarded ?? true;
+              await api.post('/api/v1/users/styles', { styleCodes: styles.map(resolveGarmentStyleCode) });
+              if (authUserId != null) {
+                try {
+                  await updateMarketingConsent(authUserId, { marketingAgreed });
+                } catch {
+                  alert("마케팅 정보 수신 동의 저장에 실패했습니다. 마이페이지에서 다시 변경할 수 있습니다.");
+                }
+              }
+              persistProfile({ nickname, birthday, gender, styles, region: region || undefined, onboarded: serverOnboarded });
+              if (openModal) openGarmentRegister();
+            } catch {
+              alert('프로필 저장에 실패했어요. 다시 시도해주세요.');
+            }
           }} />
       )}
 
@@ -268,7 +263,7 @@ export default function App() {
                 {/* Profile Avatar Icon */}
                 <div 
                   onClick={() => {
-                    if(!requireLogin()) return;
+                    if(!requireLogin("profile")) return;
                     setCurrentTab("profile")}}
                   className="w-8 h-8 rounded-full bg-slate-200 hover:bg-slate-300 flex items-center justify-center text-slate-500 stroke-2 text-xs font-bold ring-2 ring-slate-100 cursor-pointer transition"
                   title="Style Profile Screen"
@@ -304,42 +299,30 @@ export default function App() {
               {/* ========================================================= */}
               {/* TAB 2: MY CLOSET (Smart Closet view & Anatomical Fit Guide) */}
               {/* ========================================================= */}
-              {currentTab === "closet" && profile.onboarded && !authReady && (
-                <div className="flex justify-center py-16 text-sm text-slate-500">
-                  로그인 토큰을 준비하는 중…
-                </div>
-              )}
-              {currentTab === "closet" &&
-                authReady &&
-                authTokenError != null && (
-                  <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-center text-sm text-amber-900">
-                    {authTokenError}
-                    <p className="mt-2 text-xs text-amber-800">
-                      BE를 local 프로필로 8080에서 실행한 뒤 새로고침해 주세요.
-                    </p>
+              {currentTab === "closet" && !authReady && (
+                  <div className="flex justify-center py-16 text-sm text-slate-500">
+                    인증 확인 중…
                   </div>
-                )}
-              {currentTab === "closet" &&
-                authReady &&
-                authTokenError == null &&
-                authUserId != null && (
-                <ClosetTab
-                  clothes={clothes}
-                  setClothes={setClothes}
-                  selectedGarment={selectedGarment}
-                  setSelectedGarment={setSelectedGarment}
-                  userId={authUserId}
-                  onOpenRegister={openGarmentRegister}
-                />
               )}
               {currentTab === "closet" &&
-                authReady &&
-                authTokenError == null &&
-                authUserId == null && (
-                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-center text-sm text-amber-900">
-                  로그인 정보를 확인할 수 없습니다. 다시 로그인해 주세요.
-                </div>
-              )}
+                  authReady &&
+                  authUserId != null && (
+                      <ClosetTab
+                          clothes={clothes}
+                          setClothes={setClothes}
+                          selectedGarment={selectedGarment}
+                          setSelectedGarment={setSelectedGarment}
+                          userId={authUserId}
+                          onOpenRegister={openGarmentRegister}
+                      />
+                  )}
+              {currentTab === "closet" &&
+                  authReady &&
+                  authUserId == null && (
+                      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-center text-sm text-amber-900">
+                        로그인 정보를 확인할 수 없습니다. 다시 로그인해 주세요.
+                      </div>
+                  )}
 
               {/* ========================================================= */}
               {/* TAB 3: STYLE FEED (Mockup curation sandbox) */}
@@ -432,6 +415,24 @@ export default function App() {
                     </div>
                   </div>
 
+                  <MarketingConsentSetting
+                    userId={authUserId}
+                    enabled={authReady && authUserId != null}
+                  />
+
+                  {/* Logout Button */}
+                  <button
+                      onClick={handleLogout}
+                      className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-semibold transition active:scale-[0.98] cursor-pointer"
+                  >
+                    <span>로그아웃</span>
+                    <svg className="w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                      <polyline points="16 17 21 12 16 7" />
+                      <line x1="21" y1="12" x2="9" y2="12" />
+                    </svg>
+                  </button>
+
                   {/* Reset account Option and info */}
                   <div className="p-4 rounded-xl bg-[#BBF7D0]/10 border border-[#BBF7D0]/20 space-y-1.5">
                     <p className="text-[11px] text-slate-600"></p>
@@ -488,7 +489,7 @@ export default function App() {
               <button 
                 id="nav-closet" 
                 onClick={() => {
-                  if(!requireLogin()) return;
+                  if(!requireLogin("closet")) return;
                   setCurrentTab("closet")}}
                 className={`flex flex-col items-center justify-center flex-1 py-1 transition ${currentTab === "closet" ? "text-[#1E3A8A]" : "text-slate-400 hover:text-slate-600"}`}
               >
