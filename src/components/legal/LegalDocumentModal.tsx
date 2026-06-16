@@ -4,11 +4,11 @@ import {
   ModalBody,
   ModalHeader,
 } from '@/components/common/Modal'
+import { fetchLegalDocument, type LegalDocumentType } from '@/api/legalDocuments'
 
 interface LegalDocumentModalProps {
   open: boolean
-  title: string
-  src: string
+  documentType: LegalDocumentType
   onClose: () => void
 }
 
@@ -18,6 +18,8 @@ type MarkdownBlock =
   | { type: 'unordered-list'; items: string[] }
   | { type: 'ordered-list'; items: string[] }
   | { type: 'table'; headers: string[]; rows: string[][] }
+
+const LEGAL_DOCUMENT_LOAD_ERROR_MESSAGE = '약관 문서를 불러오지 못했습니다.\n잠시 후 다시 시도해 주세요.'
 
 const headingClassName: Record<number, string> = {
   1: 'text-xl font-black text-[#1E3A8A] mt-1',
@@ -232,8 +234,7 @@ function renderMarkdownBlocks(blocks: MarkdownBlock[]) {
 
 export default function LegalDocumentModal({
   open,
-  title,
-  src,
+  documentType,
   onClose,
 }: LegalDocumentModalProps) {
   const [markdown, setMarkdown] = useState('')
@@ -247,17 +248,13 @@ export default function LegalDocumentModal({
     setLoading(true)
     setErrorMessage(null)
 
-    fetch(src)
-      .then((response) => {
-        if (!response.ok) throw new Error('Failed to load legal document')
-        return response.text()
-      })
-      .then((text) => {
-        if (!cancelled) setMarkdown(text)
+    fetchLegalDocument(documentType)
+      .then((document) => {
+        if (!cancelled) setMarkdown(document.content)
       })
       .catch(() => {
         if (!cancelled) {
-          setErrorMessage('약관 문서를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.')
+          setErrorMessage(LEGAL_DOCUMENT_LOAD_ERROR_MESSAGE)
         }
       })
       .finally(() => {
@@ -267,22 +264,22 @@ export default function LegalDocumentModal({
     return () => {
       cancelled = true
     }
-  }, [open, src])
+  }, [open, documentType])
 
   const blocks = useMemo(() => parseMarkdown(markdown), [markdown])
 
   return (
     <Modal open={open} onClose={onClose} size="lg" zIndex={120} closeOnBackdrop>
-      <ModalHeader title={title} eyebrow="Legal" onClose={onClose} />
+      <ModalHeader title="LEGAL" onClose={onClose} align="center" />
       <ModalBody className="px-5 sm:px-7 py-5">
         {loading ? (
           <p className="rounded-2xl bg-slate-50 px-4 py-8 text-center text-sm font-bold text-slate-400">
             약관 문서를 불러오는 중입니다.
           </p>
         ) : errorMessage ? (
-          <p className="rounded-2xl bg-red-50 px-4 py-4 text-sm font-bold text-red-500">
-            {errorMessage}
-          </p>
+          <div className="rounded-2xl bg-red-50 px-4 py-5 text-center text-sm font-bold leading-relaxed text-red-500 break-keep">
+            <p className="whitespace-pre-line">{errorMessage}</p>
+          </div>
         ) : (
           <div className="space-y-4">{renderMarkdownBlocks(blocks)}</div>
         )}

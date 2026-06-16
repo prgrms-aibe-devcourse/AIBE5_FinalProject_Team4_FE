@@ -1,6 +1,6 @@
-import { useState } from "react";
 import { Settings, CheckCircle2 } from "./icons";
 import { UserProfile } from "@/types/index";
+import { GARMENT_STYLES, getGarmentStyleLabel, resolveGarmentStyleCode } from "@/data/garmentStyles";
 
 interface ProfileEditTabProps {
   profile: UserProfile;
@@ -23,8 +23,6 @@ interface ProfileEditTabProps {
   setEditedFitPreference: (val: string) => void;
   editedColorPalette: string;
   setEditedColorPalette: (val: string) => void;
-  setIsLoggedIn: (val: boolean) => void;
-  setProfile: (p: UserProfile) => void;
 }
 
 export default function ProfileEditTab({
@@ -40,16 +38,15 @@ export default function ProfileEditTab({
   editedFitPreference,
   setEditedFitPreference,
   editedColorPalette,
-  setEditedColorPalette,
-  setIsLoggedIn,
-  setProfile
+  setEditedColorPalette
 }: ProfileEditTabProps) {
 
   const handleStyleToggle = (styleOpt: string) => {
-    if (editedStyles.includes(styleOpt)) {
-      setEditedStyles(editedStyles.filter((s) => s !== styleOpt));
+    const styleCode = resolveGarmentStyleCode(styleOpt);
+    if (editedStyles.map(resolveGarmentStyleCode).includes(styleCode)) {
+      setEditedStyles(editedStyles.filter((s) => resolveGarmentStyleCode(s) !== styleCode));
     } else {
-      setEditedStyles([...editedStyles, styleOpt]);
+      setEditedStyles([...editedStyles, styleCode]);
     }
   };
 
@@ -127,24 +124,20 @@ export default function ProfileEditTab({
         <div className="space-y-1.5">
           <label className="text-[11.5px] font-black text-slate-500 uppercase block tracking-wider">추구하는 가중 패션 장르 (복수 지정)</label>
           <div className="flex flex-wrap gap-2 select-none">
-            {["Casual", "Minimal", "Street", "Amekaji", "Gorpcore"].map((opt) => {
-              const isSelected = editedStyles.includes(opt);
+            {GARMENT_STYLES.map((style) => {
+              const isSelected = editedStyles.map(resolveGarmentStyleCode).includes(style.code);
               return (
                 <button
-                  key={opt}
+                  key={style.code}
                   type="button"
-                  onClick={() => handleStyleToggle(opt)}
+                  onClick={() => handleStyleToggle(style.code)}
                   className={`px-4 py-2.5 rounded-full text-xs font-bold border transition duration-200 cursor-pointer ${
                     isSelected
                       ? "bg-[#BBF7D0] text-[#0284C7] border-transparent scale-102 font-extrabold"
                       : "bg-white text-slate-500 border-slate-200 hover:border-slate-300"
                   }`}
                 >
-                  {opt === "Casual" && "캐주얼"}
-                  {opt === "Minimal" && "미니멀"}
-                  {opt === "Street" && "스트리트"}
-                  {opt === "Amekaji" && "아메카지"}
-                  {opt === "Gorpcore" && "고프코어"}
+                  {getGarmentStyleLabel(style.code)}
                 </button>
               );
             })}
@@ -199,25 +192,6 @@ export default function ProfileEditTab({
           저장하고 실시간 알고리즘에 전격 연동하기
         </button>
 
-      </div>
-
-      {/* 4. Complete Reset triggers */}
-      <div className="p-4 bg-slate-50 border border-slate-150 rounded-2xl flex flex-col sm:flex-row justify-between sm:items-center gap-3 text-xs text-left">
-        <span className="text-slate-400 font-medium font-sans">
-          소장 의류 및 설정 등 모든 가입 기본 데이터를 삭제하고 가입 이전 로그인 Splash로 되돌아가시겠습니까?
-        </span>
-        <button
-          type="button"
-          onClick={() => {
-            if (confirm("모든 데이터가 영구 초기화됩니다. 계속 진행하시겠습니까?")) {
-              setIsLoggedIn(false);
-              setProfile({ nickname: "", gender: "None", styles: [], onboarded: false, birthday: "" });
-            }
-          }}
-          className="text-red-500 font-bold hover:underline select-none cursor-pointer text-left shrink-0"
-        >
-          온보딩 프로필 초기화 및 기기 연결 끊기
-        </button>
       </div>
 
     </div>

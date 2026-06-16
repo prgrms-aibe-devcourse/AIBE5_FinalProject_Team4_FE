@@ -19,11 +19,11 @@ last_updated: 2026-06-15
 
 | 세부기능 ID | 기능 | FE 처리 기준 |
 | --- | --- | --- |
-| `MYPAGE-001` | 내 정보 조회/수정 | 닉네임, 생년월일, 사용자 성별, 지역, 선호 스타일을 확인하고 수정합니다. |
+| `MYPAGE-001` | 내 정보 조회/수정 | 기본 마이페이지에서는 개인정보를 확인만 하고, `개인정보 등 편집` 화면에서 닉네임, 생년월일, 사용자 성별, 지역, 선호 스타일, 프로필 이미지, 자기소개, 외부 링크를 수정합니다. |
 | `MYPAGE-002` | 소셜 계정 확인 | 연결된 소셜 로그인 제공자를 확인합니다. |
 | `MYPAGE-003` | 외부 링크 관리 | 사용자 룩피드 프로필의 외부 링크를 등록/수정합니다. |
 | `MYPAGE-004` | 로그아웃 | 로그인 상태를 해제하고 로그인 화면 또는 초기 화면으로 이동합니다. |
-| `MYPAGE-005` | 회원 탈퇴 | 사용자 탈퇴 요청과 탈퇴 후 화면 전환을 처리합니다. |
+| `MYPAGE-005` | 회원 탈퇴 | 기본 마이페이지에는 노출하지 않고, 개인정보 편집 화면 안에서 사용자 탈퇴 요청과 탈퇴 후 화면 전환을 처리합니다. |
 | `SYSTEM-010` | 마케팅 정보 수신 동의 | 마케팅 정보 수신 동의 상태를 조회하고 동의/철회를 처리합니다. |
 
 ## 프로필 API 기준
@@ -36,6 +36,10 @@ BE 기준으로 마이페이지 프로필 조회 API는 아래 경로를 사용�
 | 사용자 프로필 상세 조회 | GET | `/api/v1/users/profile/{userId}` | 타 사용자 프로필 또는 룩피드 프로필 표시 |
 | 마케팅 동의 조회 | GET | `/api/v1/users/{userId}/marketing-consent` | 마케팅 정보 수신 동의 상태 표시 |
 | 마케팅 동의 변경 | PATCH | `/api/v1/users/{userId}/marketing-consent` | 마케팅 정보 수신 동의/철회 반영 |
+| 회원 탈퇴 | DELETE | `/api/v1/users/me` | 탈퇴 확인 후 회원 상태를 정리하고 로그인 전 화면으로 이동 |
+| 탈퇴 계정 복구 | POST | `/api/v1/auth/restore-withdrawn` | 탈퇴 후 30일 이내 재로그인 시 복구 확인 모달에서 사용자가 복구를 선택한 경우 호출 |
+
+`GET /api/v1/users/profile`은 본인 마이페이지와 편집 화면에 필요한 기본 프로필, 온보딩 여부, 생년월일, 사용자 성별, 지역, 프로필 이미지 URL, 자기소개, 외부 링크, 선호 스타일 code, 소셜 로그인 제공자를 반환합니다.
 
 응답 타입의 원본은 BE API 계약을 따르며, FE에서는 화면에 필요한 필드만 view model로 변환합니다.
 
@@ -48,16 +52,19 @@ BE 기준으로 마이페이지 프로필 조회 API는 아래 경로를 사용�
 
 ## 현재 구현 확인 대상
 
-현재 FE 구현은 `ProfileEditTab.tsx`, `App.tsx`, `userProfileStorage.ts`를 중심으로 local state와 localStorage를 사용합니다.
+현재 FE 구현은 `App.tsx`, `userProfileStorage.ts`를 중심으로 본인 프로필 API 응답을 화면 상태에 반영합니다.
 
 프로필 API 연동 PR에서는 아래를 함께 확인합니다.
 
 - `GET /api/v1/users/profile` 응답을 마이페이지 초기 상태로 반영합니다.
 - `GET /api/v1/users/profile/{userId}`가 필요한 화면과 본인 프로필 화면을 구분합니다.
-- 마케팅 정보 수신 동의 상태는 `GET /api/v1/users/{userId}/marketing-consent`로 조회하고, 토글 변경 시 `PATCH /api/v1/users/{userId}/marketing-consent`로 반영합니다.
-- 마케팅 정보 수신 동의 원문은 정적 markdown 파일을 직접 이동하지 않고 마이페이지 내 모달로 표시합니다.
-- 온보딩/마이페이지 선호 스타일 code가 [카탈로그 사용 가이드](../domain/catalog.md)와 맞는지 확인합니다.
-- 프로필 API 연동으로 local state gap이 해소되면 [FE 구현 정합성 현황](../frontend/implementation-gaps.md)을 수정합니다.
+- 기본 마이페이지는 확인 전용으로 유지하고, 개인정보 수정·지역 수정·선호 스타일 수정·마케팅 동의 변경·회원탈퇴는 `개인정보 등 편집` 화면에서 처리합니다.
+- 마케팅 정보 수신 동의 상태는 `GET /api/v1/users/{userId}/marketing-consent`로 조회하고, 저장 시 `PATCH /api/v1/users/{userId}/marketing-consent`로 반영합니다.
+- 마케팅 정보 수신 동의 원문은 BE `/api/v1/legal/marketing-consent` 응답의 markdown `content`를 마이페이지 내 모달로 표시합니다.
+- 회원 탈퇴는 `DELETE /api/v1/users/me`를 호출하고, 성공 시 local 사용자 상태를 정리해 로그인 전 화면으로 이동합니다.
+- 탈퇴 후 30일 이내 같은 계정으로 다시 로그인하면 복구 확인 모달을 표시하고, 사용자가 복구를 선택한 경우에만 `POST /api/v1/auth/restore-withdrawn`을 호출합니다.
+- 마이페이지 선호 스타일 표시와 편집 선택지는 `GET /api/v1/categories` 응답의 style code/name을 우선 사용합니다.
+- 카탈로그 API 조회에 실패하거나 style 목록이 비어 있으면 선호 스타일 편집 선택지를 임의 fallback으로 대체하지 않고, 오류 상태를 확인할 수 있게 처리합니다.
 
 ## 변경 기준
 

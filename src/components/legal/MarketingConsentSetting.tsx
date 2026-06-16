@@ -119,8 +119,7 @@ export default function MarketingConsentSetting({
       </section>
       <LegalDocumentModal
         open={isConsentModalOpen}
-        title="마케팅 정보 수신 동의"
-        src="/legal/marketing-consent.md"
+        documentType="marketing-consent"
         onClose={() => setIsConsentModalOpen(false)}
       />
     </>

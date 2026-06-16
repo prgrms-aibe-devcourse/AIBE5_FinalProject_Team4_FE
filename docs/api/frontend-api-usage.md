@@ -148,7 +148,13 @@ API를 호출하는 화면은 아래 상태를 구분합니다.
 | 화면/기능 | Method | API 기준 | FE 처리 |
 | --- | --- | --- | --- |
 | OAuth 로그인 | GET | `/oauth2/authorization/{provider}` | 로그인 시작 |
-| 내 프로필 | GET | `/api/v1/users/profile` | 로그인 사용자 본인의 마이페이지 정보 표시 |
+| 약관 원문 | GET | `/api/v1/legal/terms` | 서비스 이용약관 markdown 원문 표시 |
+| 약관 원문 | GET | `/api/v1/legal/privacy-policy` | 개인정보 처리방침 markdown 원문 표시 |
+| 약관 원문 | GET | `/api/v1/legal/marketing-consent` | 마케팅 정보 수신 동의 markdown 원문 표시 |
+| 탈퇴 계정 복구 | POST | `/api/v1/auth/restore-withdrawn` | 탈퇴 후 30일 이내 계정으로 OAuth 로그인을 시도한 경우, 사용자 확인 후 계정 복구와 인증 쿠키 발급 |
+| 내 프로필 | GET | `/api/v1/users/profile` | 로그인 사용자 본인의 마이페이지 정보와 편집 초기값 표시 |
+| 내 프로필 | PATCH | `/api/v1/users/profile` | 닉네임, 생년월일, 사용자 성별, 지역, 프로필 이미지, 자기소개, 외부 링크 저장 |
+| 선호 스타일 | POST | `/api/v1/users/styles` | 마이페이지 편집 또는 온보딩에서 선택한 선호 스타일 저장 |
 | 사용자 프로필 | GET | `/api/v1/users/profile/{userId}` | 타 사용자 프로필 또는 룩피드 프로필 표시 |
 | 마케팅 동의 | GET | `/api/v1/users/{userId}/marketing-consent` | 마이페이지에서 마케팅 정보 수신 동의 상태 표시 |
 | 마케팅 동의 | PATCH | `/api/v1/users/{userId}/marketing-consent` | 온보딩 또는 마이페이지에서 마케팅 정보 수신 동의/철회 반영 |
@@ -246,8 +252,9 @@ AI MD 추천은 아래 기준을 함께 확인합니다.
 | --- | --- | --- | --- |
 | access token 재발급 | POST | `/api/v1/auth/refresh` | 401 처리, access token 갱신, 쿠키 전달 |
 | 로그아웃 | POST | `/api/v1/auth/logout` | local token 제거, 세션 종료, 로그인 화면 이동 |
+| 회원 탈퇴 | DELETE | `/api/v1/users/me` | 탈퇴 확인 후 local 사용자 상태 정리, 로그인 전 화면 이동 |
 
-`refresh_token`은 HttpOnly 쿠키 기준이므로 FE에서 값을 직접 읽지 않습니다. 실제 FE 구현 반영 전까지는 [implementation-gaps.md](../frontend/implementation-gaps.md)에 미연동 항목으로 둡니다.
+`refresh_token`은 HttpOnly 쿠키 기준이므로 FE에서 값을 직접 읽지 않습니다. 인증 유지 흐름은 공통 API client의 401 처리와 로그아웃/회원탈퇴 화면 상태 정리를 함께 확인합니다.
 
 ## 구매내역 복수 상품 등록 (`REG-002`)
 
