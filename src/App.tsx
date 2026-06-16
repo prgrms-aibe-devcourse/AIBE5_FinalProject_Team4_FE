@@ -34,6 +34,7 @@ import {
   saveUserProfile,
 } from "@/utils/userProfileStorage";
 import { updateMarketingConsent } from "@/api/marketingConsent";
+import { resolveGarmentStyleCode } from "@/data/garmentStyles";
 import MarketingConsentSetting from "@/components/legal/MarketingConsentSetting";
 // 기존 상수 data ( TRIGGER_PRODUCTS 는 사용을 하지않아 우선 주석처리함 )
 // import { TRIGGER_PRODUCTS } from "@/data/triggerProducts";
@@ -188,7 +189,7 @@ export default function App() {
                 regionCode: region || '',
               });
               const serverOnboarded: boolean = patchRes.data.data.onboarded ?? true;
-              await api.post('/api/v1/users/styles', { styleCodes: styles });
+              await api.post('/api/v1/users/styles', { styleCodes: styles.map(resolveGarmentStyleCode) });
               if (authUserId != null) {
                 try {
                   await updateMarketingConsent(authUserId, { marketingAgreed });
