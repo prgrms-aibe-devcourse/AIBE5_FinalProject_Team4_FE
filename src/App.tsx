@@ -921,8 +921,8 @@ export default function App() {
               </div>
               <div className="space-y-1">
                 <h2 className="text-lg font-black text-slate-900">탈퇴한 계정입니다</h2>
-                <p className="text-sm leading-relaxed text-slate-500">
-                  탈퇴 후 30일 이내에는 계정을 복구할 수 있습니다. 기존 계정과 데이터를 복구하시겠습니까?
+                <p className="whitespace-pre-line break-keep text-sm leading-relaxed text-slate-500">
+                  {"탈퇴 후 30일 이내에는 계정을 복구할 수 있습니다.\n기존 계정과 데이터를 복구하시겠습니까?"}
                 </p>
               </div>
             </div>
