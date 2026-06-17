@@ -8,6 +8,7 @@ import {
   toggleFeedLike,
   toggleFeedSave,
   toggleFollow,
+  updateFeedComment,
 } from '@/api/feed'
 import AuthenticatedImage from '@/components/common/AuthenticatedImage'
 import { Modal, ModalBody, ModalFooter, ModalHeader } from '@/components/common/Modal'
@@ -28,65 +29,147 @@ function formatFeedDate(value: string): string {
   })
 }
 
+function InlineEditableComment({
+  comment,
+  bgClassName,
+  onSave,
+  onDelete,
+  onReply,
+}: {
+  comment: FeedComment
+  bgClassName: string
+  onSave: (commentId: number, content: string) => Promise<void>
+  onDelete: (commentId: number) => void
+  onReply?: (commentId: number) => void
+}) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(comment.content)
+  const [saving, setSaving] = useState(false)
+
+  const handleSave = async () => {
+    const trimmed = draft.trim()
+    if (!trimmed || saving) return
+    setSaving(true)
+    try {
+      await onSave(comment.feedCommentId, trimmed)
+      setEditing(false)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleCancel = () => {
+    setDraft(comment.content)
+    setEditing(false)
+  }
+
+  return (
+    <div className={`rounded-xl border border-slate-100 ${bgClassName} px-3 py-2.5`}>
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-black text-slate-900">{comment.author.nickname}</p>
+          {editing ? (
+            <div className="mt-1 space-y-1.5">
+              <textarea
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                rows={2}
+                className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-xs font-bold text-slate-800 resize-none focus:outline-none focus:border-[#1E3A8A]"
+              />
+              <div className="flex gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => void handleSave()}
+                  disabled={saving || !draft.trim()}
+                  className="rounded-lg bg-[#1E3A8A] px-3 py-1 text-[10px] font-black text-[#BBF7D0] cursor-pointer disabled:opacity-60"
+                >
+                  {saving ? '저장 중…' : '저장'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCancel}
+                  className="rounded-lg border border-slate-200 px-3 py-1 text-[10px] font-black text-slate-500 cursor-pointer"
+                >
+                  취소
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <p className="mt-1 text-xs font-bold text-slate-600 leading-relaxed whitespace-pre-wrap">
+                {comment.content}
+              </p>
+              <p className="mt-1 text-[10px] font-bold text-slate-400">
+                {formatFeedDate(comment.createdAt)}
+              </p>
+            </>
+          )}
+        </div>
+        {!editing ? (
+          <div className="flex shrink-0 gap-1">
+            {comment.isOwner ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setEditing(true)}
+                  className="text-[10px] font-black text-[#1E3A8A] cursor-pointer"
+                >
+                  수정
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onDelete(comment.feedCommentId)}
+                  className="text-[10px] font-black text-red-500 cursor-pointer"
+                >
+                  삭제
+                </button>
+              </>
+            ) : onReply ? (
+              <button
+                type="button"
+                onClick={() => onReply(comment.feedCommentId)}
+                className="text-[10px] font-black text-[#1E3A8A] cursor-pointer"
+              >
+                답글
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+    </div>
+  )
+}
+
 function CommentItem({
   comment,
   onReply,
   onDelete,
-  canDelete,
+  onSave,
 }: {
   comment: FeedComment
   onReply: (commentId: number) => void
   onDelete: (commentId: number) => void
-  canDelete: boolean
+  onSave: (commentId: number, content: string) => Promise<void>
 }) {
   return (
     <div className="space-y-2">
-      <div className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2.5">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <p className="text-xs font-black text-slate-900">{comment.author.nickname}</p>
-            <p className="mt-1 text-xs font-bold text-slate-600 leading-relaxed whitespace-pre-wrap">
-              {comment.content}
-            </p>
-            <p className="mt-1 text-[10px] font-bold text-slate-400">
-              {formatFeedDate(comment.createdAt)}
-            </p>
-          </div>
-          <div className="flex shrink-0 gap-1">
-            <button
-              type="button"
-              onClick={() => onReply(comment.feedCommentId)}
-              className="text-[10px] font-black text-[#1E3A8A] cursor-pointer"
-            >
-              답글
-            </button>
-            {canDelete ? (
-              <button
-                type="button"
-                onClick={() => onDelete(comment.feedCommentId)}
-                className="text-[10px] font-black text-red-500 cursor-pointer"
-              >
-                삭제
-              </button>
-            ) : null}
-          </div>
-        </div>
-      </div>
+      <InlineEditableComment
+        comment={comment}
+        bgClassName="bg-slate-50"
+        onSave={onSave}
+        onDelete={onDelete}
+        onReply={onReply}
+      />
       {comment.replies.length > 0 ? (
         <div className="ml-4 space-y-2 border-l-2 border-slate-100 pl-3">
           {comment.replies.map((reply) => (
-            <div
+            <InlineEditableComment
               key={reply.feedCommentId}
-              className="rounded-xl border border-slate-100 bg-white px-3 py-2.5"
-            >
-              <p className="text-xs font-black text-slate-900">{reply.author.nickname}</p>
-              <p className="mt-1 text-xs font-bold text-slate-600 leading-relaxed whitespace-pre-wrap">
-                {reply.content}
-              </p>
-              <p className="mt-1 text-[10px] font-bold text-slate-400">
-                {formatFeedDate(reply.createdAt)}
-              </p>
-            </div>
+              comment={reply}
+              bgClassName="bg-white"
+              onSave={onSave}
+              onDelete={onDelete}
+            />
           ))}
         </div>
       ) : null}
@@ -227,6 +310,12 @@ export default function FeedPostDetailModal({
     }
   }
 
+  const handleSaveComment = async (commentId: number, content: string) => {
+    if (!post) return
+    await updateFeedComment(post.feedPostId, commentId, { content })
+    await loadComments(post.feedPostId)
+  }
+
   const handleSubmitComment = async () => {
     if (!post || commentSubmitting) return
     const content = commentDraft.trim()
@@ -242,10 +331,7 @@ export default function FeedPostDetailModal({
       setCommentDraft('')
       setReplyToCommentId(null)
       await loadComments(post.feedPostId)
-      syncPost({
-        ...post,
-        commentCount: post.commentCount + 1,
-      })
+      syncPost({ ...post, commentCount: post.commentCount + 1 })
     } catch (submitError) {
       setError(extractApiErrorMessage(submitError, '댓글 작성에 실패했습니다.'))
     } finally {
@@ -432,7 +518,7 @@ export default function FeedPostDetailModal({
                         comment={comment}
                         onReply={setReplyToCommentId}
                         onDelete={(commentId) => void handleDeleteComment(commentId)}
-                        canDelete={comment.author.userId === userId}
+                        onSave={handleSaveComment}
                       />
                     ))}
                   </div>

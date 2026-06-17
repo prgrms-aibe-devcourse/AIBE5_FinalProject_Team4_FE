@@ -3,6 +3,7 @@ import type { BeApiResponse } from '@/types/be'
 import type {
   FeedComment,
   FeedCommentPayload,
+  FeedCommentUpdatePayload,
   FeedCreatePayload,
   FeedInteraction,
   FeedPage,
@@ -83,6 +84,20 @@ export async function createFeedComment(
   return unwrap(
     api.post<BeApiResponse<FeedComment>>(
       `${FEED_BASE}/posts/${postId}/comments`,
+      payload,
+    ),
+  )
+}
+
+/** PUT /api/v1/feed/posts/{postId}/comments/{commentId} */
+export async function updateFeedComment(
+  postId: number,
+  commentId: number,
+  payload: FeedCommentUpdatePayload,
+): Promise<FeedComment> {
+  return unwrap(
+    api.put<BeApiResponse<FeedComment>>(
+      `${FEED_BASE}/posts/${postId}/comments/${commentId}`,
       payload,
     ),
   )

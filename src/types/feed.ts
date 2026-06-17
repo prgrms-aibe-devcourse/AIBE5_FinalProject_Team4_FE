@@ -66,6 +66,11 @@ export interface FeedComment {
   content: string
   replies: FeedComment[]
   createdAt: string
+  isOwner: boolean
+}
+
+export interface FeedCommentUpdatePayload {
+  content: string
 }
 
 export interface FeedInteraction {
