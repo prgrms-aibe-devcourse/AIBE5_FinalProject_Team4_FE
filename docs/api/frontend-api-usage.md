@@ -2,7 +2,7 @@
 doc_type: fe_api_usage
 source_of_truth: AIBE5_FinalProject_Team4_FE
 api_contract_source_of_truth: AIBE5_FinalProject_Team4_BE/docs/api/api-contract.md
-last_updated: 2026-06-15
+last_updated: 2026-06-17
 ---
 
 # API 사용 기준
@@ -197,10 +197,49 @@ API를 호출하는 화면은 아래 상태를 구분합니다.
 | 코디북 | GET | `/api/v1/outfit-books/{bookId}` | 코디북 상세 표시 |
 | 코디 | POST | `/api/v1/outfit-books/{bookId}/outfits` | 코디 저장 |
 | 코디 | GET | `/api/v1/outfit-books/{bookId}/outfits/{outfitId}` | 저장 코디 상세와 구성 옷 표시 |
-| 코디 | PATCH | `/api/v1/outfit-books/{bookId}/outfits/{outfitId}` | 코디 수정 |
+| 코디 수정/좋아요 | PATCH | `/api/v1/outfit-books/{bookId}/outfits/{outfitId}` | 코디 수정 및 좋아요 토글. (title, description, situation, season 필수) |
 | 코디 | DELETE | `/api/v1/outfit-books/{bookId}/outfits/{outfitId}` | 코디 삭제 |
 | 이미지 | GET | `/api/v1/images/clothes/{userId}/{filename}` | 옷 이미지 표시 |
 | 이미지 | GET | `/api/v1/images/purchase-captures/{userId}/{filename}` | 구매내역 캡처 이미지 표시 |
+| 이미지 | GET | `/api/v1/images/feed/{userId}/{filename}` | 룩피드 게시물 이미지 표시 |
+| 룩피드 목록 | GET | `/api/v1/feed/posts?page={p}&size={s}` | 피드 목록 페이지네이션 표시 (`FEED-002`). `FeedPage` 응답 |
+| 룩피드 상세 | GET | `/api/v1/feed/posts/{postId}` | 피드 상세 모달 표시 (`FEED-003`). `FeedPost` 응답 |
+| 룩피드 작성 | POST | `/api/v1/feed/posts` | 피드 게시물 생성 (`FEED-001`). `FeedCreatePayload` 요청 |
+| 룩피드 수정 | PUT | `/api/v1/feed/posts/{postId}` | 내 피드 caption 수정. `{ caption }` 요청 |
+| 룩피드 삭제 | DELETE | `/api/v1/feed/posts/{postId}` | 내 피드 게시물 삭제 |
+| 룩피드 이미지 업로드 | POST | `/api/v1/feed/images` | 피드 이미지 업로드. `multipart/form-data`. `{ imageUrl }` 응답 |
+| 좋아요 토글 | POST | `/api/v1/feed/posts/{postId}/likes` | 좋아요/취소 토글 (`FEED-004`). `FeedInteraction` 응답 |
+| 저장 토글 | POST | `/api/v1/feed/posts/{postId}/saves` | 코디 저장/취소 토글 (`FEED-005`). `FeedInteraction` 응답. 연결 코디(`outfit`)가 없으면 FE에서 요청하지 않음 |
+| 댓글 목록 | GET | `/api/v1/feed/posts/{postId}/comments` | 댓글 목록 표시 (`FEED-006`). `FeedComment[]` 응답 |
+| 댓글 작성 | POST | `/api/v1/feed/posts/{postId}/comments` | 댓글/대댓글 작성 (`FEED-007`). `FeedCommentPayload` 요청 |
+| 댓글 수정 | PUT | `/api/v1/feed/posts/{postId}/comments/{commentId}` | 내 댓글 수정 |
+| 댓글 삭제 | DELETE | `/api/v1/feed/posts/{postId}/comments/{commentId}` | 내 댓글 삭제 |
+| 팔로우 토글 | POST | `/api/v1/feed/users/{followeeId}/follows` | 팔로우/언팔로우 토글 (`FEED-008`). `FeedInteraction` 응답. 현재 팔로우 상태는 `FeedPost.author.followedByMe`로 초기화. BE가 해당 필드를 내려주지 않으면 버튼 미표시 |
+
+## 룩피드 API 동기화 기준
+
+`src/api/feed.ts`와 `src/components/feed/`, `src/components/FeedTab.tsx`에서 실제 API를 호출합니다.
+
+| 세부기능 ID | BE API | FE 파일 | 현재 FE 상태 |
+| --- | --- | --- | --- |
+| `FEED-001` | `POST /api/v1/feed/posts` | `src/api/feed.ts` `createFeedPost` | 피드 게시물 작성 연동 |
+| `FEED-002` | `GET /api/v1/feed/posts` | `src/api/feed.ts` `fetchFeedPosts` | 피드 목록 조회 연동. 페이지네이션 `page`/`size` 사용 |
+| `FEED-003` | `GET /api/v1/feed/posts/{postId}` | `src/api/feed.ts` `fetchFeedPost` | 피드 상세 모달 연동 |
+| `FEED-004` | `POST /api/v1/feed/posts/{postId}/likes` | `src/api/feed.ts` `toggleFeedLike` | 좋아요 토글 연동. `FeedInteraction.active`/`count`로 화면 상태 갱신 |
+| `FEED-005` | `POST /api/v1/feed/posts/{postId}/saves` | `src/api/feed.ts` `toggleFeedSave` | 코디 저장 토글 연동. `outfit`이 없으면 FE에서 요청하지 않음 |
+| `FEED-006` | `GET /api/v1/feed/posts/{postId}/comments` | `src/api/feed.ts` `fetchFeedComments` | 댓글 목록 조회 연동 |
+| `FEED-007` | `POST /api/v1/feed/posts/{postId}/comments` | `src/api/feed.ts` `createFeedComment` | 댓글/대댓글 작성 연동 |
+| `FEED-008` | `POST /api/v1/feed/users/{followeeId}/follows` | `src/api/feed.ts` `toggleFollow` | 팔로우 토글 연동. 초기 상태는 `FeedPost.author.followedByMe`로 설정. BE 응답에 해당 필드가 없으면 버튼 미표시 |
+
+팔로우 버튼 초기 상태:
+
+- `GET /api/v1/feed/posts/{postId}` 상세 응답의 `author.followedByMe`로 초기화합니다.
+- `mine: true`인 게시물에는 팔로우 버튼을 표시하지 않습니다.
+- `author.followedByMe`가 `undefined`(BE 미제공)이면 팔로우 버튼을 표시하지 않습니다. 팔로우 상태를 알 수 없는 상태에서 toggle을 허용하면 기존 팔로우 관계가 의도치 않게 해제될 수 있습니다.
+- BE `FeedAuthorResponse`에 `followedByMe` 필드가 추가되면 버튼이 자동으로 표시됩니다.
+- 팔로우 토글 성공 후 `FeedInteraction.active`를 UI 상태에 반영합니다.
+
+`FeedAuthor.followedByMe`는 FE 타입(`src/types/feed.ts`)에 optional(`boolean | undefined`)로 선언되어 있습니다. BE `FeedAuthorResponse`에 해당 필드가 추가되면 필수(`boolean`)로 전환합니다.
 
 ## 추천 API 동기화 기준
 

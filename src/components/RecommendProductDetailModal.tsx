@@ -65,11 +65,9 @@ export default function RecommendProductDetailModal({
                                                         onPurchaseConfirm,
                                                         purchaseConfirmSubmitting = false,
                                                     }: RecommendProductDetailModalProps) {
-    // 모든 Hook은 early return 전에 선언
     const { showToast } = useToast()
     const [purchaseOpened, setPurchaseOpened] = useState(false)
 
-    // 모달이 닫히거나 item이 바뀌면 구매 확인 상태 초기화
     useEffect(() => {
         if (!open || !item) setPurchaseOpened(false)
     }, [open, item?.id])
@@ -209,27 +207,6 @@ export default function RecommendProductDetailModal({
             </ModalBody>
 
             <ModalFooter className="px-5 py-4 space-y-2">
-                {/* SAVED + EXCLUDE 피드백 버튼 */}
-                <div className="grid grid-cols-2 gap-2">
-                    <button
-                        type="button"
-                        onClick={() => handleFeedback('SAVED')}
-                        disabled={wishlistSubmitting}
-                        className={`h-10 rounded-2xl bg-[#111827] text-white font-black text-sm hover:bg-slate-800 transition-colors ${wishlistSubmitting ? 'opacity-60 cursor-not-allowed' : ''}`}
-                    >
-                        {wishlistSubmitting ? '처리 중...' : wishlisted ? '저장됨' : '저장하기'}
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => handleFeedback('EXCLUDE')}
-                        disabled={dislikeSubmitting}
-                        className="h-10 rounded-2xl border border-slate-200 bg-white text-slate-600 font-black text-sm hover:bg-slate-50 transition-colors disabled:opacity-60"
-                    >
-                        추천 제외
-                    </button>
-                </div>
-
-                {/* 구매 링크 클릭 시마다 갱신되고 좋아요 버튼 노출 */}
                 {item.hasDirectPurchaseUrl && item.purchaseUrl && item.purchaseUrl !== '#' && (
                     <a
                         href={item.purchaseUrl}
@@ -242,7 +219,6 @@ export default function RecommendProductDetailModal({
                     </a>
                 )}
 
-                {/* 좋아요 버튼은 구매 링크 클릭 시 노출, 클릭 시 onPurchaseConfirm 호출 */}
                 {purchaseOpened && onPurchaseConfirm && (
                     <button
                         type="button"
@@ -254,7 +230,6 @@ export default function RecommendProductDetailModal({
                     </button>
                 )}
 
-                {/* 싫어요 버튼 (현재 핸들러) */}
                 {onDislike && (
                     <button
                         type="button"

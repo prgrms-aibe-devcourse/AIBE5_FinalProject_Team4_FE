@@ -4,13 +4,26 @@ import AuthenticatedImage from "@/components/common/AuthenticatedImage";
 import {
   Search,
   ChevronRight,
-  Layout,
+  LayoutGrid,
   Heart,
 } from "./icons";
 import { Garment } from "@/types";
 import { fetchMyOutfitBook, updateOutfit, type OutfitResponse } from "@/api/outfits";
-import OutfitDetailModal from "./OutfitDetailModal";
+import type { ClothesResponse } from "@/types/be";
+import OutfitDetailModal, { type OutfitModalItem } from "./OutfitDetailModal";
 import { useToast } from './Toast'
+
+function toOutfitModalItem(clothes: ClothesResponse | undefined): OutfitModalItem | undefined {
+  if (!clothes) return undefined
+  return {
+    clothesId: clothes.clothesId,
+    name: clothes.name,
+    brand: clothes.brandName,
+    imageUrl: clothes.imageUrl ?? undefined,
+    userImageUrl: clothes.userImageUrl ?? undefined,
+    category: clothes.category,
+  }
+}
 
 interface OutfitBookTabProps {
   userId: number;
@@ -65,9 +78,8 @@ export default function OutfitBookTab({
       await updateOutfit(outfitBookId, outfit.outfitId, {
         title: outfit.title,
         description: outfit.description,
-        thumbnailUrl: outfit.thumbnailUrl ?? '',
-        situation: outfit.situation ?? '일상',
-        season: outfit.season ?? 'ALL_SEASON',
+        situation: outfit.situation || '일상',
+        season: outfit.season || 'ALL_SEASON',
         favorite: next,
         // items 생략 → BE에서 기존 구성 유지
       });
@@ -205,7 +217,7 @@ export default function OutfitBookTab({
           !outfitLoading && (
             <div className="col-span-full text-center py-20 bg-white rounded-3xl border-2 border-dashed border-slate-200">
               <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Layout className="w-8 h-8 text-slate-300" />
+                <LayoutGrid className="w-8 h-8 text-slate-300" />
               </div>
               <p className="text-xs text-slate-500 font-bold">
                 {outfitSearchTerm ? "검색 결과가 없습니다." : "저장된 코디가 없습니다."}
@@ -244,10 +256,10 @@ export default function OutfitBookTab({
             bookId: outfitBookId,
             title: selectedOutfit.title,
             description: selectedOutfit.description,
-            top: selectedOutfit.items.find((it) => it.itemRole === "TOP")?.clothes,
-            bottom: selectedOutfit.items.find((it) => it.itemRole === "BOTTOM")?.clothes,
-            outer: selectedOutfit.items.find((it) => it.itemRole === "OUTER")?.clothes,
-            shoes: selectedOutfit.items.find((it) => it.itemRole === "SHOES")?.clothes,
+            top: toOutfitModalItem(selectedOutfit.items.find((it) => it.itemRole === "TOP")?.clothes),
+            bottom: toOutfitModalItem(selectedOutfit.items.find((it) => it.itemRole === "BOTTOM")?.clothes),
+            outer: toOutfitModalItem(selectedOutfit.items.find((it) => it.itemRole === "OUTER")?.clothes),
+            shoes: toOutfitModalItem(selectedOutfit.items.find((it) => it.itemRole === "SHOES")?.clothes),
           }}
           onClose={() => setSelectedOutfit(null)}
           onSaved={loadOutfits}

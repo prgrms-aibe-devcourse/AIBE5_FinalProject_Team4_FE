@@ -1,4 +1,4 @@
-import { resolveClothesGender } from '@/data/garmentGender'
+import { resolveClothesGenderWithBrand } from '@/data/brandGender'
 import type { ClothesGender, ClothesInfoSource, ClothesResponse } from '@/types/be'
 import type { Garment, GarmentBeMeta } from '@/types'
 import {
@@ -13,7 +13,7 @@ function extractBeMeta(item: ClothesResponse): GarmentBeMeta {
   return {
     categoryCode: item.category,
     itemTypeCode: item.itemType,
-    genderCode: resolveClothesGender(item.gender),
+    genderCode: resolveClothesGenderWithBrand(item.gender, item.brandName),
     primaryColorCode: item.primaryColor ?? item.primaryColorDisplay?.code ?? 'WHITE',
     secondaryColorCodes: (item.secondaryColors ?? []).map((c) => c.code),
     styleCodes: (item.styles ?? []).map((s) => s.code),

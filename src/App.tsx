@@ -11,12 +11,13 @@ import {
     ChevronRight,
     Activity,
     Layers,
-    Layout,
+    LayoutGrid,
 } from "./components/icons";
 import { UserProfile } from "@/types/index";
 import { REGIONS } from "@/data/regions";
 import HomeTab from "./components/HomeTab";
 import ClosetTab from "./components/ClosetTab";
+import FeedTab from "./components/FeedTab";
 import OutfitBookTab from "./components/OutfitBookTab";
 import GarmentRegisterMethodModal from "./components/GarmentRegisterMethodModal";
 import PhotoGarmentRegisterModal from "./components/PhotoGarmentRegisterModal";
@@ -343,64 +344,25 @@ export default function App() {
                             )}
 
                         {/* ========================================================= */}
-                        {/* TAB 3: STYLE FEED (Mockup curation sandbox) */}
+                        {/* TAB 3: STYLE FEED */}
                         {/* ========================================================= */}
-                        {currentTab === "feed" && (
-                            <div className="space-y-5 animate-fade-in text-left">
-                                <div className="space-y-1">
-                                    <h3 className="text-base font-bold text-[#1E3A8A]">Closet Toy 스타일 실시간 피드</h3>
-                                    <p className="text-xs text-slate-400">다른 해부학 스마트 유저들의 인체 조화 스타일링 스냅샷을 구경하세요.</p>
-                                </div>
-
-                                {/* Feed mock 1 */}
-                                <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-xs">
-                                    <img
-                                        src="https://images.unsplash.com/photo-1551028719-00167b16eac5?auto=format&fit=crop&q=80&w=800"
-                                        className="w-full h-48 object-cover object-top"
-                                        alt="Street feed user"
-                                    />
-                                    <div className="p-4 space-y-2">
-                                        <div className="flex justify-between items-center">
-                                            <div className="flex items-center space-x-1.5">
-                                                <span className="w-5 h-5 rounded-full bg-slate-200 flex items-center justify-center text-[10px]">🤖</span>
-                                                <span className="text-xs font-bold text-slate-700">@tech_minimalist_kim</span>
-                                            </div>
-                                            <span className="bg-[#BBF7D0] text-[#1E3A8A] text-[10px] font-bold px-2 py-0.5 rounded-full">94% 만족</span>
-                                        </div>
-                                        <p className="text-xs text-slate-500">"고정밀 쉘 테크니컬 아노락을 코디 추천받아 착용해보니 어깨 라인부터 흐르는 drape 핏이 정말 마음에 들어요!"</p>
-
-                                        <div className="flex items-center space-x-1.5 text-[10px] text-[#1E3A8A] font-semibold bg-slate-50 p-2 rounded-lg">
-                                            <Activity className="w-3.5 h-3.5" />
-                                            <span>의류 조화 레이어링 지수 우수</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Feed mock 2 */}
-                                <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-xs">
-                                    <img
-                                        src="https://images.unsplash.com/photo-1542272604-787c3835535d?auto=format&fit=crop&q=80&w=800"
-                                        className="w-full h-48 object-cover"
-                                        alt="Casual denim feed"
-                                    />
-                                    <div className="p-4 space-y-2">
-                                        <div className="flex justify-between items-center">
-                                            <div className="flex items-center space-x-1.5">
-                                                <span className="w-5 h-5 rounded-full bg-slate-200 flex items-center justify-center text-[10px]">👟</span>
-                                                <span className="text-xs font-bold text-slate-700">@ame_gorp_lover</span>
-                                            </div>
-                                            <span className="bg-[#BBF7D0] text-[#1E3A8A] text-[10px] font-bold px-2 py-0.5 rounded-full">91% 만족</span>
-                                        </div>
-                                        <p className="text-xs text-slate-500">"허벅지가 굵은 축하형 골단 구조인데 와이드 셀비지 팬츠가 고관절 복부 압박없이 가볍게 아래로 흐르네요."</p>
-
-                                        <div className="flex items-center space-x-1.5 text-[10px] text-[#1E3A8A] font-semibold bg-slate-50 p-2 rounded-lg">
-                                            <Activity className="w-3.5 h-3.5" />
-                                            <span>골반 대퇴골 가동역 98% 확보</span>
-                                        </div>
-                                    </div>
-                                </div>
+                        {currentTab === "feed" && !authReady && (
+                            <div className="flex justify-center py-16 text-sm text-slate-500">
+                                인증 확인 중…
                             </div>
                         )}
+                        {currentTab === "feed" &&
+                            authReady &&
+                            authUserId != null && (
+                                <FeedTab userId={authUserId} />
+                            )}
+                        {currentTab === "feed" &&
+                            authReady &&
+                            authUserId == null && (
+                                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-center text-sm text-amber-900">
+                                    로그인 정보를 확인할 수 없습니다. 다시 로그인해 주세요.
+                                </div>
+                            )}
 
                         {/* ========================================================= */}
                         {/* TAB 4: MY PROFILE (Anatomical diagnostic details) */}
@@ -515,13 +477,16 @@ export default function App() {
                             }}
                             className={`flex flex-col items-center justify-center flex-1 py-1 transition ${currentTab === "outfit-book" ? "text-[#1E3A8A]" : "text-slate-400 hover:text-slate-600"}`}
                         >
-                            <Layout className="w-5 h-5" />
+                            <LayoutGrid className="w-5 h-5" />
                             <span className="text-[9px] font-extrabold mt-1">코디북</span>
                         </button>
 
                         <button
                             id="nav-feed"
-                            onClick={() => setCurrentTab("feed")}
+                            onClick={() => {
+                                if (!requireLogin()) return;
+                                setCurrentTab("feed");
+                            }}
                             className={`flex flex-col items-center justify-center flex-1 py-1 transition ${currentTab === "feed" ? "text-[#1E3A8A]" : "text-slate-400 hover:text-slate-600"}`}
                         >
                             <Activity className="w-5 h-5" />

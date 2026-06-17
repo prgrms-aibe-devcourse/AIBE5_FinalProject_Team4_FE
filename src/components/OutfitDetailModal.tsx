@@ -8,7 +8,7 @@ import { Shirt, CloudRain, Sparkles, ThumbsDown, Trash2, RefreshCw } from '@/com
 import ClothesSelectModal from './ClothesSelectModal'
 import { Garment } from '@/types'
 
-interface OutfitItem {
+export interface OutfitModalItem {
   clothesId?: number
   name?: string
   brand?: string
@@ -20,10 +20,10 @@ interface OutfitItem {
 interface OutfitDetailModalProps {
   open: boolean
   combination: {
-    top?: OutfitItem | null
-    bottom?: OutfitItem | null
-    outer?: OutfitItem | null
-    shoes?: OutfitItem | null
+    top?: OutfitModalItem | null
+    bottom?: OutfitModalItem | null
+    outer?: OutfitModalItem | null
+    shoes?: OutfitModalItem | null
     totalScore?: number
     weatherLabel?: string
     outfitId?: number
@@ -48,7 +48,6 @@ export default function OutfitDetailModal({
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [disliking, setDisliking] = useState(false)
-  
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   // 편집 상태
@@ -92,7 +91,14 @@ export default function OutfitDetailModal({
     setFavLoading(true)
     setFavorite(next)
     try {
-      await updateOutfit(editCombo.bookId, editCombo.outfitId, { favorite: next })
+      // BE PATCH requires title, description, situation, season as @NotBlank
+      await updateOutfit(editCombo.bookId, editCombo.outfitId, {
+        favorite: next,
+        title: editCombo.title || [editCombo.top?.name, editCombo.bottom?.name].filter(Boolean).join(' + ') || '추천 코디',
+        description: editCombo.description || editCombo.weatherLabel || '추천 코디',
+        situation: editCombo.situation || '일상',
+        season: editCombo.season || 'ALL_SEASON'
+      })
       showToast('success', next ? '좋아요가 되었습니다!' : '좋아요가 취소되었습니다!')
     } catch (err) {
       console.error('Failed to toggle outfit favorite', err)
@@ -169,8 +175,6 @@ export default function OutfitDetailModal({
   }, [open, combination, clothes])
 
   if (!open || !combination || !editCombo) return null
-
-  
 
   const handleSave = async () => {
     if (!editCombo.bookId) {

@@ -89,6 +89,33 @@ export const MessageSquare = (props: IconProps) => (
   </Icon>
 );
 
+export const Send = (props: IconProps) => (
+  <Icon {...props}>
+    <path d="m22 2-7 20-4-9-9-4Z" />
+    <path d="M22 2 11 13" />
+  </Icon>
+);
+
+export const Bookmark = (props: IconProps) => (
+  <Icon {...props}>
+    <path d="M7 3h10v18-5-3-5 3V3Z" />
+  </Icon>
+);
+
+export const MoreHorizontal = (props: IconProps) => (
+  <Icon {...props}>
+    <circle cx="5" cy="12" r="1.5" fill="currentColor" stroke="none" />
+    <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
+    <circle cx="19" cy="12" r="1.5" fill="currentColor" stroke="none" />
+  </Icon>
+);
+
+export const ChevronLeft = (props: IconProps) => (
+  <Icon {...props}>
+    <path d="m15 18-6-6 6-6" />
+  </Icon>
+);
+
 export const ChevronRight = (props: IconProps) => (
   <Icon {...props}>
     <path d="m9 18 6-6-6-6" />
@@ -162,6 +189,17 @@ export const Layers = (props: IconProps) => (
   </Icon>
 );
 
+export const LayoutGrid = (props: IconProps) => (
+  <Icon {...props}>
+    <rect x="3" y="3" width="18" height="18" rx="2" />
+    <path d="M3 9h18" />
+    <path d="M9 21V9" />
+  </Icon>
+);
+
+/** @deprecated Use LayoutGrid */
+export const Layout = LayoutGrid;
+
 export const ShoppingBag = (props: IconProps) => (
   <Icon {...props}>
     <path d="M6 8h12l-1 13H7L6 8Z" />
@@ -214,6 +252,23 @@ export const RefreshCw = (props: IconProps) => (
   </Icon>
 );
 
+export const Trash2 = (props: IconProps) => (
+  <Icon {...props}>
+    <path d="M3 6h18" />
+    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+    <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+    <path d="M10 11v6" />
+    <path d="M14 11v6" />
+  </Icon>
+);
+
+export const Edit2 = (props: IconProps) => (
+  <Icon {...props}>
+    <path d="M12 20h9" />
+    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" />
+  </Icon>
+);
+
 export const AlertCircle = Info;
 
 export const Shirt = (props: IconProps) => (
@@ -230,27 +285,3 @@ export function ThumbsDown({ className }: { className?: string }) {
         </svg>
     )
 }
-
-export const Trash2 = (props: IconProps) => (
-  <Icon {...props}>
-    <path d="M3 6h18" />
-    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
-    <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-    <path d="M10 11v6" />
-    <path d="M14 11v6" />
-  </Icon>
-);
-
-export const Edit2 = (props: IconProps) => (
-  <Icon {...props}>
-    <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
-  </Icon>
-);
-
-export const Layout = (props: IconProps) => (
-  <Icon {...props}>
-    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-    <line x1="3" y1="9" x2="21" y2="9" />
-    <line x1="9" y1="21" x2="9" y2="9" />
-  </Icon>
-);

@@ -25,20 +25,11 @@ export interface OutfitSavePayload {
   items: OutfitSaveItem[]
 }
 
-export interface OutfitBookResponse {
-  outfitBookId: number
-  userId: number
-  outfitCount: number
-  outfits: OutfitResponse[]
-}
-
-/** GET /api/v1/outfit-books — 코디북 + 코디 목록 한번에 조회 */
-export async function fetchMyOutfitBook(): Promise<OutfitBookResponse> {
-  return unwrap(api.get<BeApiResponse<OutfitBookResponse>>('/api/v1/outfit-books'))
-}
-/** POST /api/v1/outfit-books/{bookId}/outfits */
-export async function createOutfit(bookId: number, payload: OutfitSavePayload): Promise<void> {
-  await unwrap(api.post(`/api/v1/outfit-books/${bookId}/outfits`, payload))
+export interface OutfitItemResponse {
+  outfitItemId: number
+  itemRole: string
+  layerOrder: number | null
+  clothes: import('@/types/be').ClothesResponse
 }
 
 export interface OutfitResponse {
@@ -46,24 +37,32 @@ export interface OutfitResponse {
   outfitBookId: number
   title: string
   description: string
-  thumbnailUrl: string
-  situation: string
-  season: string
+  thumbnailUrl: string | null
+  situation: string | null
+  season: string | null
   favorite: boolean
-  items: Array<{
-    outfitItemId: number
-    itemRole: string
-    layerOrder: number
-    clothes: {
-      clothesId: number
-      wardrobeClothesId: number
-      name?: string
-      imageUrl?: string
-      userImageUrl?: string
-      ownershipStatus?: 'OWNED' | 'WISHLIST'
-      category?: string
-    }
-  }>
+  items: OutfitItemResponse[]
+  createdAt: string
+  updatedAt: string
+}
+
+export interface OutfitBookResponse {
+  outfitBookId: number
+  userId: number
+  outfitCount: number
+  outfits: OutfitResponse[]
+  createdAt: string | null
+  updatedAt: string | null
+}
+
+/** GET /api/v1/outfit-books — 코디북 + 코디 목록 한번에 조회 */
+export async function fetchMyOutfitBook(): Promise<OutfitBookResponse> {
+  return unwrap(api.get<BeApiResponse<OutfitBookResponse>>('/api/v1/outfit-books'))
+}
+
+/** POST /api/v1/outfit-books/{bookId}/outfits */
+export async function createOutfit(bookId: number, payload: OutfitSavePayload): Promise<void> {
+  await unwrap(api.post(`/api/v1/outfit-books/${bookId}/outfits`, payload))
 }
 
 /** GET /api/v1/outfit-books/{bookId}/outfits */
