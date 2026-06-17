@@ -41,6 +41,7 @@ import {
   fetchMarketingConsent,
   updateMarketingConsent,
 } from "@/api/marketingConsent";
+import { uploadProfileImage } from "@/api/profileImage";
 import { checkNicknameAvailability } from "@/api/users";
 import { getGarmentStyleLabel } from "@/data/garmentStyles";
 import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/common/Modal";
@@ -97,6 +98,7 @@ type ProfileEditDraft = {
   styles: string[];
   profileImageUrl: string;
   profileImagePreviewUrl: string;
+  profileImageFile: File | null;
   profileImageFileName: string;
   profileBio: string;
   externalLinkUrl: string;
@@ -622,6 +624,7 @@ export default function App() {
       styles: profile.styles.map((style) => style.trim()).filter(Boolean),
       profileImageUrl: profile.profileImageUrl ?? "",
       profileImagePreviewUrl: profile.profileImageUrl ?? "",
+      profileImageFile: null,
       profileImageFileName: "",
       profileBio: profile.profileBio ?? "",
       externalLinkUrl: profile.externalLinkUrl ?? "",
@@ -683,6 +686,7 @@ export default function App() {
     const previewUrl = URL.createObjectURL(file);
     updateProfileEditDraft({
       profileImagePreviewUrl: previewUrl,
+      profileImageFile: file,
       profileImageFileName: file.name,
     });
     event.target.value = "";
@@ -756,7 +760,7 @@ export default function App() {
       profileEditDraft.birthMonth,
       profileEditDraft.birthDay,
     );
-    const profileImageUrl = profileEditDraft.profileImageUrl.trim();
+    let profileImageUrl = profileEditDraft.profileImageUrl.trim();
     const profileBio = profileEditDraft.profileBio.trim();
     const externalLinkUrl = profileEditDraft.externalLinkUrl.trim();
 
@@ -778,6 +782,9 @@ export default function App() {
     setProfileEditSaving(true);
     try {
       const regionData = REGIONS.find((region) => region.code === profileEditDraft.region);
+      if (profileEditMode === "image" && profileEditDraft.profileImageFile) {
+        profileImageUrl = await uploadProfileImage(profileEditDraft.profileImageFile);
+      }
       if (profileEditMode === "basic" || profileEditMode === "image") {
         await api.patch('/api/v1/users/profile', {
           nickname,

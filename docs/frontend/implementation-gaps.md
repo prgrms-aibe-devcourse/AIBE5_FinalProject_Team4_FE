@@ -1,4 +1,9 @@
----
+| 11 | 프로필 이미지 저장소 URL 전환 확인 | BE가 S3 또는 CDN URL 반환으로 바뀔 때 FE 이미지 표시, CORS, cache 기준 확인 필요 |
+| 12 | 배포/인프라 목표 구조와 현재 FE/CI 상태 | AWS 배포 및 CD 구현 시 공통 시스템 문서와 실제 FE 레포 설정 정합성에 영향 || BE 신규 API 타입 | 일부 신규 API 응답/요청 타입이 `src/types/be.ts`에 모두 정리되어 있지 않을 수 있음 | BE develop 기준 API 계약 타입 반영 | [frontend-api-usage.md](../api/frontend-api-usage.md), [domain-types.md](domain-types.md) |
+| 프로필 이미지 저장소 전환 | FE는 `POST /api/v1/users/profile/image` 업로드 후 BE가 반환한 `imageUrl`을 저장/표시. 현재 BE 반환 URL은 로컬 `/api/v1/images/profile/**` 조회 endpoint 기준 | 운영 기준은 BE가 AWS S3 또는 CDN URL을 반환하고 FE는 반환된 이미지 URL을 그대로 표시 | [frontend-api-usage.md](../api/frontend-api-usage.md), [mypage.md](../features/mypage.md), [system-architecture.md](../architecture/system-architecture.md) || 11 | 프로필 이미지 저장소 URL 전환 확인 | BE가 S3 또는 CDN URL 반환으로 바뀔 때 FE 이미지 표시, CORS, cache 기준 확인 필요 |
+| 12 | 배포/인프라 목표 구조와 현재 FE/CI 상태 | AWS 배포 및 CD 구현 시 공통 시스템 문서와 실제 FE 레포 설정 정합성에 영향 || BE 신규 API 타입 | 일부 신규 API 응답/요청 타입이 `src/types/be.ts`에 모두 정리되어 있지 않을 수 있음 | BE develop 기준 API 계약 타입 반영 | [frontend-api-usage.md](../api/frontend-api-usage.md), [domain-types.md](domain-types.md) |
+| 프로필 이미지 저장소 전환 | FE는 `POST /api/v1/users/profile/image` 업로드 후 BE가 반환한 `imageUrl`을 저장/표시. 현재 BE 반환 URL은 로컬 `/api/v1/images/profile/**` 조회 endpoint 기준 | 운영 기준은 BE가 AWS S3 또는 CDN URL을 반환하고 FE는 반환된 이미지 URL을 그대로 표시 | [frontend-api-usage.md](../api/frontend-api-usage.md), [mypage.md](../features/mypage.md), [system-architecture.md](../architecture/system-architecture.md) |
+| 배포/인프라 목표 구조 | GitHub Actions는 lint/build CI를 수행하고, AWS 배포와 CD 자동화는 진행 예정. 공통 시스템 아키텍처는 목표 구조 기준 | FE/BE 배포 구현 시 시스템 아키텍처, 기술 스택, 기획서, gap 문서 동시 갱신 | [system-architecture.md](../architecture/system-architecture.md), [tech-stack.md](../architecture/tech-stack.md) |---
 doc_type: fe_implementation_gaps
 source_of_truth: AIBE5_FinalProject_Team4_FE
 last_updated: 2026-06-17
@@ -40,7 +45,7 @@ last_updated: 2026-06-17
 | 룩피드 프로필 피드 목록 | 프로필 화면의 2열 피드 영역은 UI 틀만 있으며 실제 피드 데이터와 연결되지 않음 | 피드 API 연동 후 게시/저장 피드 개수에 따라 최신순 2열 grid와 빈 상태 문구를 조건부 표시 | [feature-index.md](../requirements/feature-index.md), [routing.md](routing.md) |
 | 피드 팔로우 초기 상태 | `FeedAuthor.followedByMe`가 optional. BE `FeedAuthorResponse`에 해당 필드가 없으면 팔로우 버튼 미표시 | BE PR #128 `FeedAuthorResponse`에 `followedByMe` 추가 후 FE 타입을 필수로 전환 | [frontend-api-usage.md](../api/frontend-api-usage.md), [domain-types.md](domain-types.md) |
 | BE 신규 API 타입 | 일부 신규 API 응답/요청 타입이 `src/types/be.ts`에 모두 정리되어 있지 않을 수 있음 | BE develop 기준 API 계약 타입 반영 | [frontend-api-usage.md](../api/frontend-api-usage.md), [domain-types.md](domain-types.md) |
-| 프로필 이미지 수정 | 내 정보 수정에서 사진 선택/미리보기 UI는 제공하지만, BE 프로필 이미지 업로드 API는 아직 없음 | 프로필 사진 파일 업로드 후 서버가 반환한 이미지 URL을 사용자 프로필에 저장 | [mypage.md](../features/mypage.md), [frontend-api-usage.md](../api/frontend-api-usage.md) |
+| 프로필 이미지 저장소 전환 | FE는 `POST /api/v1/users/profile/image` 업로드 후 BE가 반환한 `imageUrl`을 저장/표시. 현재 BE 반환 URL은 로컬 `/api/v1/images/profile/**` 조회 endpoint 기준 | 운영 기준은 BE가 AWS S3 또는 CDN URL을 반환하고 FE는 반환된 이미지 URL을 그대로 표시 | [frontend-api-usage.md](../api/frontend-api-usage.md), [mypage.md](../features/mypage.md), [system-architecture.md](../architecture/system-architecture.md) |
 | 배포/인프라 목표 구조 | GitHub Actions는 lint/build CI를 수행하고, AWS 배포와 CD 자동화는 진행 예정. 공통 시스템 아키텍처는 목표 구조 기준 | FE/BE 배포 구현 시 시스템 아키텍처, 기술 스택, 기획서, gap 문서 동시 갱신 | [system-architecture.md](../architecture/system-architecture.md), [tech-stack.md](../architecture/tech-stack.md) |
 
 ## Feature ID 연결표
@@ -204,6 +209,19 @@ BE API 계약 기준으로 `500`은 서버 내부 오류이고, `502`는 외부 
 
 위 타입은 실제 FE 연동 PR에서 API 호출부와 함께 추가하거나, 별도 타입 정리 PR에서 반영합니다. 코드 타입이 추가되면 [frontend-api-usage.md](../api/frontend-api-usage.md)와 이 문서를 함께 확인합니다.
 
+### 프로필 이미지 저장소 전환
+
+현재 FE는 `POST /api/v1/users/profile/image`에 파일을 업로드하고, BE가 반환한 `imageUrl`을 사용자 프로필 이미지로 저장하고 표시합니다.
+
+현재 BE 구현은 로컬 파일 저장소를 사용하므로 반환 URL은 `/api/v1/images/profile/{userId}/{filename}` 형태의 로컬 이미지 조회 endpoint입니다. 운영 기준은 AWS S3 저장과 이미지 URL 관리이므로, S3 전환 시 FE는 API 경로를 변경하기보다 BE가 반환하는 `imageUrl`을 그대로 사용하는 구조를 유지합니다.
+
+S3 또는 CDN URL로 전환되면 아래 항목을 확인합니다.
+
+- 프로필 이미지 표시 URL이 정상 렌더링되는지
+- 이미지 URL CORS, cache, 인증 필요 여부가 FE 화면과 맞는지
+- 기존 로컬 URL 데이터의 유지 또는 마이그레이션 기준이 필요한지
+- [frontend-api-usage.md](../api/frontend-api-usage.md), [mypage.md](../features/mypage.md), [system-architecture.md](../architecture/system-architecture.md), 이 문서의 기준이 함께 갱신되는지
+
 ### 공통 시스템 아키텍처 목표 구조와 현재 FE/CI 상태
 
 [system-architecture.md](../architecture/system-architecture.md)는 현재 로컬 구현만이 아니라 MVP와 운영 배포까지 고려한 목표 시스템 구성을 설명합니다. 따라서 AWS EC2, RDS, S3, GitHub Actions 기반 배포 흐름은 목표 구조 기준으로 읽습니다.
@@ -231,9 +249,9 @@ FE 배포 또는 CD workflow가 구현되면 [system-architecture.md](../archite
 | 6 | `ApiResponse<T>` 타입과 500/502 에러 분기 | 모든 API parsing과 공통 error handling에 영향 |
 | 7 | BE 신규 API 타입 정리 | 추천/OOTD/코디/인증 유지 API 연동 시 타입 안정성에 영향 |
 | 8 | `WARDROBE-002` 옷장 통계 범위 | 옷장 전체 요약과 보유 옷 통계 해석에 영향 |
-| 9 | 프로필 이미지 업로드 API 연동 | 마이페이지 프로필 사진 변경 저장에 영향 |
-| 10 | 룩피드 프로필 피드 목록 API 연동 | 룩피드 프로필의 게시/저장 피드 표시와 실제 사용자 데이터 연결에 영향 |
-| 11 | 피드 팔로우 초기 상태 | 피드 상세의 팔로우 버튼 표시와 FE 타입 안정성에 영향 |
+| 9 | 룩피드 프로필 피드 목록 API 연동 | 룩피드 프로필의 게시/저장 피드 표시와 실제 사용자 데이터 연결에 영향 |
+| 10 | 피드 팔로우 초기 상태 | 피드 상세의 팔로우 버튼 표시와 FE 타입 안정성에 영향 |
+| 11 | 프로필 이미지 저장소 URL 전환 확인 | BE가 S3 또는 CDN URL 반환으로 바뀔 때 FE 이미지 표시, CORS, cache 기준 확인 필요 |
 | 12 | 배포/인프라 목표 구조와 현재 FE/CI 상태 | AWS 배포 및 CD 구현 시 공통 시스템 문서와 실제 FE 레포 설정 정합성에 영향 |
 
 ## 문서 변경 기준
