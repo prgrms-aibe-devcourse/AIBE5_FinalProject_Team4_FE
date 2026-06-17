@@ -6,6 +6,8 @@ import { resolveClothesDisplayImageUrl } from '@/utils/clothesImageUrl'
 import { resolveNaverShoppingPurchaseUrl } from '@/utils/naverShoppingUrl'
 import type { RecommendCardItem } from '@/utils/recommendationMapper'
 import { UI_CATEGORY_TO_BE, CATEGORY_ITEM_TYPES } from '@/data/categoryItemTypes'
+import { resolveGarmentStyleCode } from '@/data/garmentStyles'
+import { resolveGarmentColorCode } from '@/data/garmentColors'
 
 /** BE `WishlistClothesCreateRequest` — POST /api/users/{userId}/wishlist-clothes */
 export interface WishlistClothesCreatePayload {
@@ -99,8 +101,10 @@ export function buildWishlistPayloadFromCardItem(
     itemType,
     gender: 'UNISEX',
     primaryColor: item.color || 'UNKNOWN',
-    secondaryColors: item.secondaryColors?.map((c) => c.label) ?? [],
-    styles: item.styles?.length ? item.styles : ['CASUAL'],
+    secondaryColors: item.secondaryColors?.map((c) => resolveGarmentColorCode(c.label)) ?? [],
+    styles: item.styles?.length
+        ? item.styles.map(s => resolveGarmentStyleCode(s))
+        : ['CASUAL'],
     size: 'FREE',
     season: undefined,
     externalSource: 'NAVER_SHOPPING',
