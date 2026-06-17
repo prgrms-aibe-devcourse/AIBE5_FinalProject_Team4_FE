@@ -207,25 +207,6 @@ export default function RecommendProductDetailModal({
             </ModalBody>
 
             <ModalFooter className="px-5 py-4 space-y-2">
-                <div className="grid grid-cols-2 gap-2">
-                    <button
-                        type="button"
-                        onClick={() => handleFeedback('SAVED')}
-                        disabled={wishlistSubmitting}
-                        className={`h-10 rounded-2xl bg-[#111827] text-white font-black text-sm hover:bg-slate-800 transition-colors ${wishlistSubmitting ? 'opacity-60 cursor-not-allowed' : ''}`}
-                    >
-                        {wishlistSubmitting ? '처리 중...' : wishlisted ? '저장됨' : '저장하기'}
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => handleFeedback('EXCLUDE')}
-                        disabled={dislikeSubmitting}
-                        className="h-10 rounded-2xl border border-slate-200 bg-white text-slate-600 font-black text-sm hover:bg-slate-50 transition-colors disabled:opacity-60"
-                    >
-                        추천 제외
-                    </button>
-                </div>
-
                 {item.hasDirectPurchaseUrl && item.purchaseUrl && item.purchaseUrl !== '#' && (
                     <a
                         href={item.purchaseUrl}
