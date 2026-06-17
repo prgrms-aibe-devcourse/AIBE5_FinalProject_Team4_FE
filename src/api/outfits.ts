@@ -60,6 +60,7 @@ export interface OutfitResponse {
       name?: string
       imageUrl?: string
       userImageUrl?: string
+      ownershipStatus?: 'OWNED' | 'WISHLIST'
       category?: string
     }
   }>
