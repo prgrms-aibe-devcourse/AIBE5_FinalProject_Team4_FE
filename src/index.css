@@ -130,6 +130,8 @@
     transform: translateY(-0.03rem);
   }
 
+  .panel-bg { background-color: var(--tone-panel) !important; }
+
   .group\/logo:hover .brand-wordmark span:nth-child(1),
   .group\/logo:hover .brand-wordmark span:nth-child(3) {
     transform: translateY(-0.03rem);

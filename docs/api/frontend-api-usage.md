@@ -209,7 +209,7 @@ API를 호출하는 화면은 아래 상태를 구분합니다.
 | 코디북 | GET | `/api/v1/outfit-books/{bookId}` | 코디북 상세 표시 |
 | 코디 | POST | `/api/v1/outfit-books/{bookId}/outfits` | 코디 저장 |
 | 코디 | GET | `/api/v1/outfit-books/{bookId}/outfits/{outfitId}` | 저장 코디 상세와 구성 옷 표시 |
-| 코디 | PATCH | `/api/v1/outfit-books/{bookId}/outfits/{outfitId}` | 코디 수정 |
+| 코디 수정/좋아요 | PATCH | `/api/v1/outfit-books/{bookId}/outfits/{outfitId}` | 코디 수정 및 좋아요 토글. (title, description, situation, season 필수) |
 | 코디 | DELETE | `/api/v1/outfit-books/{bookId}/outfits/{outfitId}` | 코디 삭제 |
 | 이미지 | GET | `/api/v1/images/clothes/{userId}/{filename}` | 옷 이미지 표시 |
 | 이미지 | GET | `/api/v1/images/purchase-captures/{userId}/{filename}` | 구매내역 캡처 이미지 표시 |
@@ -326,7 +326,6 @@ analyze/draft 응답(`PurchaseCaptureDraftResponse`)과 save 응답(`PurchaseCap
 - FE는 FAILED·분석 API 오류 시 업로드 단계로 되돌리고 저장 버튼을 제공하지 않으며, 다른 캡처 선택 또는 **AI 분석 다시 시도**로 유도합니다.
 
 건너뛰기:
-
 ```ts
 POST /api/v1/users/{userId}/clothes/purchase-captures/{captureId}/items/{itemIndex}/skip
 ```
