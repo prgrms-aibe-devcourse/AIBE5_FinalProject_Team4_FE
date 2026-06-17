@@ -479,7 +479,8 @@ export default function App() {
     checkAuthProfile()
         .catch(() => {
           setIsLoggedIn(false);
-          setAuthReady(false);
+          setAuthUserId(null);
+          setAuthReady(true);
         });
   }, []);
 
@@ -1452,7 +1453,10 @@ export default function App() {
 
               <button
                 id="nav-feed"
-                onClick={() => setCurrentTab("feed")}
+                onClick={() => {
+                  if(!requireLogin()) return;
+                  setCurrentTab("feed");
+                }}
                 className={`flex flex-col items-center justify-center flex-1 py-1 transition ${currentTab === "feed" ? "text-[#1E3A8A]" : "text-slate-400 hover:text-slate-600"}`}
               >
                 <Activity className="w-5 h-5" />
