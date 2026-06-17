@@ -56,12 +56,12 @@ src/api/index.ts
 
 | 환경 | 로그인 시작 | 토큰 | `{userId}` |
 | --- | --- | --- | --- |
-| 개발(`DEV`) | `LoginPage` provider 버튼 → `App.handleSocialLogin` → `ensureDevToken` → `GET /api/v1/auth/mock-token?userId=1` | `localStorage.token` | JWT `sub` → `authUserId` |
-| 운영 | 동일 버튼 → `redirectToOAuthLogin(provider)` → `GET {VITE_API_BASE_URL}/oauth2/authorization/{provider}` | OAuth 콜백 `?token=` → `captureOAuthTokenFromUrl()` | 동일 |
+| 개발(`DEV`) | `LoginPage` provider 버튼 → `App.handleSocialLogin` → `redirectToOAuthLogin(provider)` → `GET {VITE_API_BASE_URL}/oauth2/authorization/{provider}` | OAuth 콜백 `?token=` → `captureOAuthTokenFromUrl()` | JWT `sub` → `authUserId` |
+| 운영 | 동일 | 동일 | 동일 |
 
-옷장·보유/미보유 API path의 `{userId}`는 하드코딩 `1`이 아니라 **JWT `sub`** 를 사용합니다. dev의 `userId=1`은 mock-token 발급 파라미터에만 쓰입니다.
+옷장·보유/미보유 API path의 `{userId}`는 하드코딩 `1`이 아니라 **JWT `sub`** 를 사용합니다.
 
-`DEV`이어도 `.env.local` 파일에 `VITE_USE_REAL_AUTH`가 `true`라면 실제 OAuth 경로를 타게 됩니다.
+`GET /api/v1/auth/mock-token`은 BE local profile에서만 사용하는 수동 개발 테스트용 API입니다. FE 공식 로그인 흐름에서는 자동으로 호출하지 않으며, 실제 로그인 검증은 개발과 운영 모두 OAuth redirect 기준으로 진행합니다.
 
 ## 경로 작성 기준
 
