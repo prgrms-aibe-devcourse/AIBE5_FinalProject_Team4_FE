@@ -79,7 +79,7 @@ fetch('/api/chat-gamyagi') // mock 경로 — 공통 api client·BE 계약 경�
 api.get('api/v1/categories')
 ```
 
-홈 추천은 라벨별로 다릅니다. OOTD(`RECO-001`), 취향 기반 추천(`RECO-002`), 유사 상품(`RECO-003`), AI MD(`RECO-006`), 어울리는 옷(`RECO-005`) 모두 실제 BE API를 호출합니다. 유사 상품(`RECO-003`)은 `src/api/similarProducts.ts`, AI MD(`RECO-006`)는 `src/api/aiMd.ts`, 나머지는 `src/api/recommendations.ts`를 통해 연동됩니다. `RECO-003`의 기준 옷은 `GET /api/v1/users/{userId}/clothes`에서 반환된 `OWNED` 옷만 허용합니다. `RECO-005`는 `limitPerCategory=50`을 기본값으로 사용합니다. ([implementation-gaps.md](../frontend/implementation-gaps.md), [home-recommendation.md](../features/home-recommendation.md))
+홈 추천은 라벨별로 다릅니다. OOTD(`RECO-001`), 취향 기반 추천(`RECO-002`), 유사 상품(`RECO-003`), AI MD(`RECO-006`), 어울리는 옷(`RECO-005`) 모두 실제 BE API를 호출합니다. 유사 상품(`RECO-003`)은 `src/api/similarProducts.ts`, AI MD(`RECO-006`)는 `src/api/aiMd.ts`, 나머지는 `src/api/recommendations.ts`를 통해 연동됩니다. `RECO-003`의 기준 옷은 `GET /api/v1/users/{userId}/clothes`에서 반환된 `OWNED`와 `WISHLIST` 옷을 모두 허용하며, 유사 상품 결과는 최대 50개 표시를 기준으로 합니다. `RECO-005`는 `limitPerCategory=50`을 기본값으로 사용합니다. ([implementation-gaps.md](../frontend/implementation-gaps.md), [home-recommendation.md](../features/home-recommendation.md))
 
 직접 `fetch`를 사용하는 경우에도 인증, 에러 처리, base URL 기준이 동일하게 적용되어야 하므로 공통 API 클라이언트로 옮기는 것을 우선합니다.
 
@@ -183,7 +183,7 @@ API를 호출하는 화면은 아래 상태를 구분합니다.
 | 외부 상품 | GET | `/api/naver/search` | 네이버쇼핑 상품 검색 |
 | 외부 상품 | POST | `/api/v1/external/clothes/naver` | 외부 상품을 옷 정보로 저장 |
 | 추천 | GET | `/api/v1/recommendations/{wardrobeId}?currentTemp={temp}` | 취향 기반 상품 추천 표시. FE 홈 `style` 라벨 연동 |
-| 추천 | GET | `/api/v1/users/{userId}/clothes/{clothesId}/similar-products` | `OWNED` 기준 옷의 유사 상품 추천 표시. FE 홈 `similar` 라벨 연동 |
+| 추천 | GET | `/api/v1/users/{userId}/clothes/{clothesId}/similar-products` | `OWNED`/`WISHLIST` 기준 옷의 유사 상품 추천 표시. FE 홈 `similar` 라벨 연동. 결과 안내는 최대 50개 기준 |
 | 추천 | GET | `/api/v1/users/{userId}/clothes/{clothesId}/recommendations?limitPerCategory={n}` | 옷장 기반 어울리는 옷 추천. FE `match` 라벨 연동. 기본 `n=50` |
 | 추천 | GET | `/api/v1/ootd/{wardrobeId}?currentTemp={temp}` | OOTD 추천 표시. FE 홈 `ootd` 라벨 연동 |
 | 추천 | POST | `/api/v1/users/{userId}/recommendations/feedback` | 추천 저장/싫어요/추천 제외 피드백 제출 |
@@ -210,7 +210,7 @@ BE 추천 API 중 현재 FE에서 실제 호출하는 API와 아직 mock/static 
 | --- | --- | --- |
 | `RECO-001` | `GET /api/v1/ootd/{wardrobeId}?currentTemp={temp}` | `HomeTab` `ootd` 라벨 연동 |
 | `RECO-002` | `GET /api/v1/recommendations/{wardrobeId}?currentTemp={temp}` | `HomeTab` `style` 라벨 연동 |
-| `RECO-003` | `GET /api/v1/users/{userId}/clothes/{clothesId}/similar-products` | `HomeTab` `similar` 라벨 연동. 기준 옷은 `OWNED`만 노출 |
+| `RECO-003` | `GET /api/v1/users/{userId}/clothes/{clothesId}/similar-products` | `HomeTab` `similar` 라벨 연동. 기준 옷은 `OWNED`와 `WISHLIST` 모두 노출, 결과 안내는 최대 50개 기준 |
 | `RECO-005` | `GET /api/v1/users/{userId}/clothes/{clothesId}/recommendations?limitPerCategory={n}` | `HomeTab` `match` 라벨 연동. FE 기본 `n=50` |
 | `RECO-006` | `/api/v1/users/{userId}/recommendations/ai-md/**` | `HomeTab` `aimd` 라벨 연동. MD 목록·코디/상품 추천·코디 저장 사용 |
 | `RECO-013`~`RECO-014` | `POST /api/v1/users/{userId}/recommendations/feedback` | 저장/싫어요/추천 제외 액션 연동 필요 |

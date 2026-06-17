@@ -72,9 +72,9 @@ type RecommendItem = {
 const labelConfig: Record<RecommendationLabel, { title: string; subtitle: string; icon: string }> = {
   ootd: { title: "OOTD 추천", subtitle: "오늘 입기 좋은 코디", icon: "✨" },
   style: { title: "스타일 기반 추천", subtitle: "사용자 취향 기반", icon: "\ud83c\udfaf" },
-  similar: { title: "유사 상품 추천", subtitle: "보유/저장 옷과 유사", icon: "\ud83d\udecd️" },
+  similar: { title: "유사 상품 추천", subtitle: "보유/미보유 옷과 유사", icon: "\ud83d\udecd️" },
   match: { title: "어울리는 옷 추천", subtitle: "", icon: "\ud83d\udc55" },
-  aimd: { title: "AI 페르소나 MD 추천", subtitle: "MD 코디 설명 제공", icon: "\ud83e\udd16" },
+  aimd: { title: "AI MD 추천", subtitle: "MD 코디 설명 제공", icon: "\ud83e\udd16" },
 };
 
 const labelTiltClasses: Record<RecommendationLabel, { card: string; activeCard: string; chip: string; activeChip: string }> = {
