@@ -480,13 +480,20 @@ export default function FeedPostDetailModal({
     }
   }
 
+  const handleClose = () => {
+    if (editingCaption) {
+      if (!confirm('현재 수정 중인 내용이 있습니다. 저장하지 않고 닫으시겠습니까?')) return
+    }
+    onClose()
+  }
+
   if (!open) return null
 
   return (
     <>
     <Modal
       open={open}
-      onClose={onClose}
+      onClose={handleClose}
       titleId="feed-detail-title"
       size="md"
       placement="sheet"
@@ -734,7 +741,7 @@ export default function FeedPostDetailModal({
       <ModalFooter className="px-5 py-4">
         <button
           type="button"
-          onClick={onClose}
+          onClick={handleClose}
           className="w-full h-11 rounded-2xl border border-slate-200 bg-white text-sm font-black text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
         >
           닫기
