@@ -29,6 +29,7 @@ import type { NaverShoppingProduct, SimilarProductSaveForm } from '@/types/simil
 import type { Garment } from '@/types'
 import type { UserGender } from '@/utils/genderClothesFilter'
 import { extractApiErrorMessage } from '@/utils/apiError'
+import { useToast } from './Toast'
 
 interface AiMdRecommendationsProps {
   userId: number | null
@@ -104,6 +105,7 @@ export default function AiMdRecommendations({
   existingGarments,
   onWishlistAdded,
 }: AiMdRecommendationsProps) {
+  const { showToast } = useToast() || { showToast: () => {} }
   const [mds, setMds] = useState<AiMd[]>([])
   const [selectedMdId, setSelectedMdId] = useState<AiMdId | null>(null)
   const [mode, setMode] = useState<RecommendationMode>('outfits')
@@ -122,7 +124,6 @@ export default function AiMdRecommendations({
   const [saveForm, setSaveForm] = useState<SimilarProductSaveForm | null>(null)
   const [saveOpen, setSaveOpen] = useState(false)
   const [savingProducts, setSavingProducts] = useState(false)
-  const [toast, setToast] = useState<string | null>(null)
 
   const selectedMd = useMemo(
     () => mds.find((md) => md.id === selectedMdId) ?? null,
@@ -222,12 +223,6 @@ export default function AiMdRecommendations({
     }
   }, [userId])
 
-  useEffect(() => {
-    if (!toast) return
-    const timer = window.setTimeout(() => setToast(null), 3200)
-    return () => window.clearTimeout(timer)
-  }, [toast])
-
   const resetResults = () => {
     setOutfits([])
     setProducts([])
@@ -323,7 +318,8 @@ export default function AiMdRecommendations({
       return next
     })
     setSavingOutfits(false)
-    setToast(
+    showToast(
+      'success',
       failedCount
         ? `${savedKeys.length}개 저장, ${failedCount}개는 저장하지 못했어요.`
         : `${savedKeys.length}개 코디를 저장했어요.`,
@@ -393,7 +389,8 @@ export default function AiMdRecommendations({
     setSavingProducts(false)
     setSaveOpen(false)
     setSelectedProducts(new Set())
-    setToast(
+    showToast(
+      failedCount ? 'error' : 'success',
       failedCount
         ? `${successCount}개 저장, ${failedCount}개는 저장하지 못했어요.`
         : `${successCount}개 상품을 미보유 옷으로 저장했어요.`,
@@ -939,12 +936,6 @@ export default function AiMdRecommendations({
           </button>
         </ModalFooter>
       </Modal>
-
-      {toast && (
-        <div className="fixed left-1/2 bottom-24 -translate-x-1/2 z-50 rounded-full bg-[#111827] text-white px-4 py-2.5 text-xs font-black shadow-xl whitespace-nowrap">
-          {toast}
-        </div>
-      )}
     </div>
   )
 }
