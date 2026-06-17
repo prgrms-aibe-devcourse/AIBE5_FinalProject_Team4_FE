@@ -34,6 +34,7 @@ BE 기준으로 마이페이지 프로필 조회 API는 아래 경로를 사용�
 | --- | --- | --- | --- |
 | 내 프로필 조회 | GET | `/api/v1/users/profile` | 로그인 사용자 본인의 마이페이지 정보 표시 |
 | 사용자 프로필 상세 조회 | GET | `/api/v1/users/profile/{userId}` | 타 사용자 프로필 또는 룩피드 프로필 표시 |
+| 닉네임 중복 확인 | GET | `/api/v1/users/nickname/check` | 개인정보 편집 화면에서 닉네임 규칙과 중복 여부 실시간 확인 |
 | 마케팅 동의 조회 | GET | `/api/v1/users/{userId}/marketing-consent` | 마케팅 정보 수신 동의 상태 표시 |
 | 마케팅 동의 변경 | PATCH | `/api/v1/users/{userId}/marketing-consent` | 마케팅 정보 수신 동의/철회 반영 |
 | 회원 탈퇴 | DELETE | `/api/v1/users/me` | 탈퇴 확인 후 회원 상태를 정리하고 로그인 전 화면으로 이동 |
@@ -59,11 +60,14 @@ BE 기준으로 마이페이지 프로필 조회 API는 아래 경로를 사용�
 - `GET /api/v1/users/profile` 응답을 마이페이지 초기 상태로 반영합니다.
 - `GET /api/v1/users/profile/{userId}`가 필요한 화면과 본인 프로필 화면을 구분합니다.
 - 기본 마이페이지는 확인 전용으로 유지하고, 개인정보 수정·지역 수정·선호 스타일 수정·마케팅 동의 변경·회원탈퇴는 `개인정보 등 편집` 화면에서 처리합니다.
+- 닉네임은 룩피드 프로필 식별에도 사용하므로 전체 회원 기준으로 중복될 수 없으며, 개인정보 편집 화면에서 `GET /api/v1/users/nickname/check`로 실시간 확인합니다.
+- 닉네임은 영문 소문자, 숫자, 마침표(`.`), 밑줄(`_`)만 3~30자로 입력합니다.
 - 마케팅 정보 수신 동의 상태는 `GET /api/v1/users/{userId}/marketing-consent`로 조회하고, 저장 시 `PATCH /api/v1/users/{userId}/marketing-consent`로 반영합니다.
 - 마케팅 정보 수신 동의 원문은 BE `/api/v1/legal/marketing-consent` 응답의 markdown `content`를 마이페이지 내 모달로 표시합니다.
 - 회원 탈퇴는 `DELETE /api/v1/users/me`를 호출하고, 성공 시 local 사용자 상태를 정리해 로그인 전 화면으로 이동합니다.
 - 탈퇴 후 30일 이내 같은 계정으로 다시 로그인하면 복구 확인 모달을 표시하고, 사용자가 복구를 선택한 경우에만 `POST /api/v1/auth/restore-withdrawn`을 호출합니다.
 - 마이페이지 선호 스타일 표시와 편집 선택지는 `GET /api/v1/categories` 응답의 style code/name을 우선 사용합니다.
+- 선호 스타일 수정 시 최소 2개 이상 선택해야 저장할 수 있습니다.
 - 카탈로그 API 조회에 실패하거나 style 목록이 비어 있으면 선호 스타일 편집 선택지를 임의 fallback으로 대체하지 않고, 오류 상태를 확인할 수 있게 처리합니다.
 
 ## 변경 기준

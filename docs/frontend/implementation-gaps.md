@@ -40,13 +40,11 @@ last_updated: 2026-06-15
 | 피드 | `feed` tab이 static feed mock 중심 | 룩피드 API와 실제 사용자 데이터 기준 | [feature-index.md](../requirements/feature-index.md), [routing.md](routing.md) |
 | BE 신규 API 타입 | 일부 신규 API 응답/요청 타입이 `src/types/be.ts`에 모두 정리되어 있지 않을 수 있음 | BE develop 기준 API 계약 타입 반영 | [frontend-api-usage.md](../api/frontend-api-usage.md), [domain-types.md](domain-types.md) |
 | 배포/인프라 목표 구조 | GitHub Actions는 lint/build CI를 수행하고, AWS 배포와 CD 자동화는 진행 예정. 공통 시스템 아키텍처는 목표 구조 기준 | FE/BE 배포 구현 시 시스템 아키텍처, 기술 스택, 기획서, gap 문서 동시 갱신 | [system-architecture.md](../architecture/system-architecture.md), [tech-stack.md](../architecture/tech-stack.md) |
-| 온보딩 일괄 저장 | 온보딩 완료 시 프로필, 선호 스타일, 마케팅 동의 API를 순차 호출할 수 있음 | 온보딩 완료는 하나의 저장 단위로 처리되어 일부 정보만 저장되지 않도록 함 | [auth-and-onboarding.md](../features/auth-and-onboarding.md), [frontend-api-usage.md](../api/frontend-api-usage.md) |
 
 ## Feature ID 연결표
 
 | F-ID | 화면/Route/Tab | 현재 주요 코드 | 기준 문서 | 현재 구현 상태 |
 | --- | --- | --- | --- | --- |
-| `ONBOARD-001`~`ONBOARD-010`, `STYLE-001`, `MYPAGE-001` | 온보딩, 마이페이지 | `OnboardingPage.tsx`, `App.tsx` | [feature-index.md](../requirements/feature-index.md), [catalog.md](../domain/catalog.md), [mypage.md](../features/mypage.md) | 마이페이지 프로필/스타일 저장은 API 기준 반영. 온보딩 완료 저장은 부분 저장이 발생하지 않도록 BE 일괄 저장 API 또는 트랜잭션 경계 확정 필요 |
 | `WARDROBE-002` | `closet` tab 요약 | `ClosetTab.tsx` | [feature-index.md](../requirements/feature-index.md), [wardrobe.md](../features/wardrobe.md) | 옷장 전체 요약 기준과 현재 BE 통계 API 범위가 다르게 읽힐 수 있음 |
 | `WARDROBE-011`~`WARDROBE-030`, 옷 수정 | 옷 등록/수정 modal | `PhotoGarmentRegisterModal.tsx`, `PurchaseGarmentRegisterModal.tsx`, `GarmentEditModal.tsx` | [garment-registration.md](../features/garment-registration.md), [domain-types.md](domain-types.md) | 등록/수정 API 연동 자체가 아니라, 옷 대상 성별 UI 노출과 `season` 수정 payload/검증 주석 확인 필요 |
 | `RECO-001` | `home` tab `ootd` 라벨 | `HomeTab.tsx` | [home-recommendation.md](../features/home-recommendation.md) | BE `GET /api/v1/ootd/{wardrobeId}` 연동 |
@@ -56,24 +54,6 @@ last_updated: 2026-06-15
 | `FEED-001` | `feed` tab | `App.tsx` 내부 feed section | [feature-index.md](../requirements/feature-index.md), [routing.md](routing.md) | static feed mock |
 
 ## FE 코드와 공식 기준 확인 필요
-
-### 온보딩 일괄 저장
-
-온보딩은 가입 직후 프로필, 선호 스타일, 마케팅 동의 여부를 확정하는 흐름입니다. 이 정보는 추천과 마이페이지의 기준 데이터가 되므로 일부만 저장된 상태가 남으면 안 됩니다.
-
-현재 FE는 BE API 계약에 맞춰 아래 저장 요청을 분리해서 호출할 수 있습니다.
-
-```text
-PATCH /api/v1/users/profile
-POST /api/v1/users/styles
-PATCH /api/v1/users/{userId}/marketing-consent
-```
-
-이 구조에서는 첫 번째 요청은 성공했지만 두 번째 요청이 실패하는 부분 저장 상태가 발생할 수 있습니다.
-
-목표 기준은 온보딩 완료를 하나의 저장 단위로 처리하는 것입니다. BE에서 온보딩 완료 전용 API를 제공하면 FE는 해당 API로 연결하고, 프로필/스타일/마케팅 동의가 함께 성공하거나 함께 실패하도록 처리합니다.
-
-BE API가 확정되기 전까지 FE는 실패 시 사용자가 상태를 오해하지 않도록 오류 안내와 재시도 흐름을 유지합니다. BE API 계약이 변경되면 [frontend-api-usage.md](../api/frontend-api-usage.md), [auth-and-onboarding.md](../features/auth-and-onboarding.md), 이 문서를 함께 갱신합니다.
 
 ### 홈 추천 연동 상태
 

@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { RegionCode } from "@/types/index";
 import { REGIONS } from '@/data/regions';
+import { checkNicknameAvailability } from "@/api/users";
 import LegalConsentGroup from "@/components/legal/LegalConsentGroup";
 import { Check, ChevronRight, X } from "@/components/icons";
+import { formatNicknameInput, getNicknameValidationError, NICKNAME_RULE_MESSAGE } from "@/utils/nickname";
 
 export type OnboardingStyleOption = {
     code: string;
@@ -46,6 +48,9 @@ const buildBirthday = (year: string, month: string, day: string) => {
     return `${year}-${String(monthNumber).padStart(2, "0")}-${String(dayNumber).padStart(2, "0")}`;
 };
 
+const MIN_STYLE_SELECTION = 2;
+type NicknameAvailabilityStatus = "idle" | "invalid" | "checking" | "available" | "unavailable" | "error";
+
 export default function OnboardingPage({
     onComplete,
     onExit,
@@ -63,6 +68,8 @@ export default function OnboardingPage({
         .filter((style) => style.key !== "");
     const [step, setStep] = useState(1);
     const [nickname, setNickname] = useState(defaultNickname);
+    const [nicknameStatus, setNicknameStatus] = useState<NicknameAvailabilityStatus>("idle");
+    const [nicknameMessage, setNicknameMessage] = useState(NICKNAME_RULE_MESSAGE);
     const [birthYear, setBirthYear] = useState("");
     const [birthMonth, setBirthMonth] = useState("");
     const [birthDay, setBirthDay] = useState("");
@@ -85,6 +92,7 @@ export default function OnboardingPage({
     const selectedRegionLabel = REGIONS.find(({ code }) => code === region)?.label ?? "";
     const canProceedStep1 =
         nickname !== "" &&
+        nicknameStatus === "available" &&
         birthday !== "" &&
         gender !== "None" &&
         region !== "" &&
@@ -100,12 +108,55 @@ export default function OnboardingPage({
         step === 1
             ? "생년월일, 성별, 지역은 AI 맞춤 추천에 활용됩니다."
             : step === 2
-                ? "마음에 드는 스타일을 선택해주세요."
+                ? (
+                    <>
+                        마음에 드는 스타일을 <span className="font-black text-slate-950">2개 이상</span> 선택해주세요.
+                    </>
+                )
                 : "옷을 등록하면 AI 맞춤 추천 정확도가 더 좋아집니다.";
+
+    useEffect(() => {
+        const formatted = formatNicknameInput(defaultNickname);
+        setNickname(formatted);
+    }, [defaultNickname]);
+
+    useEffect(() => {
+        const validationError = getNicknameValidationError(nickname);
+        if (validationError) {
+            setNicknameStatus(nickname.trim() ? "invalid" : "idle");
+            setNicknameMessage(validationError);
+            return;
+        }
+
+        let active = true;
+        const timer = window.setTimeout(() => {
+            setNicknameStatus("checking");
+            setNicknameMessage("닉네임 중복을 확인하고 있어요.");
+            void checkNicknameAvailability(nickname)
+                .then((result) => {
+                    if (!active) return;
+                    setNicknameStatus(result.available ? "available" : "unavailable");
+                    setNicknameMessage(result.message);
+                    if (result.nickname && result.nickname !== nickname) {
+                        setNickname(result.nickname);
+                    }
+                })
+                .catch(() => {
+                    if (!active) return;
+                    setNicknameStatus("error");
+                    setNicknameMessage("닉네임 확인에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+                });
+        }, 350);
+
+        return () => {
+            active = false;
+            window.clearTimeout(timer);
+        };
+    }, [nickname]);
 
     const handleNext = () => {
         if (!canProceedStep1) {
-            if (nickname === "") setNicknameError("닉네임을 확인해주세요.");
+            if (nicknameStatus !== "available") setNicknameError(nicknameMessage || "닉네임을 확인해주세요.");
             if (birthday === "") setBirthdayError("생년월일을 확인해주세요.");
             if (gender === "None") setGenderError("성별을 확인해주세요.");
             return;
@@ -177,14 +228,31 @@ export default function OnboardingPage({
                         {/* 닉네임 */}
                         <div className="flex flex-col gap-1.5">
                             <label className="text-[11px] font-bold text-[#73737a] uppercase tracking-wider">닉네임</label>
-                            <input
-                                type="text"
-                                value={nickname}
-                                onChange={(e) => setNickname(e.target.value)}
-                                placeholder="닉네임을 입력해 주세요."
-                                className="w-full h-11 px-4 rounded-xl border border-[#e5e7eb] text-sm outline-none focus:border-[#111827] transition"
-                            />
-                            {nicknameError && <p className="text-xs text-red-500">{nicknameError}</p>}
+                            <div className="relative">
+                                <input
+                                    type="text"
+                                    value={nickname}
+                                    onChange={(e) => {
+                                        setNickname(formatNicknameInput(e.target.value));
+                                        setNicknameError("");
+                                    }}
+                                    placeholder="닉네임을 입력해 주세요."
+                                    autoCapitalize="none"
+                                    spellCheck={false}
+                                    className="w-full h-11 rounded-xl border border-[#e5e7eb] px-4 text-sm outline-none focus:border-[#111827] transition"
+                                />
+                            </div>
+                            <p
+                                className={`text-[11px] leading-relaxed ${
+                                    nicknameStatus === "available"
+                                        ? "text-[#0284C7]"
+                                        : nicknameStatus === "unavailable" || nicknameStatus === "invalid" || nicknameStatus === "error" || nicknameError
+                                            ? "text-rose-500"
+                                            : "text-slate-400"
+                                }`}
+                            >
+                                {nicknameError || nicknameMessage}
+                            </p>
                         </div>
 
                         {/* 생년월일 */}
@@ -338,14 +406,9 @@ export default function OnboardingPage({
                             )}
                         </div>
 
-                        <div className="flex items-center justify-between text-xs text-[#73737a]">
-                            <span>{styles.length}개 선택됨</span>
-                            <span className={styles.length >= 3 ? "text-[#111827] font-bold" : ""}>최소 3개 필요</span>
-                        </div>
-
                         <button
                             onClick={() => setStep(3)}
-                            disabled={styleOptionsLoading || styleOptionsError || resolvedStyleOptions.length === 0 || styles.length < 3}
+                            disabled={styleOptionsLoading || styleOptionsError || resolvedStyleOptions.length === 0 || styles.length < MIN_STYLE_SELECTION}
                             className="w-full h-12 rounded-xl bg-[#111827] text-white font-bold text-sm transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                         >
                             다음

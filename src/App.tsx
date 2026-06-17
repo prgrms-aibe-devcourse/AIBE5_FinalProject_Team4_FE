@@ -39,15 +39,17 @@ import {
   fetchMarketingConsent,
   updateMarketingConsent,
 } from "@/api/marketingConsent";
+import { checkNicknameAvailability } from "@/api/users";
 import { getGarmentStyleLabel } from "@/data/garmentStyles";
 import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/common/Modal";
 import LegalDocumentModal from "@/components/legal/LegalDocumentModal";
+import { formatNicknameInput, getNicknameValidationError, NICKNAME_RULE_MESSAGE } from "@/utils/nickname";
 // 기존 상수 data ( TRIGGER_PRODUCTS 는 사용을 하지않아 우선 주석처리함 )
 // import { TRIGGER_PRODUCTS } from "@/data/triggerProducts";
 
 type MyProfilePayload = {
   userId: number;
-  nickname: string;
+  nickname?: string | null;
   onboarded: boolean;
   birthDate?: string | null;
   gender?: "MALE" | "FEMALE" | "OTHER" | string | null;
@@ -88,6 +90,8 @@ type ProfileEditDraft = {
   externalLinkUrl: string;
   marketingAgreed: boolean;
 };
+
+type NicknameAvailabilityStatus = "idle" | "invalid" | "checking" | "available" | "unavailable" | "error";
 
 type CatalogStylePayload = {
   code?: string | null;
@@ -194,6 +198,8 @@ export default function App() {
   const [profileEditDraft, setProfileEditDraft] = useState<ProfileEditDraft | null>(null);
   const [profileEditLoading, setProfileEditLoading] = useState(false);
   const [profileEditSaving, setProfileEditSaving] = useState(false);
+  const [profileNicknameStatus, setProfileNicknameStatus] = useState<NicknameAvailabilityStatus>("idle");
+  const [profileNicknameMessage, setProfileNicknameMessage] = useState(NICKNAME_RULE_MESSAGE);
   const [isMarketingConsentDocumentOpen, setIsMarketingConsentDocumentOpen] = useState(false);
 
   // 비로그인 상태면 모달을 열고 false를 반환, 로그인 상태면 true를 반환
@@ -284,12 +290,12 @@ export default function App() {
     setProfile((prev) => {
       const nextProfile: UserProfile = {
         ...prev,
-        nickname: nickname || prev.nickname,
+        nickname: nickname ?? (onboarded ? prev.nickname : ""),
         onboarded,
-        birthday: data.birthDate ?? prev.birthday,
-        gender: data.gender ? toClientGender(data.gender) : prev.gender,
-        region: normalizeRegionCode(data.regionCode) ?? prev.region,
-        styles: data.styleCodes?.map((style) => style.trim()).filter(Boolean) ?? prev.styles,
+        birthday: data.birthDate ?? (onboarded ? prev.birthday : ""),
+        gender: data.gender ? toClientGender(data.gender) : (onboarded ? prev.gender : "None"),
+        region: normalizeRegionCode(data.regionCode) ?? (onboarded ? prev.region : undefined),
+        styles: data.styleCodes?.map((style) => style.trim()).filter(Boolean) ?? (onboarded ? prev.styles : []),
         profileImageUrl: data.profileImageUrl ?? prev.profileImageUrl ?? "",
         profileBio: data.profileBio ?? prev.profileBio ?? "",
         externalLinkUrl: data.externalLinkUrl ?? prev.externalLinkUrl ?? "",
@@ -471,6 +477,46 @@ export default function App() {
     setProfileEditDraft((current) => (current ? { ...current, ...patch } : current));
   };
 
+  useEffect(() => {
+    if (!isProfileEditOpen || !profileEditDraft) {
+      setProfileNicknameStatus("idle");
+      setProfileNicknameMessage(NICKNAME_RULE_MESSAGE);
+      return;
+    }
+
+    const validationError = getNicknameValidationError(profileEditDraft.nickname);
+    if (validationError) {
+      setProfileNicknameStatus(profileEditDraft.nickname.trim() ? "invalid" : "idle");
+      setProfileNicknameMessage(validationError);
+      return;
+    }
+
+    let active = true;
+    const timer = window.setTimeout(() => {
+      setProfileNicknameStatus("checking");
+      setProfileNicknameMessage("닉네임 중복을 확인하고 있어요.");
+      void checkNicknameAvailability(profileEditDraft.nickname)
+        .then((result) => {
+          if (!active) return;
+          setProfileNicknameStatus(result.available ? "available" : "unavailable");
+          setProfileNicknameMessage(result.message);
+          if (result.nickname && result.nickname !== profileEditDraft.nickname) {
+            updateProfileEditDraft({ nickname: result.nickname });
+          }
+        })
+        .catch(() => {
+          if (!active) return;
+          setProfileNicknameStatus("error");
+          setProfileNicknameMessage("닉네임 확인에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+        });
+    }, 350);
+
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [isProfileEditOpen, profileEditDraft?.nickname]);
+
   const toggleProfileEditStyle = (styleCode: string) => {
     setProfileEditDraft((current) => {
       if (!current) return current;
@@ -497,9 +543,14 @@ export default function App() {
       !profileEditDraft.birthday ||
       profileEditDraft.gender === "None" ||
       !profileEditDraft.region ||
-      profileEditDraft.styles.length === 0
+      profileEditDraft.styles.length < 2
     ) {
-      showMessage("입력 확인", "닉네임, 생년월일, 성별, 지역, 선호 스타일을 모두 입력해 주세요.", "danger");
+      showMessage("입력 확인", "닉네임, 생년월일, 성별, 지역을 입력하고 선호 스타일은 2개 이상 선택해 주세요.", "danger");
+      return;
+    }
+
+    if (profileNicknameStatus !== "available") {
+      showMessage("닉네임 확인", profileNicknameMessage || "닉네임을 확인해 주세요.", "danger");
       return;
     }
 
@@ -601,38 +652,16 @@ export default function App() {
             onComplete={async (nickname, birthday, gender, styles, region, openModal, marketingAgreed) => {
             try {
               const regionData = REGIONS.find(r => r.code === region);
-              await api.patch('/api/v1/users/profile', {
+              const response = await api.post('/api/v1/users/onboarding', {
                 nickname,
                 birthDate: birthday,
                 gender: gender === 'Male' ? 'MALE' : 'FEMALE',
                 regionName: regionData?.label ?? '',
                 regionCode: region || '',
+                styleCodes: styles,
+                marketingAgreed,
               });
-              await api.post('/api/v1/users/styles', { styleCodes: styles });
-              if (authUserId != null) {
-                try {
-                  await updateMarketingConsent(authUserId, { marketingAgreed });
-                } catch {
-                  showMessage(
-                    "마케팅 동의 저장 실패",
-                    "마케팅 정보 수신 동의 저장에 실패했습니다. 마이페이지에서 다시 변경할 수 있습니다.",
-                    "danger",
-                  );
-                }
-              }
-              persistProfile({
-                ...profile,
-                nickname,
-                birthday,
-                gender,
-                styles,
-                region: region || undefined,
-                onboarded: true,
-                socialProviders: profile.socialProviders ?? [],
-                profileImageUrl: profile.profileImageUrl ?? '',
-                profileBio: profile.profileBio ?? '',
-                externalLinkUrl: profile.externalLinkUrl ?? '',
-              });
+              applyAuthProfile(response.data.data);
               if (openModal) openGarmentRegister();
             } catch {
               showMessage("프로필 저장 실패", "프로필 저장에 실패했어요. 다시 시도해주세요.", "danger");
@@ -1171,9 +1200,22 @@ export default function App() {
                     <input
                       type="text"
                       value={profileEditDraft.nickname}
-                      onChange={(event) => updateProfileEditDraft({ nickname: event.target.value })}
+                      onChange={(event) => updateProfileEditDraft({ nickname: formatNicknameInput(event.target.value) })}
+                      autoCapitalize="none"
+                      spellCheck={false}
                       className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-semibold outline-hidden transition focus:border-[#1E3A8A] focus:bg-white"
                     />
+                    <p
+                      className={`text-[11px] leading-relaxed ${
+                        profileNicknameStatus === "available"
+                          ? "text-[#0284C7]"
+                          : profileNicknameStatus === "unavailable" || profileNicknameStatus === "invalid" || profileNicknameStatus === "error"
+                            ? "text-rose-500"
+                            : "text-slate-400"
+                      }`}
+                    >
+                      {profileNicknameMessage}
+                    </p>
                   </label>
                   <label className="block space-y-1.5">
                     <span className="text-xs font-bold text-slate-500">생년월일</span>
@@ -1227,7 +1269,7 @@ export default function App() {
                   <div className="space-y-1">
                     <h4 className="text-sm font-black text-[#1E3A8A]">선호 스타일</h4>
                     <p className="text-[11px] text-slate-400">
-                      첫 번째 선택 스타일은 대표 스타일, 나머지는 보조 스타일로 저장됩니다.
+                      2개 이상 선택해 주세요. 첫 번째 선택 스타일은 대표 스타일, 나머지는 보조 스타일로 저장됩니다.
                     </p>
                   </div>
                   <div className="grid grid-cols-2 gap-2">

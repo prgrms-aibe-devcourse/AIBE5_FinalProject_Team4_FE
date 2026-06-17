@@ -57,12 +57,17 @@ last_updated: 2026-06-15
 
 ## 선호 스타일 선택 기준
 
+- 닉네임은 룩피드 프로필 식별에도 사용하므로 전체 회원 기준으로 중복될 수 없습니다.
+- 닉네임은 영문 소문자, 숫자, 마침표(`.`), 밑줄(`_`)만 3~30자로 입력합니다.
+- 닉네임의 처음과 끝은 영문 또는 숫자여야 하며, 마침표(`.`)를 연속으로 사용할 수 없습니다.
+- 온보딩에서는 닉네임 입력 중 실시간으로 `GET /api/v1/users/nickname/check`를 호출해 규칙과 중복 여부를 안내합니다.
 - 온보딩 스타일 선택지는 `GET /api/v1/categories` 응답의 style code/name/description을 기준으로 렌더링합니다.
 - 카탈로그 API 조회에 실패하거나 style 목록이 비어 있으면 오류 상태를 표시하고 다음 단계 진행을 막습니다. 온보딩 화면은 FE 하드코딩 스타일 목록으로 대체하지 않습니다.
 - 현재 style code는 `CASUAL`, `STREET`, `MINIMAL`, `SPORTY`, `CLASSIC`, `CHIC`, `WORKWEAR`, `CITYBOY`, `GORPCORE`, `RETRO`입니다.
-- 온보딩에서는 사용자가 선호 스타일을 3개 이상 선택해야 다음 단계로 이동할 수 있습니다.
+- 온보딩에서는 사용자가 선호 스타일을 2개 이상 선택해야 다음 단계로 이동할 수 있습니다.
 - FE는 선택한 값을 BE style code로 저장 요청합니다.
 - 선택 배열의 첫 번째 값은 대표 스타일, 나머지 값은 보조 스타일 점수 계산 기준으로 사용됩니다.
+- 온보딩 정보는 마지막 단계에서 한 번 저장하며, 프로필, 선호 스타일, 마케팅 정보 수신 동의가 일부만 저장된 상태를 남기지 않습니다.
 
 ## API 기준
 
@@ -70,8 +75,10 @@ last_updated: 2026-06-15
 | --- | --- | --- | --- |
 | 약관 원문 조회 | GET | `/api/v1/legal/{documentType}` | 로그인/온보딩/마이페이지 약관 원문 모달 표시 |
 | 탈퇴 계정 복구 | POST | `/api/v1/auth/restore-withdrawn` | 복구 확인 모달에서 사용자가 복구를 선택한 경우 호출 |
+| 닉네임 중복 확인 | GET | `/api/v1/users/nickname/check` | 온보딩/마이페이지 편집에서 닉네임 규칙과 중복 여부 실시간 확인 |
+| 온보딩 완료 저장 | POST | `/api/v1/users/onboarding` | 프로필, 선호 스타일, 마케팅 정보 수신 동의 여부를 마지막 단계에서 한 번 저장 |
 | 마케팅 동의 조회 | GET | `/api/v1/users/{userId}/marketing-consent` | 마이페이지에서 현재 동의 상태 표시 |
-| 마케팅 동의 변경 | PATCH | `/api/v1/users/{userId}/marketing-consent` | 온보딩 또는 마이페이지에서 동의/철회 상태 반영 |
+| 마케팅 동의 변경 | PATCH | `/api/v1/users/{userId}/marketing-consent` | 마이페이지에서 동의/철회 상태 반영 |
 
 요청 예시:
 

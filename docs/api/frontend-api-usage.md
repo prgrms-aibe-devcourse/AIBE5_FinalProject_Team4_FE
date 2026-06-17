@@ -153,12 +153,14 @@ API를 호출하는 화면은 아래 상태를 구분합니다.
 | 약관 원문 | GET | `/api/v1/legal/privacy-policy` | 개인정보 처리방침 markdown 원문 표시 |
 | 약관 원문 | GET | `/api/v1/legal/marketing-consent` | 마케팅 정보 수신 동의 markdown 원문 표시 |
 | 탈퇴 계정 복구 | POST | `/api/v1/auth/restore-withdrawn` | 탈퇴 후 30일 이내 계정으로 OAuth 로그인을 시도한 경우, 사용자 확인 후 계정 복구와 인증 쿠키 발급 |
-| 내 프로필 | GET | `/api/v1/users/profile` | 로그인 사용자 본인의 마이페이지 정보와 편집 초기값 표시 |
+| 내 프로필 | GET | `/api/v1/users/profile` | 로그인 사용자 본인의 마이페이지 정보와 편집 초기값 표시. 온보딩 완료 전 `nickname`, `birthDate`는 비어 있을 수 있음 |
+| 닉네임 중복 확인 | GET | `/api/v1/users/nickname/check` | 온보딩/마이페이지 편집에서 닉네임 규칙과 중복 여부 실시간 확인 |
 | 내 프로필 | PATCH | `/api/v1/users/profile` | 닉네임, 생년월일, 사용자 성별, 지역, 프로필 이미지, 자기소개, 외부 링크 저장 |
-| 선호 스타일 | POST | `/api/v1/users/styles` | 마이페이지 편집 또는 온보딩에서 선택한 선호 스타일 저장 |
+| 온보딩 완료 | POST | `/api/v1/users/onboarding` | 가입 직후 프로필, 선호 스타일, 마케팅 정보 수신 동의 여부를 한 번에 저장 |
+| 선호 스타일 | POST | `/api/v1/users/styles` | 마이페이지 편집에서 선택한 선호 스타일 저장 |
 | 사용자 프로필 | GET | `/api/v1/users/profile/{userId}` | 타 사용자 프로필 또는 룩피드 프로필 표시 |
 | 마케팅 동의 | GET | `/api/v1/users/{userId}/marketing-consent` | 마이페이지에서 마케팅 정보 수신 동의 상태 표시 |
-| 마케팅 동의 | PATCH | `/api/v1/users/{userId}/marketing-consent` | 온보딩 또는 마이페이지에서 마케팅 정보 수신 동의/철회 반영 |
+| 마케팅 동의 | PATCH | `/api/v1/users/{userId}/marketing-consent` | 마이페이지에서 마케팅 정보 수신 동의/철회 반영 |
 | 카탈로그 | GET | `/api/v1/categories` | 카테고리, 타입, 색상, 스타일 선택지 렌더링 |
 | 카탈로그 | GET | `/api/v1/categories/guide` | 카테고리 사용 가이드 표시 |
 | 카탈로그 | GET | `/api/v1/categories/ai-guide` | AI 분석용 카탈로그 가이드 확인 |
