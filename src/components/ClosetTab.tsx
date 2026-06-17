@@ -584,7 +584,7 @@ export default function ClosetTab({
               id="btn-closet-register"
               type="button"
               onClick={onOpenRegister}
-              className="pointer-events-auto flex items-center gap-2 h-12 px-6 rounded-2xl bg-[#1E3A8A] hover:bg-[#1E3A8A]/90 text-[#BBF7D0] shadow-lg font-bold text-sm transition active:scale-95 cursor-pointer"
+              className="pointer-events-auto flex items-center gap-2 h-11 px-6 rounded-2xl bg-[#1E3A8A] hover:bg-[#1E3A8A]/90 text-[#BBF7D0] shadow-lg font-bold text-sm transition active:scale-95 cursor-pointer"
           >
             <Plus className="w-5 h-5 stroke-[3]" />
             <span>옷 등록</span>

@@ -28,6 +28,7 @@ export type RegionCode =
 
 
 export interface UserProfile {
+  email?: string;
   nickname: string;
   gender: "Male" | "Female" | "None";
   styles: string[]; // BE StyleCode 문자열 목록
@@ -38,6 +39,10 @@ export interface UserProfile {
   profileBio?: string;
   externalLinkUrl?: string;
   socialProviders?: string[];
+  socialAccounts?: {
+    provider: string;
+    providerEmail: string;
+  }[];
 }
 
 export interface Recommendation {

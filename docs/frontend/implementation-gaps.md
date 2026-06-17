@@ -1,7 +1,7 @@
 ---
 doc_type: fe_implementation_gaps
 source_of_truth: AIBE5_FinalProject_Team4_FE
-last_updated: 2026-06-15
+last_updated: 2026-06-17
 ---
 
 # FE 구현 정합성 현황
@@ -38,7 +38,9 @@ last_updated: 2026-06-15
 | 공통 응답 | `src/types/index.ts`의 `ApiResponse<T>`에 `status` 필드 포함 | `success`, `data`, `message` 기준 | [domain-types.md](domain-types.md) |
 | 에러 분기 | `src/api/index.ts`에서 `status >= 500`을 모두 `/error/server`로 이동 | 500 서버 내부 오류와 502 외부 서비스 오류 구분 | [frontend-api-usage.md](../api/frontend-api-usage.md), [common-loading-error.md](../features/common-loading-error.md) |
 | 피드 | `feed` tab이 static feed mock 중심 | 룩피드 API와 실제 사용자 데이터 기준 | [feature-index.md](../requirements/feature-index.md), [routing.md](routing.md) |
+| 룩피드 프로필 피드 목록 | 프로필 화면의 2열 피드 영역은 UI 틀만 있으며 실제 피드 데이터와 연결되지 않음 | 피드 API 연동 후 게시/저장 피드 개수에 따라 최신순 2열 grid와 빈 상태 문구를 조건부 표시 | [feature-index.md](../requirements/feature-index.md), [routing.md](routing.md) |
 | BE 신규 API 타입 | 일부 신규 API 응답/요청 타입이 `src/types/be.ts`에 모두 정리되어 있지 않을 수 있음 | BE develop 기준 API 계약 타입 반영 | [frontend-api-usage.md](../api/frontend-api-usage.md), [domain-types.md](domain-types.md) |
+| 프로필 이미지 수정 | 내 정보 수정에서 사진 선택/미리보기 UI는 제공하지만, BE 프로필 이미지 업로드 API는 아직 없음 | 프로필 사진 파일 업로드 후 서버가 반환한 이미지 URL을 사용자 프로필에 저장 | [mypage.md](../features/mypage.md), [frontend-api-usage.md](../api/frontend-api-usage.md) |
 | 배포/인프라 목표 구조 | GitHub Actions는 lint/build CI를 수행하고, AWS 배포와 CD 자동화는 진행 예정. 공통 시스템 아키텍처는 목표 구조 기준 | FE/BE 배포 구현 시 시스템 아키텍처, 기술 스택, 기획서, gap 문서 동시 갱신 | [system-architecture.md](../architecture/system-architecture.md), [tech-stack.md](../architecture/tech-stack.md) |
 
 ## Feature ID 연결표
@@ -52,6 +54,7 @@ last_updated: 2026-06-15
 | `RECO-005` | `home` tab `match` 라벨 | `HomeTab.tsx`, `MatchRecommendationByCategory.tsx`, `src/api/recommendations.ts` | [home-recommendation.md](../features/home-recommendation.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | BE recommendations API 연동. 추천 피드백 API와 별개로 동작 |
 | `RECO-013`~`RECO-014` | 추천 카드 액션 | `HomeTab.tsx`, `MatchRecommendationByCategory.tsx`, `RecommendProductDetailModal.tsx`, `OutfitDetailModal.tsx` | [home-recommendation.md](../features/home-recommendation.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | 싫어요/추천 제외와 일부 저장 액션은 피드백 API에 연결. 외부 상품 저장/AI MD 등 세부 액션의 피드백 기록 범위 확인 필요 |
 | `FEED-001` | `feed` tab | `App.tsx` 내부 feed section | [feature-index.md](../requirements/feature-index.md), [routing.md](routing.md) | static feed mock |
+| `FEED-001` | `lookfeed-profile` view | `App.tsx` 내부 lookfeed profile section | [feature-index.md](../requirements/feature-index.md), [routing.md](routing.md) | 2열 피드 목록 UI 틀만 있음. 게시/저장 피드 API 미연동 |
 
 ## FE 코드와 공식 기준 확인 필요
 
@@ -153,6 +156,18 @@ BE API 계약이 확정되면 [frontend-api-usage.md](../api/frontend-api-usage.
 | --- | --- | --- |
 | `/api/chat-gamyagi` | AI MD 채팅 mock 성격 | BE AI MD API(`/api/v1/users/{userId}/recommendations/ai-md/**`)로 대체 필요 |
 
+### 룩피드 프로필 피드 목록
+
+현재 룩피드 프로필 화면은 게시한 피드와 저장한 피드 탭, 2열 grid, 빈 상태 문구, 피드 등록 버튼의 기본 UI 틀만 제공합니다.
+
+남은 gap:
+
+- 게시한 피드/저장한 피드 목록을 실제 룩피드 API와 연결해야 합니다.
+- 피드가 1개 이상 존재하면 `피드가 아직 없습니다.` 문구를 숨기고, 최신 피드를 왼쪽 상단부터 2열 grid에 표시해야 합니다.
+- 피드가 없을 때는 2x2 영역을 유지하고, 해당 영역의 가로/세로 중앙에 `피드가 아직 없습니다.` 문구를 표시해야 합니다.
+- 현재 `피드 등록` 버튼은 준비 중 안내만 표시하므로, 추후 피드 작성 화면 또는 피드 등록 API와 연결해야 합니다.
+- 피드 API가 확정되면 [frontend-api-usage.md](../api/frontend-api-usage.md), [routing.md](routing.md), 관련 기능 문서를 함께 갱신해야 합니다.
+
 
 ### `ApiResponse<T>`와 에러 분기
 
@@ -215,8 +230,9 @@ FE 배포 또는 CD workflow가 구현되면 [system-architecture.md](../archite
 | 5 | `ApiResponse<T>` 타입과 500/502 에러 분기 | 모든 API parsing과 공통 error handling에 영향 |
 | 6 | BE 신규 API 타입 정리 | 추천/OOTD/코디/인증 유지 API 연동 시 타입 안정성에 영향 |
 | 7 | `WARDROBE-002` 옷장 통계 범위 | 옷장 전체 요약과 보유 옷 통계 해석에 영향 |
-| 8 | 피드와 옷 등록/수정 등 일부 스타일 선택 UI의 local·static 데이터 경계 | 실제 사용자 데이터와 mock/local 데이터 구분에 영향 |
-| 9 | 배포/인프라 목표 구조와 현재 FE/CI 상태 | AWS 배포 및 CD 구현 시 공통 시스템 문서와 실제 FE 레포 설정 정합성에 영향 |
+| 8 | 프로필 이미지 업로드 API 연동 | 마이페이지 프로필 사진 변경 저장에 영향 |
+| 9 | 피드와 룩피드 프로필 피드 목록의 local·static 데이터 경계 | 실제 사용자 데이터와 mock/local 데이터 구분에 영향 |
+| 10 | 배포/인프라 목표 구조와 현재 FE/CI 상태 | AWS 배포 및 CD 구현 시 공통 시스템 문서와 실제 FE 레포 설정 정합성에 영향 |
 
 ## 문서 변경 기준
 
