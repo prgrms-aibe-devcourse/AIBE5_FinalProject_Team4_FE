@@ -214,7 +214,7 @@ API를 호출하는 화면은 아래 상태를 구분합니다.
 | 댓글 작성 | POST | `/api/v1/feed/posts/{postId}/comments` | 댓글/대댓글 작성 (`FEED-007`). `FeedCommentPayload` 요청 |
 | 댓글 수정 | PUT | `/api/v1/feed/posts/{postId}/comments/{commentId}` | 내 댓글 수정 |
 | 댓글 삭제 | DELETE | `/api/v1/feed/posts/{postId}/comments/{commentId}` | 내 댓글 삭제 |
-| 팔로우 토글 | POST | `/api/v1/feed/users/{followeeId}/follows` | 팔로우/언팔로우 토글 (`FEED-008`). `FeedInteraction` 응답. 현재 팔로우 상태는 `FeedPost.author.followedByMe`로 초기화 |
+| 팔로우 토글 | POST | `/api/v1/feed/users/{followeeId}/follows` | 팔로우/언팔로우 토글 (`FEED-008`). `FeedInteraction` 응답. 현재 팔로우 상태는 `FeedPost.author.followedByMe`로 초기화. BE가 해당 필드를 내려주지 않으면 버튼 미표시 |
 
 ## 룩피드 API 동기화 기준
 
@@ -229,13 +229,17 @@ API를 호출하는 화면은 아래 상태를 구분합니다.
 | `FEED-005` | `POST /api/v1/feed/posts/{postId}/saves` | `src/api/feed.ts` `toggleFeedSave` | 코디 저장 토글 연동. `outfit`이 없으면 FE에서 요청하지 않음 |
 | `FEED-006` | `GET /api/v1/feed/posts/{postId}/comments` | `src/api/feed.ts` `fetchFeedComments` | 댓글 목록 조회 연동 |
 | `FEED-007` | `POST /api/v1/feed/posts/{postId}/comments` | `src/api/feed.ts` `createFeedComment` | 댓글/대댓글 작성 연동 |
-| `FEED-008` | `POST /api/v1/feed/users/{followeeId}/follows` | `src/api/feed.ts` `toggleFollow` | 팔로우 토글 연동. 초기 상태는 `FeedPost.author.followedByMe`로 설정 |
+| `FEED-008` | `POST /api/v1/feed/users/{followeeId}/follows` | `src/api/feed.ts` `toggleFollow` | 팔로우 토글 연동. 초기 상태는 `FeedPost.author.followedByMe`로 설정. BE 응답에 해당 필드가 없으면 버튼 미표시 |
 
 팔로우 버튼 초기 상태:
 
 - `GET /api/v1/feed/posts/{postId}` 상세 응답의 `author.followedByMe`로 초기화합니다.
 - `mine: true`인 게시물에는 팔로우 버튼을 표시하지 않습니다.
+- `author.followedByMe`가 `undefined`(BE 미제공)이면 팔로우 버튼을 표시하지 않습니다. 팔로우 상태를 알 수 없는 상태에서 toggle을 허용하면 기존 팔로우 관계가 의도치 않게 해제될 수 있습니다.
+- BE `FeedAuthorResponse`에 `followedByMe` 필드가 추가되면 버튼이 자동으로 표시됩니다.
 - 팔로우 토글 성공 후 `FeedInteraction.active`를 UI 상태에 반영합니다.
+
+`FeedAuthor.followedByMe`는 FE 타입(`src/types/feed.ts`)에 optional(`boolean | undefined`)로 선언되어 있습니다. BE `FeedAuthorResponse`에 해당 필드가 추가되면 필수(`boolean`)로 전환합니다.
 
 ## 추천 API 동기화 기준
 

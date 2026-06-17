@@ -40,6 +40,7 @@ last_updated: 2026-06-17
 | 에러 분기 | `src/api/index.ts`에서 `status >= 500`을 모두 `/error/server`로 이동 | 500 서버 내부 오류와 502 외부 서비스 오류 구분 | [frontend-api-usage.md](../api/frontend-api-usage.md), [common-loading-error.md](../features/common-loading-error.md) |
 | 온보딩/스타일 | 온보딩, 프로필, 스타일 값 일부가 local state와 하드코딩 문자열 중심 | 공식 style code와 사용자 스타일 API 기준 | [catalog.md](../domain/catalog.md), [domain-types.md](domain-types.md) |
 | 약관 원문 제공 | FE `public/legal/*.md`에 BE 약관 원본과 동기화된 표시용 사본을 둠 | AWS 배포 이후 BE가 약관 원문을 API 또는 정적 경로로 제공하면 FE는 해당 경로를 fetch하고 표시용 사본 제거 | [auth-and-onboarding.md](../features/auth-and-onboarding.md), [legal/README.md](../legal/README.md) |
+| 피드 팔로우 초기 상태 | `FeedAuthor.followedByMe`가 optional. BE `FeedAuthorResponse`에 해당 필드가 없으면 팔로우 버튼 미표시 | BE PR #128 `FeedAuthorResponse`에 `followedByMe` 추가 후 FE 타입을 필수로 전환 | [frontend-api-usage.md](../api/frontend-api-usage.md), [domain-types.md](domain-types.md) |
 | BE 신규 API 타입 | 일부 신규 API 응답/요청 타입이 `src/types/be.ts`에 모두 정리되어 있지 않을 수 있음 | BE develop 기준 API 계약 타입 반영 | [frontend-api-usage.md](../api/frontend-api-usage.md), [domain-types.md](domain-types.md) |
 | 배포/인프라 목표 구조 | GitHub Actions는 lint/build CI를 수행하고, AWS 배포와 CD 자동화는 진행 예정. 공통 시스템 아키텍처는 목표 구조 기준 | FE/BE 배포 구현 시 시스템 아키텍처, 기술 스택, 기획서, gap 문서 동시 갱신 | [system-architecture.md](../architecture/system-architecture.md), [tech-stack.md](../architecture/tech-stack.md) |
 
@@ -55,6 +56,7 @@ last_updated: 2026-06-17
 | `RECO-002` | `home` tab `style` 라벨 | `HomeTab.tsx` | [home-recommendation.md](../features/home-recommendation.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | BE `GET /api/v1/recommendations/{wardrobeId}` 연동 |
 | `RECO-005` | `home` tab `match` 라벨 | `HomeTab.tsx`, `MatchRecommendationByCategory.tsx`, `src/api/recommendations.ts` | [home-recommendation.md](../features/home-recommendation.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | BE recommendations API 연동. 추천 피드백 API와 별개로 동작 |
 | `RECO-013`~`RECO-014` | 추천 카드 액션 | `HomeTab.tsx`, `MatchRecommendationByCategory.tsx`, `RecommendProductDetailModal.tsx`, `OutfitDetailModal.tsx` | [home-recommendation.md](../features/home-recommendation.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | 싫어요/추천 제외와 일부 저장 액션은 피드백 API에 연결. 외부 상품 저장/AI MD 등 세부 액션의 피드백 기록 범위 확인 필요 |
+| `FEED-008` | `feed` tab 상세 모달 팔로우 버튼 | `FeedPostDetailModal.tsx`, `src/types/feed.ts` | [frontend-api-usage.md](../api/frontend-api-usage.md), [domain-types.md](domain-types.md) | `FeedAuthor.followedByMe`가 BE 응답에 없으면 팔로우 버튼 미표시. BE PR #128 `FeedAuthorResponse`에 필드 추가 후 FE 타입 필수로 전환 필요 |
 
 ## FE 코드와 공식 기준 확인 필요
 

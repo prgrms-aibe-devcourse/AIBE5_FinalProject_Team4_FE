@@ -291,7 +291,7 @@ export default function FeedPostDetailModal({
   const [replyToCommentId, setReplyToCommentId] = useState<number | null>(null)
   const [commentSubmitting, setCommentSubmitting] = useState(false)
   const [interactionSubmitting, setInteractionSubmitting] = useState(false)
-  const [following, setFollowing] = useState(false)
+  const [following, setFollowing] = useState<boolean | null>(null)
   const [followSubmitting, setFollowSubmitting] = useState(false)
   const [deleteSubmitting, setDeleteSubmitting] = useState(false)
   const [editingCaption, setEditingCaption] = useState(false)
@@ -305,7 +305,7 @@ export default function FeedPostDetailModal({
     try {
       const detail = await fetchFeedPost(id)
       setPost(detail)
-      setFollowing(detail.author.followedByMe)
+      setFollowing(detail.author.followedByMe ?? null)
     } catch (loadError) {
       setError(extractApiErrorMessage(loadError, '피드 상세를 불러오지 못했습니다.'))
       setPost(null)
@@ -332,7 +332,7 @@ export default function FeedPostDetailModal({
       setComments([])
       setCommentDraft('')
       setReplyToCommentId(null)
-      setFollowing(false)
+      setFollowing(null)
       setError(null)
       return
     }
@@ -545,7 +545,7 @@ export default function FeedPostDetailModal({
                     {formatFeedDate(post.createdAt)}
                   </p>
                 </div>
-                {!post.mine ? (
+                {!post.mine && following !== null ? (
                   <button
                     type="button"
                     onClick={() => void handleToggleFollow()}

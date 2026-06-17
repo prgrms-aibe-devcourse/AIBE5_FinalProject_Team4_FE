@@ -186,7 +186,7 @@ type FeedAuthor = {
   userId: number;
   nickname: string;
   profileImageUrl: string | null;
-  followedByMe: boolean;   // 현재 로그인 사용자가 작성자를 팔로우 중인지 여부. 상세 모달 팔로우 버튼 초기 상태에 사용
+  followedByMe?: boolean;  // 현재 로그인 사용자가 작성자를 팔로우 중인지 여부. undefined이면 팔로우 버튼 미표시. BE FeedAuthorResponse에 필드 추가 후 필수로 전환 예정
 };
 
 type FeedPost = {
