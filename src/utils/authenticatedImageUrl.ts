@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import api from '@/api'
 
 const PROTECTED_IMAGE_PATH =
-  /^\/api\/v1\/images\/(clothes|purchase-captures)\//
+  /^\/api\/v1\/images\/(clothes|purchase-captures|feed)\//
 
 /** BE 로컬/운영 저장 이미지 URL인지 확인 */
 export function isProtectedStorageImageUrl(url: string): boolean {

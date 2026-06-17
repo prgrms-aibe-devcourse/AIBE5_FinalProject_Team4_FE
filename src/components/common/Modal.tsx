@@ -4,7 +4,7 @@ import { X } from '@/components/icons'
 
 export type ModalSize = 'sm' | 'md' | 'lg'
 export type ModalPlacement = 'center' | 'sheet'
-/** App 고정 UI(header z-30, FAB z-40, toast z-50)보다 위 */
+/** App 고정 UI(header z-30, FAB z-40)보다 위. toast는 z-[130]으로 모달 위에 표시 */
 export type ModalZIndex = 100 | 110 | 120
 
 const SIZE_CLASS: Record<ModalSize, string> = {
