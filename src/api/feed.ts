@@ -35,6 +35,14 @@ export async function fetchFeedPost(postId: number): Promise<FeedPost> {
   return unwrap(api.get<BeApiResponse<FeedPost>>(`${FEED_BASE}/posts/${postId}`))
 }
 
+/** PUT /api/v1/feed/posts/{postId} */
+export async function updateFeedPost(
+  postId: number,
+  payload: Partial<Pick<FeedCreatePayload, 'caption'>>,
+): Promise<FeedPost> {
+  return unwrap(api.put<BeApiResponse<FeedPost>>(`${FEED_BASE}/posts/${postId}`, payload))
+}
+
 /** POST /api/v1/feed/posts — FEED-001 */
 export async function createFeedPost(payload: FeedCreatePayload): Promise<FeedPost> {
   return unwrap(

@@ -9,14 +9,101 @@ import {
   toggleFeedSave,
   toggleFollow,
   updateFeedComment,
+  updateFeedPost,
 } from '@/api/feed'
 import AuthenticatedImage from '@/components/common/AuthenticatedImage'
 import { Modal, ModalBody, ModalFooter, ModalHeader } from '@/components/common/Modal'
 import Spinner from '@/components/common/Spinner'
-import { Heart, MessageSquare, ShoppingBag, User } from '@/components/icons'
+import { Heart, MessageSquare, User, X } from '@/components/icons'
 import { useToast } from '@/components/Toast'
+import type { ClothesResponse } from '@/types/be'
+import { updateClothesFavorite } from '@/api/wardrobe'
 import type { FeedComment, FeedPost } from '@/types/feed'
 import { extractApiErrorMessage } from '@/utils/apiError'
+
+
+function ClothesDetailSheet({
+  clothes,
+  isMine,
+  onClose,
+}: {
+  clothes: ClothesResponse
+  isMine: boolean
+  onClose: () => void
+}) {
+  const imageUrl = clothes.userImageUrl ?? clothes.imageUrl
+  const canFavorite = !isMine && clothes.wardrobeClothesId != null
+  const [favorite, setFavorite] = useState(clothes.isFavorite ?? false)
+  const [favoriteSubmitting, setFavoriteSubmitting] = useState(false)
+
+  const handleToggleFavorite = async () => {
+    if (!canFavorite || favoriteSubmitting) return
+    setFavoriteSubmitting(true)
+    try {
+      await updateClothesFavorite(clothes.clothesId, !favorite)
+      setFavorite((prev) => !prev)
+    } finally {
+      setFavoriteSubmitting(false)
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-[120] flex items-end justify-center bg-slate-900/50 backdrop-blur-xs animate-fade-in"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-md rounded-t-3xl bg-white shadow-2xl animate-slide-up"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* 헤더 */}
+        <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-slate-100">
+          <p className="text-xs font-black text-[#1E3A8A] uppercase tracking-wide">옷 상세</p>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => void handleToggleFavorite()}
+              disabled={!canFavorite || favoriteSubmitting}
+              className="p-1.5 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <Heart className={`w-4 h-4 ${favorite ? 'fill-rose-500 text-rose-500' : ''}`} />
+            </button>
+            <button type="button" onClick={onClose} className="p-1.5 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 cursor-pointer">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* 이미지 */}
+        <div className="mx-5 mt-4 aspect-square w-[calc(100%-2.5rem)] rounded-2xl border border-slate-200 bg-slate-50 overflow-hidden">
+          {imageUrl ? (
+            <AuthenticatedImage src={imageUrl} alt={clothes.name} className="w-full h-full object-contain p-4" />
+          ) : null}
+        </div>
+
+        {/* 정보 */}
+        <div className="px-5 py-4 space-y-1 pb-8">
+          <p className="text-base font-black text-slate-900 leading-snug">{clothes.name}</p>
+          {clothes.brandName ? (
+            <p className="text-sm font-bold text-slate-500">{clothes.brandName}</p>
+          ) : null}
+          {clothes.externalProductUrl ? (
+            <div className="pt-3">
+              <a
+                href={clothes.externalProductUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex h-11 w-full items-center justify-center rounded-2xl bg-[#03C75A] text-white text-sm font-black hover:bg-[#02b351] transition-colors cursor-pointer"
+              >
+                쇼핑몰 바로가기
+              </a>
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 function formatFeedDate(value: string): string {
   const date = new Date(value)
@@ -207,6 +294,10 @@ export default function FeedPostDetailModal({
   const [following, setFollowing] = useState(false)
   const [followSubmitting, setFollowSubmitting] = useState(false)
   const [deleteSubmitting, setDeleteSubmitting] = useState(false)
+  const [editingCaption, setEditingCaption] = useState(false)
+  const [captionDraft, setCaptionDraft] = useState('')
+  const [captionSubmitting, setCaptionSubmitting] = useState(false)
+  const [selectedClothes, setSelectedClothes] = useState<ClothesResponse | null>(null)
 
   const loadDetail = useCallback(async (id: number) => {
     setLoading(true)
@@ -353,6 +444,25 @@ export default function FeedPostDetailModal({
     }
   }
 
+  const handleStartEditCaption = () => {
+    setCaptionDraft(post?.caption ?? '')
+    setEditingCaption(true)
+  }
+
+  const handleSaveCaption = async () => {
+    if (!post || captionSubmitting) return
+    setCaptionSubmitting(true)
+    try {
+      const updated = await updateFeedPost(post.feedPostId, { caption: captionDraft.trim() || undefined })
+      syncPost(updated)
+      setEditingCaption(false)
+    } catch (e) {
+      setError(extractApiErrorMessage(e, '피드 수정에 실패했습니다.'))
+    } finally {
+      setCaptionSubmitting(false)
+    }
+  }
+
   const handleDeletePost = async () => {
     if (!post || deleteSubmitting) return
     if (!confirm('이 피드를 삭제할까요?')) return
@@ -372,6 +482,7 @@ export default function FeedPostDetailModal({
   if (!open) return null
 
   return (
+    <>
     <Modal
       open={open}
       onClose={onClose}
@@ -387,6 +498,25 @@ export default function FeedPostDetailModal({
         title={post?.author.nickname ?? '룩피드'}
         titleId="feed-detail-title"
         className="[&_h3]:text-lg [&_h3]:font-black"
+        trailing={post?.mine ? (
+          <div className="flex gap-1">
+            <button
+              type="button"
+              onClick={handleStartEditCaption}
+              className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[10px] font-black text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
+            >
+              수정
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleDeletePost()}
+              disabled={deleteSubmitting}
+              className="rounded-full border border-red-200 bg-white px-3 py-1.5 text-[10px] font-black text-red-500 hover:bg-red-50 transition-colors cursor-pointer disabled:opacity-60"
+            >
+              {deleteSubmitting ? '삭제 중…' : '삭제'}
+            </button>
+          </div>
+        ) : undefined}
       />
 
       <ModalBody className="px-0 py-0">
@@ -414,7 +544,7 @@ export default function FeedPostDetailModal({
                     {formatFeedDate(post.createdAt)}
                   </p>
                 </div>
-                {post.author.userId !== userId ? (
+                {!post.mine ? (
                   <button
                     type="button"
                     onClick={() => void handleToggleFollow()}
@@ -431,7 +561,34 @@ export default function FeedPostDetailModal({
                 ) : null}
               </div>
 
-              {post.caption ? (
+              {editingCaption ? (
+                <div className="space-y-2">
+                  <textarea
+                    value={captionDraft}
+                    onChange={(e) => setCaptionDraft(e.target.value)}
+                    rows={3}
+                    placeholder="내용을 입력하세요"
+                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm font-bold text-slate-800 resize-none focus:outline-none focus:border-[#1E3A8A]"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void handleSaveCaption()}
+                      disabled={captionSubmitting}
+                      className="rounded-xl bg-[#1E3A8A] px-4 py-1.5 text-xs font-black text-[#BBF7D0] cursor-pointer disabled:opacity-60"
+                    >
+                      {captionSubmitting ? '저장 중…' : '저장'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditingCaption(false)}
+                      className="rounded-xl border border-slate-200 px-4 py-1.5 text-xs font-black text-slate-500 cursor-pointer"
+                    >
+                      취소
+                    </button>
+                  </div>
+                </div>
+              ) : post.caption ? (
                 <p className="text-sm font-bold text-slate-700 leading-relaxed whitespace-pre-wrap">
                   {post.caption}
                 </p>
@@ -451,21 +608,23 @@ export default function FeedPostDetailModal({
                   {post.outfit.items.length > 0 ? (
                     <div className="flex gap-2 overflow-x-auto pb-1">
                       {post.outfit.items.map((item) => (
-                        <div
+                        <button
                           key={item.outfitItemId}
-                          className="shrink-0 w-16 space-y-1 text-center"
+                          type="button"
+                          onClick={() => setSelectedClothes(item.clothes)}
+                          className="shrink-0 w-16 space-y-1 text-center cursor-pointer group"
                         >
-                          <div className="aspect-square overflow-hidden rounded-xl border border-slate-200 bg-white">
+                          <div className="aspect-square overflow-hidden rounded-xl border border-slate-200 bg-white group-hover:border-[#1E3A8A]/40 transition-colors">
                             <AuthenticatedImage
                               src={item.clothes.userImageUrl ?? item.clothes.imageUrl}
                               alt={item.clothes.name}
                               className="h-full w-full object-contain p-1"
                             />
                           </div>
-                          <p className="line-clamp-2 text-[9px] font-bold text-slate-600">
+                          <p className="line-clamp-2 text-[9px] font-bold text-slate-600 group-hover:text-[#1E3A8A] transition-colors">
                             {item.clothes.name}
                           </p>
-                        </div>
+                        </button>
                       ))}
                     </div>
                   ) : null}
@@ -473,37 +632,40 @@ export default function FeedPostDetailModal({
               ) : null}
 
               <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => void handleToggleLike()}
-                  disabled={interactionSubmitting}
-                  className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-black transition-colors cursor-pointer disabled:opacity-60 ${
-                    post.likedByMe
-                      ? 'border-rose-200 bg-rose-50 text-rose-500'
-                      : 'border-slate-200 bg-white text-slate-600'
-                  }`}
-                >
-                  <Heart className={`h-4 w-4 ${post.likedByMe ? 'fill-rose-500' : ''}`} />
-                  {post.likeCount}
-                </button>
+                {!post.mine ? (
+                  <button
+                    type="button"
+                    onClick={() => void handleToggleLike()}
+                    disabled={interactionSubmitting}
+                    className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-black transition-colors cursor-pointer disabled:opacity-60 ${
+                      post.likedByMe
+                        ? 'border-rose-200 bg-rose-50 text-rose-500'
+                        : 'border-slate-200 bg-white text-slate-600'
+                    }`}
+                  >
+                    <Heart className={`h-4 w-4 ${post.likedByMe ? 'fill-rose-500' : ''}`} />
+                    {post.likeCount}
+                  </button>
+                ) : null}
                 <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-black text-slate-600">
                   <MessageSquare className="h-4 w-4" />
                   {post.commentCount}
                 </span>
-                <button
-                  type="button"
-                  onClick={() => void handleToggleSave()}
-                  disabled={interactionSubmitting || !post.outfit}
-                  title={post.outfit ? '코디북에 저장' : '연결된 코디가 없습니다'}
-                  className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-black transition-colors cursor-pointer disabled:opacity-40 ${
-                    post.savedByMe
-                      ? 'border-[#1E3A8A]/20 bg-[#BBF7D0]/30 text-[#1E3A8A]'
-                      : 'border-slate-200 bg-white text-slate-600'
-                  }`}
-                >
-                  <ShoppingBag className="h-4 w-4" />
-                  저장
-                </button>
+                {!post.mine ? (
+                  <button
+                    type="button"
+                    onClick={() => void handleToggleSave()}
+                    disabled={interactionSubmitting || !post.outfit}
+                    title={post.outfit ? '코디북에 저장' : '연결된 코디가 없습니다'}
+                    className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-black transition-colors cursor-pointer disabled:opacity-40 ${
+                      post.savedByMe
+                        ? 'border-[#1E3A8A]/20 bg-[#BBF7D0]/30 text-[#1E3A8A]'
+                        : 'border-slate-200 bg-white text-slate-600'
+                    }`}
+                  >
+                    저장
+                  </button>
+                ) : null}
               </div>
 
               <div className="space-y-3 border-t border-slate-100 pt-4">
@@ -568,25 +730,20 @@ export default function FeedPostDetailModal({
         )}
       </ModalBody>
 
-      <ModalFooter className="px-5 py-4 flex gap-2">
-        {post?.mine ? (
-          <button
-            type="button"
-            onClick={() => void handleDeletePost()}
-            disabled={deleteSubmitting}
-            className="flex-1 h-11 rounded-2xl border border-red-200 bg-white text-sm font-black text-red-500 hover:bg-red-50 transition-colors cursor-pointer disabled:opacity-60"
-          >
-            {deleteSubmitting ? '삭제 중…' : '삭제'}
-          </button>
-        ) : null}
+      <ModalFooter className="px-5 py-4">
         <button
           type="button"
           onClick={onClose}
-          className="flex-1 h-11 rounded-2xl border border-slate-200 bg-white text-sm font-black text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
+          className="w-full h-11 rounded-2xl border border-slate-200 bg-white text-sm font-black text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
         >
           닫기
         </button>
       </ModalFooter>
     </Modal>
+
+    {selectedClothes ? (
+      <ClothesDetailSheet clothes={selectedClothes} isMine={post?.mine ?? false} onClose={() => setSelectedClothes(null)} />
+    ) : null}
+    </>
   )
 }
