@@ -60,6 +60,19 @@ last_updated: 2026-06-14
 - `season`은 `CLOTHES.season` code이며 사용자별 옷장 정보로 해석하지 않습니다.
 - 옷 대상 성별(`gender`)은 내부 분류/추천 제외 기준으로만 사용하고, 사용자 화면에 표시하거나 필터로 노출하지 않습니다.
 
+## 유사 상품 추천 (`similar`, `RECO-003`)
+
+현재 FE는 `HomeTab` `similar` 라벨에서 아래 흐름을 사용합니다.
+
+- 기준 옷: 사용자 옷장에 등록된 `OWNED`, `WISHLIST` 항목
+- 기준 옷 선택: 전체/보유/미보유 필터로 구분 표시
+- API: `GET /api/v1/users/{userId}/clothes/{clothesId}/similar-products`
+- FE 요청: 별도 `limit` query parameter 없이 BE 유사상품 기본 계약을 사용
+- UI 결과 안내: 최대 50개 결과
+- 카드 액션: 상세 모달, 외부 구매 페이지, 미보유 옷 저장
+
+FE의 `similar` 탭은 유사상품 결과를 최대 50개까지 표시하는 것을 기준으로 합니다. 기준 옷 후보는 `GET /api/v1/users/{userId}/clothes` 응답에서 `OWNED`와 `WISHLIST`를 모두 포함하되, 사용자가 선택 모달에서 상태별로 나눠 볼 수 있어야 합니다.
+
 ## 어울리는 옷 추천 (`match`, `RECO-005`)
 
 현재 FE는 `HomeTab` `match` 라벨에서 아래 흐름을 사용합니다.
