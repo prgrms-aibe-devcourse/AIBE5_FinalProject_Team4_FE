@@ -4,6 +4,7 @@ export interface FeedAuthor {
   userId: number
   nickname: string
   profileImageUrl: string | null
+  followedByMe: boolean
 }
 
 export interface FeedImage {

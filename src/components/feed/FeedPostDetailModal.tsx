@@ -305,6 +305,7 @@ export default function FeedPostDetailModal({
     try {
       const detail = await fetchFeedPost(id)
       setPost(detail)
+      setFollowing(detail.author.followedByMe)
     } catch (loadError) {
       setError(extractApiErrorMessage(loadError, '피드 상세를 불러오지 못했습니다.'))
       setPost(null)
