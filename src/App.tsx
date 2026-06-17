@@ -348,7 +348,7 @@ export default function App() {
   }
   /** 쿠키 기반 인증 확인 완료 여부 */
   const [authReady, setAuthReady] = useState(false);
-  
+
   // User Profile Setup State
   const [profile, setProfile] = useState<UserProfile>(() => {
     const stored = loadUserProfile();
@@ -902,7 +902,7 @@ export default function App() {
           : "bg-[#F8FAFC] p-0"
       }`}
     >
-      
+
       {/* ========================================================= */}
       {/* 1. AUTH / LOGIN FLOW MODAL VIEW */}
       {/* ========================================================= */}
@@ -986,11 +986,11 @@ export default function App() {
               currentTab === "profile" || currentTab === "lookfeed-profile" ? "bg-white" : "bg-[#F8FAFC]"
             }`}
           >
-            
+
             {/* ----------------- Header GNB ----------------- */}
             <header className="fixed top-0 left-0 right-0 bg-white border-b border-slate-100 px-5 py-4.5 flex items-center justify-between z-30">
               {/* Logo / Left */}
-              <div 
+              <div
                 className="flex items-center gap-2 cursor-pointer selection:bg-transparent group/logo"
                 onClick={() => setCurrentTab("home")}
               >
@@ -1059,7 +1059,7 @@ export default function App() {
                   : "px-5 pb-24 space-y-6"
               }`}
             >
-              
+
               {/* ========================================================= */}
               {/* TAB 1: HOME (Curation Dashboard & Gamyagi) */}
               {/* ========================================================= */}
@@ -1411,8 +1411,8 @@ export default function App() {
 
             {/* ----------------- Sticky Bottom Navigation Dock Bar ----------------- */}
             <nav id="bottom-dock" className="fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-slate-100 flex justify-around items-center px-4 shadow-xl z-30">
-              <button 
-                id="nav-home" 
+              <button
+                id="nav-home"
                 onClick={handleHomeNavigation}
                 className={`flex flex-col items-center justify-center flex-1 py-1 transition ${currentTab === "home" ? "text-[#1E3A8A]" : "text-slate-400 hover:text-slate-600"}`}
               >
@@ -1420,8 +1420,8 @@ export default function App() {
                 <span className="text-[9px] font-extrabold mt-1">추천</span>
               </button>
 
-              <button 
-                id="nav-closet" 
+              <button
+                id="nav-closet"
                 onClick={() => {
                   if(!requireLogin("closet")) return;
                   setCurrentTab("closet")}}
@@ -1443,8 +1443,8 @@ export default function App() {
                 <span className="text-[9px] font-extrabold mt-1">코디북</span>
               </button>
 
-              <button 
-                id="nav-feed" 
+              <button
+                id="nav-feed"
                 onClick={() => setCurrentTab("feed")}
                 className={`flex flex-col items-center justify-center flex-1 py-1 transition ${currentTab === "feed" ? "text-[#1E3A8A]" : "text-slate-400 hover:text-slate-600"}`}
               >
@@ -1464,7 +1464,7 @@ export default function App() {
         {gamyagiChatOpen && (
           <div id="panel-gamyagi-chat" className="absolute inset-0 bg-slate-900/45 backdrop-blur-xs flex flex-col justify-end z-[30] animate-fade-in">
             <div className="bg-white rounded-t-[32px] h-[550px] flex flex-col overflow-hidden shadow-2xl relative">
-              
+
               {/* Chat head */}
               <div className="bg-[#1E3A8A] text-white p-5 flex items-center justify-between pb-4">
                 <div className="flex items-center space-x-2.5">
@@ -1477,7 +1477,7 @@ export default function App() {
                   </div>
                 </div>
 
-                <button 
+                <button
                   onClick={() => setGamyagiChatOpen(false)}
                   className="p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition cursor-pointer"
                 >
@@ -1488,16 +1488,16 @@ export default function App() {
               {/* Chat Messages scroll pane */}
               <div className="flex-1 overflow-y-auto p-4 space-y-3.5 bg-slate-50">
                 {chatMessages.map((m, idx) => (
-                  <div 
-                    key={idx} 
+                  <div
+                    key={idx}
                     className={`flex items-start space-x-2 ${m.sender === "user" ? "flex-row-reverse space-x-reverse" : ""}`}
                   >
                     {m.sender === "gamyagi" && (
                       <span className="text-lg p-1 bg-white border rounded-lg">🤖</span>
                     )}
                     <div className={`text-xs p-3 rounded-2xl max-w-[75%] leading-relaxed ${
-                      m.sender === "user" 
-                        ? "bg-[#1E3A8A] text-white rounded-tr-none" 
+                      m.sender === "user"
+                        ? "bg-[#1E3A8A] text-white rounded-tr-none"
                         : "bg-white text-slate-700 rounded-tl-none border border-slate-100 shadow-3xs"
                     }`}>
                       {m.text}

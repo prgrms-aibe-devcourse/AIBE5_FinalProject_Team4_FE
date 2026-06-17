@@ -47,21 +47,24 @@ src/api/index.ts
 역할:
 
 - `VITE_API_BASE_URL`을 base URL로 사용합니다.
-- `localStorage.token`이 있으면 `Authorization: Bearer {token}` 헤더를 추가합니다.
+- 개발 환경에서는 Vite proxy 또는 `VITE_API_BASE_URL` 기준으로 BE OAuth 시작 URL로 이동합니다.
+- API 요청은 쿠키 기반 인증을 사용하며, 공통 API 클라이언트는 `withCredentials: true`로 쿠키를 함께 전송합니다.
+- 401 응답을 받으면 `/api/v1/auth/refresh`를 한 번 호출한 뒤 기존 요청을 재시도합니다.
+- FE는 access token 또는 refresh token 값을 직접 읽거나 `localStorage`에 저장하지 않습니다.
 - 500 서버 내부 오류는 `/error/server`로 이동합니다.
 - 502 외부 서비스 오류는 외부 서비스 오류 안내로 처리합니다.
 - 네트워크 오류는 `/error/network`로 이동합니다.
 
-## 인증 (현재 `LoginPage` + `App.tsx`)
+## 인증 (현재 `App.tsx` + 공통 API client)
 
-| 환경 | 로그인 시작 | 토큰 | `{userId}` |
+| 환경 | 로그인 시작 | 인증 유지 | `{userId}` |
 | --- | --- | --- | --- |
-| 개발(`DEV`) | `LoginPage` provider 버튼 → `App.handleSocialLogin` → `redirectToOAuthLogin(provider)` → `GET {VITE_API_BASE_URL}/oauth2/authorization/{provider}` | OAuth 콜백 `?token=` → `captureOAuthTokenFromUrl()` | JWT `sub` → `authUserId` |
+| 개발(`DEV`) | provider 버튼 → `App.handleSocialLogin` → `redirectToOAuthLogin(provider)` → `GET {VITE_API_BASE_URL}/oauth2/authorization/{provider}` | BE가 발급한 인증 쿠키를 공통 API client가 `withCredentials`로 전송합니다. 401 응답 시 `/api/v1/auth/refresh`를 호출합니다. | `GET /api/v1/users/profile` 응답의 `userId` |
 | 운영 | 동일 | 동일 | 동일 |
 
-옷장·보유/미보유 API path의 `{userId}`는 하드코딩 `1`이 아니라 **JWT `sub`** 를 사용합니다.
+옷장·보유/미보유 API path의 `{userId}`는 하드코딩 `1`이 아니라 로그인 후 조회한 현재 사용자 `userId`를 사용합니다.
 
-`GET /api/v1/auth/mock-token`은 BE local profile에서만 사용하는 수동 개발 테스트용 API입니다. FE 공식 로그인 흐름에서는 자동으로 호출하지 않으며, 실제 로그인 검증은 개발과 운영 모두 OAuth redirect 기준으로 진행합니다.
+`GET /api/v1/auth/mock-token`은 BE local profile에서만 사용하는 수동 개발 테스트용 API입니다. FE 공식 로그인 흐름에서는 자동으로 호출하지 않으며, 실제 로그인 검증은 개발과 운영 모두 OAuth redirect와 쿠키 기반 인증 상태 확인 기준으로 진행합니다.
 
 ## 경로 작성 기준
 
