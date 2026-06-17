@@ -11,7 +11,7 @@ import {
     ChevronRight,
     Activity,
     Layers,
-    Layout,
+    LayoutGrid,
 } from "./components/icons";
 import { UserProfile } from "@/types/index";
 import { REGIONS } from "@/data/regions";
@@ -477,7 +477,7 @@ export default function App() {
                             }}
                             className={`flex flex-col items-center justify-center flex-1 py-1 transition ${currentTab === "outfit-book" ? "text-[#1E3A8A]" : "text-slate-400 hover:text-slate-600"}`}
                         >
-                            <Layout className="w-5 h-5" />
+                            <LayoutGrid className="w-5 h-5" />
                             <span className="text-[9px] font-extrabold mt-1">코디북</span>
                         </button>
 

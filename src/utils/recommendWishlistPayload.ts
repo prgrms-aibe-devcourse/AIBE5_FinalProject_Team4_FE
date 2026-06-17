@@ -1,4 +1,4 @@
-import { resolveClothesGender } from '@/data/garmentGender'
+import { resolveClothesGenderWithBrand } from '@/data/brandGender'
 import type { Garment } from '@/types'
 import type { ClothesGender } from '@/types/be'
 import type { RecommendedClothesItem } from '@/types/recommendations'
@@ -57,7 +57,7 @@ export function buildWishlistPayloadFromRecommendedItem(
     imageUrl,
     category: item.category,
     itemType: item.itemType,
-    gender: resolveClothesGender(item.gender),
+    gender: resolveClothesGenderWithBrand(item.gender, item.brandName),
     primaryColor: item.primaryColor,
     secondaryColors: item.secondaryColors ?? [],
     styles: item.styleCodes?.length ? item.styleCodes : ['CASUAL'],

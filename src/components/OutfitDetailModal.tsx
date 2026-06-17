@@ -8,7 +8,7 @@ import { Shirt, CloudRain, Sparkles, ThumbsDown, Trash2, Edit2, RefreshCw } from
 import ClothesSelectModal from './ClothesSelectModal'
 import { Garment } from '@/types'
 
-interface OutfitItem {
+export interface OutfitModalItem {
   clothesId?: number
   name?: string
   brand?: string
@@ -20,10 +20,10 @@ interface OutfitItem {
 interface OutfitDetailModalProps {
   open: boolean
   combination: {
-    top?: OutfitItem | null
-    bottom?: OutfitItem | null
-    outer?: OutfitItem | null
-    shoes?: OutfitItem | null
+    top?: OutfitModalItem | null
+    bottom?: OutfitModalItem | null
+    outer?: OutfitModalItem | null
+    shoes?: OutfitModalItem | null
     totalScore?: number
     weatherLabel?: string
     outfitId?: number
