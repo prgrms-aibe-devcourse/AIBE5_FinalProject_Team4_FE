@@ -252,6 +252,7 @@ export default function OutfitBookTab({
                   bookId: outfitBookId,
                   title: selectedOutfit.title,
                   description: selectedOutfit.description,
+                  favorite: selectedOutfit.favorite,
                   top: toOutfitModalItem(selectedOutfit.items.find((it) => it.itemRole === "TOP")?.clothes),
                   bottom: toOutfitModalItem(selectedOutfit.items.find((it) => it.itemRole === "BOTTOM")?.clothes),
                   outer: toOutfitModalItem(selectedOutfit.items.find((it) => it.itemRole === "OUTER")?.clothes),

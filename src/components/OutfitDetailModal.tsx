@@ -26,6 +26,7 @@ interface OutfitDetailModalProps {
     shoes?: OutfitModalItem | null
     totalScore?: number
     weatherLabel?: string
+    favorite?: boolean
     outfitId?: number
     bookId?: number
     title?: string
@@ -63,12 +64,16 @@ export default function OutfitDetailModal({
   const [favLoading, setFavLoading] = useState(false)
   const [favorite, setFavorite] = useState<boolean | null>(null)
 
-  // load favorite state when modal opens for an existing outfit
   useEffect(() => {
     let cancelled = false
     const loadFavorite = async () => {
       if (!editCombo?.outfitId || !editCombo?.bookId) {
         setFavorite(null)
+        return
+      }
+      // combination.favorite가 있으면 API 호출 불필요
+      if (editCombo.favorite !== undefined) {
+        setFavorite(Boolean(editCombo.favorite))
         return
       }
       try {
@@ -189,7 +194,7 @@ export default function OutfitDetailModal({
         thumbnailUrl: editCombo.top?.imageUrl || editCombo.top?.userImageUrl || editCombo.bottom?.imageUrl || editCombo.bottom?.userImageUrl || editCombo.outer?.imageUrl || editCombo.outer?.userImageUrl || '',
         situation: '일상',
         season: 'ALL_SEASON',
-        favorite: false,
+        favorite: editCombo.outfitId ? (favorite ?? false) : false,
         items: [
           { item: editCombo.top, itemRole: 'TOP', layerOrder: 1 },
           { item: editCombo.bottom, itemRole: 'BOTTOM', layerOrder: 2 },
