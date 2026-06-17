@@ -313,7 +313,6 @@ analyze/draft 응답(`PurchaseCaptureDraftResponse`)과 save 응답(`PurchaseCap
 - FE는 FAILED·분석 API 오류 시 업로드 단계로 되돌리고 저장 버튼을 제공하지 않으며, 다른 캡처 선택 또는 **AI 분석 다시 시도**로 유도합니다.
 
 건너뛰기:
-
 ```ts
 POST /api/v1/users/{userId}/clothes/purchase-captures/{captureId}/items/{itemIndex}/skip
 ```
