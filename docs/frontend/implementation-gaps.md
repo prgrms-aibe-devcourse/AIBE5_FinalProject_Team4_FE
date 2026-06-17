@@ -37,8 +37,8 @@ last_updated: 2026-06-17
 | 옷장 통계 범위 | `ClosetTab` local count와 현재 BE `totalOwnedCount`만으로 전체 요약을 해석할 수 있음 | 옷장 전체 요약은 `OWNED`와 `WISHLIST`를 함께 고려 | [wardrobe.md](../features/wardrobe.md) |
 | 공통 응답 | `src/types/index.ts`의 `ApiResponse<T>`에 `status` 필드 포함 | `success`, `data`, `message` 기준 | [domain-types.md](domain-types.md) |
 | 에러 분기 | `src/api/index.ts`에서 `status >= 500`을 모두 `/error/server`로 이동 | 500 서버 내부 오류와 502 외부 서비스 오류 구분 | [frontend-api-usage.md](../api/frontend-api-usage.md), [common-loading-error.md](../features/common-loading-error.md) |
-| 피드 | `feed` tab이 static feed mock 중심 | 룩피드 API와 실제 사용자 데이터 기준 | [feature-index.md](../requirements/feature-index.md), [routing.md](routing.md) |
 | 룩피드 프로필 피드 목록 | 프로필 화면의 2열 피드 영역은 UI 틀만 있으며 실제 피드 데이터와 연결되지 않음 | 피드 API 연동 후 게시/저장 피드 개수에 따라 최신순 2열 grid와 빈 상태 문구를 조건부 표시 | [feature-index.md](../requirements/feature-index.md), [routing.md](routing.md) |
+| 피드 팔로우 초기 상태 | `FeedAuthor.followedByMe`가 optional. BE `FeedAuthorResponse`에 해당 필드가 없으면 팔로우 버튼 미표시 | BE PR #128 `FeedAuthorResponse`에 `followedByMe` 추가 후 FE 타입을 필수로 전환 | [frontend-api-usage.md](../api/frontend-api-usage.md), [domain-types.md](domain-types.md) |
 | BE 신규 API 타입 | 일부 신규 API 응답/요청 타입이 `src/types/be.ts`에 모두 정리되어 있지 않을 수 있음 | BE develop 기준 API 계약 타입 반영 | [frontend-api-usage.md](../api/frontend-api-usage.md), [domain-types.md](domain-types.md) |
 | 프로필 이미지 수정 | 내 정보 수정에서 사진 선택/미리보기 UI는 제공하지만, BE 프로필 이미지 업로드 API는 아직 없음 | 프로필 사진 파일 업로드 후 서버가 반환한 이미지 URL을 사용자 프로필에 저장 | [mypage.md](../features/mypage.md), [frontend-api-usage.md](../api/frontend-api-usage.md) |
 | 배포/인프라 목표 구조 | GitHub Actions는 lint/build CI를 수행하고, AWS 배포와 CD 자동화는 진행 예정. 공통 시스템 아키텍처는 목표 구조 기준 | FE/BE 배포 구현 시 시스템 아키텍처, 기술 스택, 기획서, gap 문서 동시 갱신 | [system-architecture.md](../architecture/system-architecture.md), [tech-stack.md](../architecture/tech-stack.md) |
@@ -53,8 +53,8 @@ last_updated: 2026-06-17
 | `RECO-002` | `home` tab `style` 라벨 | `HomeTab.tsx` | [home-recommendation.md](../features/home-recommendation.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | BE `GET /api/v1/recommendations/{wardrobeId}` 연동 |
 | `RECO-005` | `home` tab `match` 라벨 | `HomeTab.tsx`, `MatchRecommendationByCategory.tsx`, `src/api/recommendations.ts` | [home-recommendation.md](../features/home-recommendation.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | BE recommendations API 연동. 추천 피드백 API와 별개로 동작 |
 | `RECO-013`~`RECO-014` | 추천 카드 액션 | `HomeTab.tsx`, `MatchRecommendationByCategory.tsx`, `RecommendProductDetailModal.tsx`, `OutfitDetailModal.tsx` | [home-recommendation.md](../features/home-recommendation.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | 싫어요/추천 제외와 일부 저장 액션은 피드백 API에 연결. 외부 상품 저장/AI MD 등 세부 액션의 피드백 기록 범위 확인 필요 |
-| `FEED-001` | `feed` tab | `App.tsx` 내부 feed section | [feature-index.md](../requirements/feature-index.md), [routing.md](routing.md) | static feed mock |
 | `FEED-001` | `lookfeed-profile` view | `App.tsx` 내부 lookfeed profile section | [feature-index.md](../requirements/feature-index.md), [routing.md](routing.md) | 2열 피드 목록 UI 틀만 있음. 게시/저장 피드 API 미연동 |
+| `FEED-008` | `feed` tab 상세 모달 팔로우 버튼 | `FeedPostDetailModal.tsx`, `src/types/feed.ts` | [frontend-api-usage.md](../api/frontend-api-usage.md), [domain-types.md](domain-types.md) | `FeedAuthor.followedByMe`가 BE 응답에 없으면 팔로우 버튼 미표시. BE PR #128 `FeedAuthorResponse`에 필드 추가 후 FE 타입 필수로 전환 필요 |
 
 ## FE 코드와 공식 기준 확인 필요
 
@@ -223,16 +223,18 @@ FE 배포 또는 CD workflow가 구현되면 [system-architecture.md](../archite
 
 | 우선순위 | 대상 | 이유 |
 | --- | --- | --- |
-| 1 | 옷 대상 성별(`gender`) UI 비노출 전환 | 공통 문서 기준과 현재 등록/수정 UI가 다르게 동작 |
-| 2 | 옷 계절(`season`) 수정 payload/검증 주석 정리 | ERD v2.3 기준과 등록/수정 화면 payload 해석에 영향 |
-| 3 | AI MD 채팅 mock API 전환 | 사용자가 보는 AI MD 채팅의 실제 데이터 연동 여부에 영향 |
-| 4 | 추천 피드백 기록 범위 확정 | 저장/싫어요/추천 제외 정책과 사용자 스타일 점수에 영향 |
-| 5 | `ApiResponse<T>` 타입과 500/502 에러 분기 | 모든 API parsing과 공통 error handling에 영향 |
-| 6 | BE 신규 API 타입 정리 | 추천/OOTD/코디/인증 유지 API 연동 시 타입 안정성에 영향 |
-| 7 | `WARDROBE-002` 옷장 통계 범위 | 옷장 전체 요약과 보유 옷 통계 해석에 영향 |
-| 8 | 프로필 이미지 업로드 API 연동 | 마이페이지 프로필 사진 변경 저장에 영향 |
-| 9 | 피드와 룩피드 프로필 피드 목록의 local·static 데이터 경계 | 실제 사용자 데이터와 mock/local 데이터 구분에 영향 |
-| 10 | 배포/인프라 목표 구조와 현재 FE/CI 상태 | AWS 배포 및 CD 구현 시 공통 시스템 문서와 실제 FE 레포 설정 정합성에 영향 |
+| 1 | `AUTH-005` refresh/logout 연동 | 로그인 상태 유지와 세션 만료 처리에 직접 영향 |
+| 2 | 옷 대상 성별(`gender`) UI 비노출 전환 | 공통 문서 기준과 현재 등록/수정 UI가 다르게 동작 |
+| 3 | 옷 계절(`season`) 수정 payload/검증 주석 정리 | ERD v2.3 기준과 등록/수정 화면 payload 해석에 영향 |
+| 4 | AI MD 채팅 mock API 전환 | 사용자가 보는 AI MD 채팅의 실제 데이터 연동 여부에 영향 |
+| 5 | 추천 피드백 기록 범위 확정 | 저장/싫어요/추천 제외 정책과 사용자 스타일 점수에 영향 |
+| 6 | `ApiResponse<T>` 타입과 500/502 에러 분기 | 모든 API parsing과 공통 error handling에 영향 |
+| 7 | BE 신규 API 타입 정리 | 추천/OOTD/코디/인증 유지 API 연동 시 타입 안정성에 영향 |
+| 8 | `WARDROBE-002` 옷장 통계 범위 | 옷장 전체 요약과 보유 옷 통계 해석에 영향 |
+| 9 | 프로필 이미지 업로드 API 연동 | 마이페이지 프로필 사진 변경 저장에 영향 |
+| 10 | 룩피드 프로필 피드 목록 API 연동 | 룩피드 프로필의 게시/저장 피드 표시와 실제 사용자 데이터 연결에 영향 |
+| 11 | 피드 팔로우 초기 상태 | 피드 상세의 팔로우 버튼 표시와 FE 타입 안정성에 영향 |
+| 12 | 배포/인프라 목표 구조와 현재 FE/CI 상태 | AWS 배포 및 CD 구현 시 공통 시스템 문서와 실제 FE 레포 설정 정합성에 영향 |
 
 ## 문서 변경 기준
 

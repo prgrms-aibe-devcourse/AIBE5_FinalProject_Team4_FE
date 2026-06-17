@@ -77,14 +77,6 @@ const labelConfig: Record<RecommendationLabel, { title: string; subtitle: string
   aimd: { title: "AI MD 추천", subtitle: "MD 코디 설명 제공", icon: "\ud83e\udd16" },
 };
 
-const labelTiltClasses: Record<RecommendationLabel, { card: string; activeCard: string; chip: string; activeChip: string }> = {
-  ootd: { card: "rotate-0 hover:rotate-0", activeCard: "-rotate-3 md:-rotate-1 hover:rotate-0", chip: "rotate-0 hover:rotate-0", activeChip: "-rotate-2 hover:rotate-0" },
-  style: { card: "rotate-0 hover:rotate-0", activeCard: "rotate-3 md:rotate-1 hover:rotate-0", chip: "rotate-0 hover:rotate-0", activeChip: "rotate-2 hover:rotate-0" },
-  similar: { card: "rotate-0 hover:rotate-0", activeCard: "-rotate-[2.5deg] md:-rotate-[0.75deg] hover:rotate-0", chip: "rotate-0 hover:rotate-0", activeChip: "-rotate-[1.5deg] hover:rotate-0" },
-  match: { card: "rotate-0 hover:rotate-0", activeCard: "rotate-3 md:rotate-[1deg] hover:rotate-0", chip: "rotate-0 hover:rotate-0", activeChip: "rotate-[1.5deg] hover:rotate-0" },
-  aimd: { card: "rotate-0 hover:rotate-0", activeCard: "-rotate-2 md:rotate-[0.5deg] hover:rotate-0", chip: "rotate-0 hover:rotate-0", activeChip: "-rotate-1 hover:rotate-0" },
-};
-
 const fallbackImages = {
   Top: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&q=80&w=600",
   Bottom: "https://images.unsplash.com/photo-1542272604-787c3835535d?auto=format&fit=crop&q=80&w=600",
@@ -427,11 +419,10 @@ export default function HomeTab({
               <div className="flex gap-1.5 overflow-x-auto scrollbar-none">
                 {labelKeys.map((label) => {
                   const config = labelConfig[label];
-                  const tilt = labelTiltClasses[label];
                   const isActive = activeLabel === label;
                   return (
                       <button key={label} onClick={() => selectLabel(label, true)}
-                              className={`h-7 px-3 rounded-full text-[10px] font-black whitespace-nowrap transition-all duration-200 hover:-translate-y-0.5 active:scale-95 ${isActive ? "bg-[#111827] text-[#C4B5FD] shadow-md" : "bg-slate-50 text-slate-500 hover:bg-white hover:text-[#111827]"} ${isActive ? tilt.activeChip : tilt.chip}`}
+                              className={`h-7 px-3 rounded-full text-[10px] font-black whitespace-nowrap transition-all duration-200 hover:-translate-y-0.5 active:scale-95 ${isActive ? "bg-[#111827] text-[#C4B5FD] shadow-md" : "bg-slate-50 text-slate-500 hover:bg-white hover:text-[#111827]"}`}
                               type="button"
                       >
                         <span className="mr-1">{config.icon}</span>{config.title}
@@ -446,11 +437,10 @@ export default function HomeTab({
           <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
             {labelKeys.map((label) => {
               const config = labelConfig[label];
-              const tilt = labelTiltClasses[label];
               const isActive = activeLabel === label;
               return (
                   <button key={label} onClick={() => selectLabel(label)}
-                          className={`min-h-[86px] rounded-2xl border p-3 text-left transition-all duration-200 hover:-translate-y-1 active:scale-95 ${isActive ? "bg-[#111827] text-white border-transparent shadow-md ring-2 ring-[#C4B5FD]" : "bg-white text-slate-700 border-slate-100 hover:bg-slate-50 hover:shadow-md"} ${isActive ? tilt.activeCard : tilt.card}`}
+                          className={`min-h-[86px] rounded-2xl border p-3 text-left transition-all duration-200 hover:-translate-y-1 active:scale-95 ${isActive ? "bg-[#111827] text-white border-transparent shadow-md ring-2 ring-[#C4B5FD]" : "bg-white text-slate-700 border-slate-100 hover:bg-slate-50 hover:shadow-md"}`}
                   >
                     <span className="text-xl block mb-2">{config.icon}</span>
                     <strong className="text-xs font-black block leading-tight">{config.title}</strong>
