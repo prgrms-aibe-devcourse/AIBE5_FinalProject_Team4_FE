@@ -713,7 +713,7 @@ export default function HomeTab({
               ) : styleError ? (
                   <div className="col-span-full rounded-2xl border border-red-100 bg-red-50 px-5 py-10 text-center">
                     <p className="text-sm font-black text-red-700">{styleError}</p>
-                    <button type="button" onClick={() => onRefreshWardrobe?.()} className="mt-4 h-9 px-4 rounded-full bg-[#111827] text-white text-xs font-black">다시 시도</button>
+                    <button type="button" onClick={() => { setStyleError(null); setRefreshSignal(s => s + 1); }} className="mt-4 h-9 px-4 rounded-full bg-[#111827] text-white text-xs font-black">다시 시도</button>
                   </div>
               ) : selectedRecommendations.length === 0 ? (
                   !styleLoading && (

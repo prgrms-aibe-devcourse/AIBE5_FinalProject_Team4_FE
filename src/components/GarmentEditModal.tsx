@@ -18,6 +18,7 @@ import {
   BRAND_NAME_MAX_LENGTH,
   GARMENT_SIZE_MAX_LENGTH,
   getSizeOptionsByCategory,
+  getGarmentSeasonLabel,
   type GarmentFormFieldErrors,
   type GarmentRegisterDraft,
 } from '@/utils/garmentRegisterValidation'
@@ -143,7 +144,7 @@ export default function GarmentEditModal({
               )}
             </div>
           ) : ownedEdit ? (
-            /* 옷장 등록 옷: 사진·의상명·사이즈·시즌 */
+            /* 옷장 등록 옷: 사진·의상명·사이즈 (시즌은 읽기 전용) */
             <>
               {/* 사진 */}
               <div className="space-y-1">
@@ -193,6 +194,13 @@ export default function GarmentEditModal({
                   onChange={(e) => onDraftChange({ size: e.target.value })} placeholder="직접 입력"
                   className={`w-full h-9 px-3 rounded-lg border text-sm bg-white ${fieldErrors.size ? 'border-red-400' : 'border-slate-200'}`} />
                 {fieldErrors.size && <p className="text-xs text-red-600">{fieldErrors.size}</p>}
+              </div>
+              {/* 시즌 — 읽기 전용 */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-500">시즌</label>
+                <p className="h-9 flex items-center px-3 rounded-lg border border-slate-100 bg-slate-50 text-sm text-slate-500">
+                  {getGarmentSeasonLabel(draft.season) || '미지정'}
+                </p>
               </div>
             </>
           ) : (
