@@ -183,7 +183,7 @@ export async function convertWishlistToOwned(
 ): Promise<Garment> {
   const updated = await unwrap(
     api.patch<BeApiResponse<ClothesResponse>>(
-      `/api/clothes/${clothesId}/convert-to-owned`,
+      `/api/v1/clothes/${clothesId}/convert-to-owned`,
       payload,
     ),
   )

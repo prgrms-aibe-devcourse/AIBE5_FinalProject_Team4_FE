@@ -135,6 +135,7 @@ function mapAiMdProductToCard(
   const brandLabel = product.brand || product.mallName || (
     product.candidateSource === 'INTERNAL' ? '서비스 상품' : '네이버쇼핑'
   )
+  const showProductMetadata = product.candidateSource !== 'NAVER'
 
   return {
     id: productKey(product),
@@ -152,11 +153,11 @@ function mapAiMdProductToCard(
           : '신발',
     itemTypeCode: product.category4 || product.category3 || CATEGORY_ITEM_TYPES[uiCategory][0].code,
     itemTypeLabel,
-    style: styles[0] ?? '—',
-    styles,
-    color: color?.label ?? '—',
-    colorHex: color?.hex,
-    secondaryColors,
+    style: showProductMetadata ? styles[0] ?? '—' : '—',
+    styles: showProductMetadata ? styles : [],
+    color: showProductMetadata ? color?.label ?? '—' : '—',
+    colorHex: showProductMetadata ? color?.hex : undefined,
+    secondaryColors: showProductMetadata ? secondaryColors : [],
     matchRate: 0,
     imageUrl: product.image,
     reason: item.reason,
