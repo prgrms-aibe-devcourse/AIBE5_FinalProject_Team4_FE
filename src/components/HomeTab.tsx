@@ -48,6 +48,7 @@ interface HomeTabProps {
   onRefreshWardrobe?: () => void;
   onGoToCloset?: () => void;
   region?: string;
+  onLoginRequired?: () => void;
 }
 
 type RecommendationLabel = "ootd" | "style" | "similar" | "match" | "aimd";
@@ -68,6 +69,10 @@ type RecommendItem = {
   clothesId?: number | null;
   outfitId?: number | null;
   bookId?: number | null;
+  top?: any;
+  bottom?: any;
+  outer?: any;
+  shoes?: any;
   purchaseUrl?: string;
 };
 
@@ -108,6 +113,7 @@ export default function HomeTab({
                                   onAddWishlistItem,
                                   onGoToCloset,
                                   region = '서울',
+                                  onLoginRequired,
                                 }: HomeTabProps) {
   const [activeLabel, setActiveLabel] = useState<RecommendationLabel>("ootd");
   const [showStickyLabels, setShowStickyLabels] = useState(false);
@@ -163,10 +169,17 @@ export default function HomeTab({
   // we don't use toastMessage directly here
 
   // 추천 목록에서 중복된 clothesId를 제거하는 헬퍼
-  const uniqueItems = useCallback(<T extends { clothesId?: number | null; id: string }>(items: T[]): T[] => {
+  const uniqueItems = useCallback(<T extends { clothesId?: number | null; id: string; top?: any; bottom?: any; outer?: any; shoes?: any }>(items: T[]): T[] => {
     const seen = new Set();
     return items.filter(item => {
-      // clothesId가 있으면 그것을 키로 쓰고, 없으면 id를 키로 씀
+      // OOTD 조합인 경우 구성 요소들의 ID 조합으로 중복 체크 가능
+      if (item.top || item.bottom || item.outer || item.shoes) {
+        const comboKey = [item.top?.clothesId, item.bottom?.clothesId, item.outer?.clothesId, item.shoes?.clothesId].filter(Boolean).sort().join(',');
+        if (seen.has(comboKey)) return false;
+        seen.add(comboKey);
+        return true;
+      }
+      // 일반 아이템인 경우 clothesId 또는 id로 체크
       const key = item.clothesId != null ? String(item.clothesId) : item.id;
       if (seen.has(key)) return false;
       seen.add(key);
@@ -177,8 +190,29 @@ export default function HomeTab({
   const selectedRecommendations = useMemo(() => {
     if (activeLabel === "match" || activeLabel === "similar" || activeLabel === "aimd") return [];
     const items = activeLabel === "ootd" ? ootdItems : styleItems;
-    return uniqueItems(items);
-  }, [activeLabel, ootdItems, styleItems, uniqueItems]);
+    const uniques = uniqueItems(items);
+
+    const ownedSet = new Set(clothes.map(c => parseBeClothesId(c.id)).filter((id): id is number => id != null));
+    const owned = [] as typeof uniques;
+    const notOwned = [] as typeof uniques;
+    uniques.forEach((it) => {
+      // outfit을 구성하는 아이템 중 하나라도 보유 중이면 owned로 분류
+      const itemClothesIds = [
+        it.top?.clothesId,
+        it.bottom?.clothesId,
+        it.outer?.clothesId,
+        it.shoes?.clothesId,
+        it.clothesId,
+      ].filter((id): id is number => id != null);
+
+      const isOwned = itemClothesIds.some(id => ownedSet.has(id));
+      if (isOwned) owned.push(it);
+      else notOwned.push(it);
+    });
+
+    const limit = activeLabel === "style" ? 20 : 6;
+    return [...owned, ...notOwned].slice(0, limit);
+  }, [activeLabel, ootdItems, styleItems, uniqueItems, clothes]);
 
   const ownedClothes = useMemo(() => clothes.filter((item) => !item.isWishlist), [clothes]);
   const matchEligibleOwnedClothes = useMemo(
@@ -262,21 +296,35 @@ export default function HomeTab({
 
             if (cancelled) return;
             setOotdError(null);
-            const combos = outfits.map((item: any) => ({
-              top: item.top ?? null,
-              bottom: item.bottom ?? null,
-              outer: item.outer ?? null,
-              totalScore: item.totalScore ?? null,
-              weatherLabel: weatherLabel || item.weatherLabel,
-              outfitId: item.outfitId ?? null,
-              bookId: currentBookId || null,
-            }));
+
+            const generateOotdId = (item: any, idx: number) => {
+              if (item.outfitId) return `ootd-outfit-${item.outfitId}`;
+              // outfitId가 없는 경우 구성 요소들의 ID 조합으로 고유 ID 생성 (안정성)
+              const components = [item.top?.clothesId, item.bottom?.clothesId, item.outer?.clothesId, item.shoes?.clothesId].filter(Boolean).sort().join('-');
+              return components ? `ootd-comp-${components}` : `ootd-${idx}`;
+            };
+
+            const combos = outfits.map((item: any, idx: number) => {
+              const id = generateOotdId(item, idx);
+              return {
+                id,
+                top: item.top ?? null,
+                bottom: item.bottom ?? null,
+                outer: item.outer ?? null,
+                shoes: item.shoes ?? null,
+                totalScore: item.totalScore ?? null,
+                weatherLabel: weatherLabel || item.weatherLabel,
+                outfitId: item.outfitId ?? null,
+                bookId: currentBookId || null,
+              };
+            });
 
             const mapped = outfits.map((item: any, idx: number) => {
+              const id = generateOotdId(item, idx);
               const mainItem = item.top || item.outer || item.bottom || item;
               const title = [item.top?.name, item.bottom?.name].filter(Boolean).join(' + ') || (item.name ?? item.title ?? `추천 코디 ${idx + 1}`);
               return {
-                id: item.outfitId ? `ootd-outfit-${item.outfitId}` : `ootd-${idx}`,
+                id,
                 title,
                 category: mainItem.category ? (mainItem.category === 'TOP' ? 'Top' : mainItem.category === 'BOTTOM' ? 'Bottom' : mainItem.category === 'OUTER' ? 'Outer' : 'Shoes') : 'Outer',
                 style: STYLE_LABELS[(item.styleCodes && item.styleCodes[0]) || item.style] ?? (item.style || '—'),
@@ -291,6 +339,10 @@ export default function HomeTab({
                 clothesId: mainItem.clothesId ?? null,
                 outfitId: item.outfitId ?? null,
                 bookId: currentBookId || null,
+                top: item.top,
+                bottom: item.bottom,
+                outer: item.outer,
+                shoes: item.shoes,
               } as RecommendItem;
             });
             setOotdCombinations(combos);
@@ -504,7 +556,7 @@ export default function HomeTab({
 
         {hasRecommendationData && activeLabel !== "match" && (activeLabel === 'ootd' ? ootdLoading : styleLoading) && (
             <div className={`grid gap-4 ${activeLabel === "ootd" ? "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3" : "grid-cols-2 lg:grid-cols-3"} mb-6`}>
-              {Array.from({ length: 6 }).map((_, idx) => (
+              {Array.from({ length: activeLabel === 'style' ? 20 : 6 }).map((_, idx) => (
                   <div key={idx} className="h-44 sm:h-52 lg:h-72 rounded-[24px] bg-slate-100 animate-pulse" />
               ))}
             </div>
@@ -596,7 +648,7 @@ export default function HomeTab({
         ) : (
             <div className={`grid gap-4 ${activeLabel === "ootd" ? "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3" : "grid-cols-2 lg:grid-cols-3"}`}>
               {(activeLabel === 'ootd' && ootdLoading) || (activeLabel === 'style' && styleLoading) ? (
-                  Array.from({ length: 6 }).map((_, idx) => (
+                  Array.from({ length: activeLabel === 'style' ? 20 : 6 }).map((_, idx) => (
                       <div key={idx} className="h-44 sm:h-52 lg:h-72 rounded-[24px] bg-slate-100 animate-pulse" />
                   ))
               ) : (activeLabel === 'ootd' && ootdError) || (activeLabel === 'style' && styleError) ? (
@@ -623,7 +675,7 @@ export default function HomeTab({
                           key={item.id}
                           onClick={() => {
                             if (activeLabel === 'ootd') {
-                              const combo = ootdCombinations[selectedRecommendations.indexOf(item)] ?? null;
+                              const combo = ootdCombinations.find(c => c.id === item.id) ?? null;
                               setSelectedCombo(combo);
                               setSelectedItem(null);
                             } else {
@@ -636,8 +688,7 @@ export default function HomeTab({
                         {activeLabel === 'ootd' ? (
                             <div className="h-44 sm:h-52 lg:h-72 bg-slate-100 relative overflow-hidden">
                               {(() => {
-                                const idx = selectedRecommendations.indexOf(item);
-                                const combo = ootdCombinations[idx];
+                                const combo = ootdCombinations.find(c => c.id === item.id);
                                 if (combo && !combo.outer && combo.top && combo.bottom) {
                                   return (
                                       <div className="w-full h-full flex flex-col">
