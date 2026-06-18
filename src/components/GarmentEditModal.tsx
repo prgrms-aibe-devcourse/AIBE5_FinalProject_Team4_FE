@@ -93,7 +93,7 @@ export default function GarmentEditModal({
             {sizeOnly
               ? '외부 상품은 사이즈만 수정할 수 있습니다.'
               : ownedEdit
-              ? '의상명, 사진, 사이즈, 시즌을 수정할 수 있습니다.'
+              ? '의상명, 사진, 사이즈를 수정할 수 있습니다.'
               : '카테고리, 색상, 스타일 등 옷 정보를 수정할 수 있습니다.'}
           </span>
         }
