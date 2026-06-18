@@ -81,7 +81,7 @@ export default function RecommendProductDetailModal({
         { label: item.color, hex: item.colorHex },
         ...item.secondaryColors,
     ]
-    const canToggleWishlist = !item.isAnchor && item.clothesId != null && onWishlistToggle
+    const canToggleWishlist = !item.isAnchor && Boolean(onWishlistToggle)
 
     const handleFeedback = async (type: RecommendationFeedbackType) => {
         const uid = userId

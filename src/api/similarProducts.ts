@@ -17,14 +17,30 @@ async function unwrap<T>(
 export async function getBaseClothesForSimilarProducts(
   userId: number,
 ): Promise<ClothesResponse[]> {
-  const clothes = await unwrap(
-    api.get<BeApiResponse<ClothesResponse[]>>(
-      `/api/v1/users/${userId}/clothes`,
+  const [ownedClothes, wishlistClothes] = await Promise.all([
+    unwrap(
+      api.get<BeApiResponse<ClothesResponse[]>>(
+        `/api/v1/users/${userId}/clothes`,
+      ),
     ),
-  )
-  return clothes.filter((item) =>
-    item.ownershipStatus === 'OWNED' || item.ownershipStatus === 'WISHLIST',
-  )
+    unwrap(
+      api.get<BeApiResponse<ClothesResponse[]>>(
+        `/api/users/${userId}/wishlist-clothes`,
+      ),
+    ),
+  ])
+
+  const clothesById = new Map<number, ClothesResponse>()
+  const baseClothes = [...ownedClothes, ...wishlistClothes]
+
+  baseClothes.forEach((item) => {
+    if (item.ownershipStatus !== 'OWNED' && item.ownershipStatus !== 'WISHLIST') {
+      return
+    }
+    clothesById.set(item.clothesId, item)
+  })
+
+  return Array.from(clothesById.values())
 }
 
 export async function getSimilarProducts(

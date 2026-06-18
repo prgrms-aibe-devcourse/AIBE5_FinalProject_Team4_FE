@@ -203,3 +203,15 @@ export async function createWishlistClothes(
   )
   return mapClothesToGarment(data)
 }
+
+export async function connectWishlistClothes(
+  userId: number,
+  clothesId: number,
+): Promise<Garment> {
+  const data = await unwrap(
+    api.post<BeApiResponse<ClothesResponse>>(
+      `${wishlistClothesPath(userId)}/${clothesId}`,
+    ),
+  )
+  return mapClothesToGarment(data)
+}
