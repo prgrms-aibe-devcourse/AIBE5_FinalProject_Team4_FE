@@ -36,7 +36,6 @@ export function useRecommendWishlistToggle({
   onWishlistChanged,
 }: UseRecommendWishlistToggleOptions) {
   const { showToast } = useToast() || { showToast: () => {} }
-  const [toastMessage, setToastMessage] = useState<string | null>(null)
   const [submittingClothesId, setSubmittingClothesId] = useState<number | null>(null)
   const [feedbackSubmittingId, setFeedbackSubmittingId] = useState<number | null>(null)
   const [overrides, setOverrides] = useState<Map<number, boolean>>(new Map())
@@ -44,12 +43,6 @@ export function useRecommendWishlistToggle({
   useEffect(() => {
     setOverrides(new Map())
   }, [existingGarments])
-
-  useEffect(() => {
-    if (!toastMessage) return
-    const timer = window.setTimeout(() => setToastMessage(null), 3000)
-    return () => window.clearTimeout(timer)
-  }, [toastMessage])
 
   const isWishlisted = useCallback(
     (clothesId: number | null | undefined) => {
@@ -68,7 +61,6 @@ export function useRecommendWishlistToggle({
 
   const triggerToast = useCallback(
     (message: string, type: 'success' | 'info' | 'error' = 'success') => {
-      setToastMessage(message)
       showToast(type === 'info' ? 'info' : type === 'error' ? 'error' : 'success', message)
     },
     [showToast],
@@ -240,7 +232,6 @@ export function useRecommendWishlistToggle({
   )
 
   return {
-    toastMessage,
     isWishlisted,
     isSubmitting,
     isFeedbackSubmitting,

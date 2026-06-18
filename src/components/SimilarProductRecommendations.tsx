@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+﻿import { useCallback, useEffect, useMemo, useState } from 'react'
 import axios from 'axios'
 import { getBaseClothesForSimilarProducts, getSimilarProducts } from '@/api/similarProducts'
 import { createWishlistClothes } from '@/api/wardrobe'
@@ -378,15 +378,6 @@ export default function SimilarProductRecommendations({
   return (
     <div className="space-y-5">
       <div>
-        <div className="mb-3">
-          <div>
-            <h3 className="text-sm font-black text-slate-900">기준 옷 선택</h3>
-            <p className="text-[11px] text-slate-400 font-bold mt-1">
-              보유 옷이나 미보유 옷을 선택하면 비슷한 상품을 찾아드려요.
-            </p>
-          </div>
-        </div>
-
         <button
           type="button"
           disabled={recommendLoading}
@@ -434,9 +425,6 @@ export default function SimilarProductRecommendations({
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-black text-slate-900">
                   유사 상품을 찾을 옷을 선택해 주세요
-                </p>
-                <p className="mt-1 text-[11px] font-bold text-slate-400">
-                  기준 옷 {baseClothes.length}개
                 </p>
               </div>
               <span className="shrink-0 h-8 px-3 rounded-full bg-[#111827] text-white text-[11px] font-black grid place-items-center">

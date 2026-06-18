@@ -15,7 +15,6 @@ import { extractApiErrorMessage } from '@/utils/apiError'
 import { validateGarmentImageFile } from '@/utils/imageFileValidation'
 import {
   hasFormErrors,
-  validateGarmentRegisterDraft,
   validateGarmentSizeOnlyEdit,
   type GarmentFormFieldErrors,
 } from '@/utils/garmentRegisterValidation'
@@ -201,9 +200,7 @@ export default function ClosetGarmentDetail({
     if (!detail || !editDraft) return
 
     const sizeOnly = isExternalProductGarment(detail)
-    const errors = sizeOnly
-      ? validateGarmentSizeOnlyEdit(editDraft.size)
-      : validateGarmentRegisterDraft(editDraft, { skipGender: true, skipSeason: true })
+    const errors = validateGarmentSizeOnlyEdit(editDraft.size)
     setFieldErrors(errors)
     if (hasFormErrors(errors)) {
       onToast('입력값을 확인해 주세요.')
@@ -244,21 +241,11 @@ export default function ClosetGarmentDetail({
         return
       }
 
-      const styles = [
-        editDraft.mainStyle,
-        ...editDraft.secondaryStyles.filter((s) => s !== editDraft.mainStyle),
-      ]
       const updated = await updateClothes(Number(detail.id), detail, {
         name: editDraft.name.trim(),
-        brandName: editDraft.brandName.trim(),
-        productCode: editDraft.productCode.trim() || detail.productCode || 'UNKNOWN',
-        category: UI_CATEGORY_TO_BE[editDraft.category],
-        itemType: editDraft.itemType,
-        primaryColor: editDraft.mainColor,
-        secondaryColors: editDraft.secondaryColors,
-        styles,
         size: editDraft.size.trim() || 'FREE',
         imageUrl,
+        ...(editDraft.season.trim() ? { season: editDraft.season.trim() } : {}),
       })
       setDetail(updated)
       onGarmentUpdated(updated)
@@ -352,6 +339,7 @@ export default function ClosetGarmentDetail({
           imageError={imageError}
           fieldErrors={fieldErrors}
           sizeOnly={sizeOnlyEdit}
+          ownedEdit={!sizeOnlyEdit}
           onDraftChange={handleDraftChange}
           onImageFileSelect={handleImageFileSelect}
           onSave={() => void handleSave()}

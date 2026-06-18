@@ -4,8 +4,19 @@
 const sstBrandIcon = (slug: string) =>
   `https://img.goodwearmall.com/ost/system/brand/icon/${slug}.png`
 
+const wiki = (path: string) => `https://upload.wikimedia.org/wikipedia/commons/${path}`
+
 /** favicon보다 선명한 공식 PNG가 있는 브랜드 */
 const BRAND_LOGO_URLS: Record<string, string> = {
+  LEE: wiki('b/b0/Lee_Jeans_logo.svg'),
+  지프: wiki('0/0f/Jeep_logo.svg'),
+  JEEP: wiki('0/0f/Jeep_logo.svg'),
+  톰포드: wiki('f/fc/Tom_Ford_wordmark.svg'),
+  TOMFORD: wiki('f/fc/Tom_Ford_wordmark.svg'),
+  'TOM FORD': wiki('f/fc/Tom_Ford_wordmark.svg'),
+  MONBELL: wiki('thumb/4/46/Mont-bell_logo.svg/320px-Mont-bell_logo.svg.png'),
+  몽벨: wiki('thumb/4/46/Mont-bell_logo.svg/320px-Mont-bell_logo.svg.png'),
+  'MONT-BELL': wiki('thumb/4/46/Mont-bell_logo.svg/320px-Mont-bell_logo.svg.png'),
   TOPTEN: sstBrandIcon('topten'),
   TOPTEN10: sstBrandIcon('topten'),
   'TOP TEN': sstBrandIcon('topten'),
