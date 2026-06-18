@@ -80,7 +80,7 @@ FE의 `similar` 탭은 유사상품 결과를 최대 50개까지 표시하는 �
 - 기준 옷: 사용자 보유 옷(`OWNED`) 중 카테고리·성별 필터를 통과한 항목
 - API: `GET /api/v1/users/{userId}/clothes/{clothesId}/recommendations?limitPerCategory={n}`
 - FE 기본 요청: `limitPerCategory=50` (`src/api/recommendations.ts`)
-- UI: 카테고리(상의/하의/아우터/신발)별 섹션, `TOP 1`~`TOP 10` 뱃지만 표시, 접기/더보기 그리드
+- UI: 카테고리(상의/하의/아우터/신발)별 섹션, 접기/더보기 그리드
 - 카드 액션: 상세 모달, 위시리스트 토글(`POST /api/users/{userId}/wishlist-clothes`)
 
 ### 어울리는 옷 추천 요청 수 (`limitPerCategory`)
@@ -91,7 +91,7 @@ FE는 카테고리당 최대 50건을 요청합니다. BE API 계약도 `limitPe
 | --- | --- |
 | 기본 요청값 | `50` |
 | 허용 범위 | `1`~`50` |
-| 화면 표시 | 카테고리별 `TOP 1`~`TOP 10` 우선 표시, 더보기로 추가 후보 확인 |
+| 화면 표시 | 카테고리별 접기/더보기 그리드로 추가 후보 확인 |
 
 ## 추천 상세 — 구매 후 보유 옷장 등록 (`match`)
 
