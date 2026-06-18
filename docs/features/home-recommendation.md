@@ -105,7 +105,7 @@ FE는 카테고리당 최대 50건을 요청합니다. BE API 계약도 `limitPe
 **샀어요** BE 호출 순서:
 
 1. 위시리스트에 없으면 `POST /api/users/{userId}/wishlist-clothes` (추천 item body, `REC-{clothesId}` productCode)
-2. `PATCH /api/clothes/{clothesId}/convert-to-owned` 로 `WISHLIST` → `OWNED` 전환
+2. `PATCH /api/v1/clothes/{clothesId}/convert-to-owned` 로 `WISHLIST` → `OWNED` 전환
 
 이미 보유 옷장에 있으면 API 호출 없이 안내 토스트만 표시합니다. 성공 시 옷장 목록 refresh 콜백(`onRefreshWardrobe`)을 호출합니다.
 

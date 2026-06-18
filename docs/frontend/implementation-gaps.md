@@ -67,16 +67,16 @@ last_updated: 2026-06-17
 - AI MD 채팅(`RECO-007`): `/api/chat-gamyagi` mock 경로 사용 중. `/api/v1/users/{userId}/recommendations/ai-md/personas/{personaId}/chat` 계약으로 전환 필요
 - AI MD 상품/코디 저장, 외부 상품 저장처럼 추천과 연결되는 세부 액션이 `RECO-013`~`RECO-014` 피드백으로도 기록되어야 하는지 기준 확인 필요
 
-### `RECO-005` 추천 상세 — 구매 후 보유 옷장 등록
+### `RECO-005` 추천 상세 — 구매 후 보유 옷장 등록 피드백 범위
 
 `RecommendProductDetailModal` + `useRecommendWishlistToggle.addPurchasedToCloset` 흐름:
 
 1. 네이버쇼핑 구매 링크 새 탭 오픈
 2. 확인 모달(「옷이 마음에 드셨나요?」)에서 **샀어요** / **안 샀어요**
-3. **샀어요**: 필요 시 `POST /api/users/{userId}/wishlist-clothes` → `PATCH /api/clothes/{id}/convert-to-owned`
+3. **샀어요**: 필요 시 `POST /api/users/{userId}/wishlist-clothes` → `PATCH /api/v1/clothes/{id}/convert-to-owned`
 4. **안 샀어요**: 모달만 닫음
 
-기준 문서: [home-recommendation.md](../features/home-recommendation.md) 「추천 상세 — 구매 후 보유 옷장 등록」. 이 흐름은 `RECO-013` 피드백 API와 별개이며, 추천 피드백 기록 범위 확인 gap과는 독립입니다.
+기준 문서: [home-recommendation.md](../features/home-recommendation.md) 「추천 상세 — 구매 후 보유 옷장 등록」. 보유 전환 경로는 공식 `/api/v1` 경로를 사용하며, 남은 gap은 이 흐름을 `RECO-013` 피드백 API로도 기록해야 하는지 여부입니다.
 
 현재 `HomeTab`, `MatchRecommendationByCategory`, `RecommendProductDetailModal`, `OutfitDetailModal`은 싫어요/추천 제외와 일부 저장 액션에서 `POST /api/v1/users/{userId}/recommendations/feedback`을 호출합니다.
 
