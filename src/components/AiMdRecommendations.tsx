@@ -40,6 +40,8 @@ interface AiMdRecommendationsProps {
 
 type RecommendationMode = 'outfits' | 'products'
 
+const MAX_AI_MD_PRODUCTS = 40
+
 const seasonOptions = [
   { code: '', label: '선택 안 함' },
   { code: 'SPRING', label: '봄' },
@@ -259,7 +261,7 @@ export default function AiMdRecommendations({
         setProducts([])
       } else {
         const result = await fetchAiMdProducts(userId, selectedMdId)
-        setProducts(result.products)
+        setProducts(result.products.slice(0, MAX_AI_MD_PRODUCTS))
         setOutfits([])
       }
     } catch (error) {
@@ -626,80 +628,85 @@ export default function AiMdRecommendations({
       )}
 
       {!recommendLoading && mode === 'products' && products.length > 0 && (
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-          {products.map((item) => {
-            const { product } = item
-            const key = productKey(product)
-            const selected = selectedProducts.has(key)
-            const storageStatus = getProductStorageStatus(product)
-            const saved = storageStatus != null
-            const statusLabel =
-              storageStatus === 'owned' ? '보유 중' : '저장됨'
-            return (
-              <article
-                key={key}
-                role="button"
-                tabIndex={0}
-                onClick={() => setDetailProduct(item)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault()
-                    setDetailProduct(item)
-                  }
-                }}
-                className={`group rounded-2xl border overflow-hidden bg-slate-50 transition hover:-translate-y-1 hover:shadow-lg cursor-pointer ${
-                  saved
-                    ? 'border-emerald-200'
-                    : selected
-                    ? 'border-[#111827] ring-2 ring-[#C4B5FD]'
-                    : 'border-slate-100'
-                }`}
-              >
-                <div className="relative h-44 sm:h-52 lg:h-72 bg-slate-100 overflow-hidden">
-                  <img
-                    src={product.image}
-                    alt={stripHtml(product.title)}
-                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                    loading="lazy"
-                    referrerPolicy="no-referrer"
-                  />
-                  <button
-                    type="button"
-                    disabled={saved}
-                    onClick={(event) => {
-                      event.stopPropagation()
-                      toggleProduct(product)
-                    }}
-                    className={`absolute top-2 right-2 ${saved ? 'w-12' : 'w-8'} h-8 rounded-full grid place-items-center border shadow-sm ${
-                      saved
-                        ? 'bg-emerald-500 text-white border-emerald-500'
-                        : selected
-                        ? 'bg-[#111827] text-white border-[#111827]'
-                        : 'bg-white/90 text-slate-500 border-white'
-                    }`}
-                    aria-label={saved ? statusLabel : selected ? '선택 해제' : '저장할 상품 선택'}
-                  >
-                    {saved ? (
-                      <span className="text-[9px] font-black">{statusLabel}</span>
-                    ) : (
-                      <Check className="w-4 h-4" />
-                    )}
-                  </button>
-                  <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/85 via-black/45 to-transparent text-white">
-                    <p className="text-[10px] font-bold text-white/75 truncate">
-                      {product.brand || product.mallName || '네이버쇼핑'}
-                    </p>
-                    <h3 className="text-sm font-black line-clamp-2 leading-snug">
-                      {stripHtml(product.title)}
-                    </h3>
-                    <strong className="block mt-1 text-sm">
-                      {formatPrice(product.lowestPrice)}
-                    </strong>
+        <div className="space-y-3">
+          <p className="text-xs font-black text-slate-500">
+            최대 {MAX_AI_MD_PRODUCTS}개 상품 · {products.length}개
+          </p>
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+            {products.map((item) => {
+              const { product } = item
+              const key = productKey(product)
+              const selected = selectedProducts.has(key)
+              const storageStatus = getProductStorageStatus(product)
+              const saved = storageStatus != null
+              const statusLabel =
+                storageStatus === 'owned' ? '보유 중' : '저장됨'
+              return (
+                <article
+                  key={key}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setDetailProduct(item)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault()
+                      setDetailProduct(item)
+                    }
+                  }}
+                  className={`group rounded-2xl border overflow-hidden bg-slate-50 transition hover:-translate-y-1 hover:shadow-lg cursor-pointer ${
+                    saved
+                      ? 'border-emerald-200'
+                      : selected
+                      ? 'border-[#111827] ring-2 ring-[#C4B5FD]'
+                      : 'border-slate-100'
+                  }`}
+                >
+                  <div className="relative h-44 sm:h-52 lg:h-72 bg-slate-100 overflow-hidden">
+                    <img
+                      src={product.image}
+                      alt={stripHtml(product.title)}
+                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      loading="lazy"
+                      referrerPolicy="no-referrer"
+                    />
+                    <button
+                      type="button"
+                      disabled={saved}
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        toggleProduct(product)
+                      }}
+                      className={`absolute top-2 right-2 ${saved ? 'w-12' : 'w-8'} h-8 rounded-full grid place-items-center border shadow-sm ${
+                        saved
+                          ? 'bg-emerald-500 text-white border-emerald-500'
+                          : selected
+                          ? 'bg-[#111827] text-white border-[#111827]'
+                          : 'bg-white/90 text-slate-500 border-white'
+                      }`}
+                      aria-label={saved ? statusLabel : selected ? '선택 해제' : '저장할 상품 선택'}
+                    >
+                      {saved ? (
+                        <span className="text-[9px] font-black">{statusLabel}</span>
+                      ) : (
+                        <Check className="w-4 h-4" />
+                      )}
+                    </button>
+                    <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/85 via-black/45 to-transparent text-white">
+                      <p className="text-[10px] font-bold text-white/75 truncate">
+                        {product.brand || product.mallName || '네이버쇼핑'}
+                      </p>
+                      <h3 className="text-sm font-black line-clamp-2 leading-snug">
+                        {stripHtml(product.title)}
+                      </h3>
+                      <strong className="block mt-1 text-sm">
+                        {formatPrice(product.lowestPrice)}
+                      </strong>
+                    </div>
                   </div>
-                </div>
-              </article>
-            )
-          })}
+                </article>
+              )
+            })}
+          </div>
         </div>
       )}
 

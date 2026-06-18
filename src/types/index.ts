@@ -28,12 +28,21 @@ export type RegionCode =
 
 
 export interface UserProfile {
+  email?: string;
   nickname: string;
   gender: "Male" | "Female" | "None";
-  styles: string[]; // Casual, Minimal, Street, Amekaji, Gorpcore
+  styles: string[]; // BE StyleCode 문자열 목록
   onboarded: boolean;
   birthday: string; // 사용자 연령에 따른 추천에 활용
   region?: RegionCode;
+  profileImageUrl?: string;
+  profileBio?: string;
+  externalLinkUrl?: string;
+  socialProviders?: string[];
+  socialAccounts?: {
+    provider: string;
+    providerEmail: string;
+  }[];
 }
 
 export interface Recommendation {
@@ -91,4 +100,3 @@ export interface Garment {
   userImageUrl?: string;
   be?: GarmentBeMeta;
 }
-

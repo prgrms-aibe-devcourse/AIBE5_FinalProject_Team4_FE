@@ -14,7 +14,7 @@ async function unwrap<T>(
   return body.data
 }
 
-export async function getOwnedClothesForSimilarProducts(
+export async function getBaseClothesForSimilarProducts(
   userId: number,
 ): Promise<ClothesResponse[]> {
   const clothes = await unwrap(
@@ -22,7 +22,9 @@ export async function getOwnedClothesForSimilarProducts(
       `/api/v1/users/${userId}/clothes`,
     ),
   )
-  return clothes.filter((item) => item.ownershipStatus === 'OWNED')
+  return clothes.filter((item) =>
+    item.ownershipStatus === 'OWNED' || item.ownershipStatus === 'WISHLIST',
+  )
 }
 
 export async function getSimilarProducts(

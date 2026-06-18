@@ -79,7 +79,7 @@ mock을 사용하는 화면은 관련 기능 문서에 아래를 적습니다.
 | --- | --- |
 | `HomeTab.tsx` OOTD·스타일 API 연동 | **BE 추천 API 연동**. API 실패 시에만 static 데이터를 fallback으로 사용하며 에러를 표시합니다. |
 | `HomeTab.tsx` `match` 탭 (`RECO-005`) | **BE `recommendations` API 연동**. mock/static이 아닙니다. |
-| `HomeTab.tsx` `similar` 탭 (`RECO-003`) | **BE `similar-products` API 연동**. 기준 옷은 `OWNED`만 사용합니다. |
+| `HomeTab.tsx` `similar` 탭 (`RECO-003`) | **BE `similar-products` API 연동**. 기준 옷은 `OWNED`와 `WISHLIST`를 모두 사용합니다. |
 | `HomeTab.tsx` `aimd` 탭 (`RECO-006`) | **BE AI MD API 연동**. MD 목록, 코디·상품 추천, 코디 저장을 사용합니다. |
 | `/api/chat-gamyagi` | BE API 계약에 없는 AI 채팅 mock 또는 개발용 경로입니다. 실제 AI MD 연동은 `/api/v1/users/{userId}/recommendations/ai-md/**` 기준입니다. |
 | `/api/analyze-garment` | BE API 계약에 없는 legacy 분석 mock 또는 개발용 경로입니다. 실제 옷 등록 분석은 photo/purchase-capture API 기준으로 사용합니다. |

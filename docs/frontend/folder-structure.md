@@ -90,7 +90,7 @@ src/pages/FeedPage.tsx
 ```text
 src/components/HomeTab.tsx
 src/components/ClosetTab.tsx
-src/components/ProfileEditTab.tsx
+src/components/legal/LegalDocumentModal.tsx
 ```
 
 여러 화면에서 공통으로 쓰는 컴포넌트는 `src/components/common/`에 둡니다.

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import axios from 'axios'
-import { getOwnedClothesForSimilarProducts, getSimilarProducts } from '@/api/similarProducts'
+import { getBaseClothesForSimilarProducts, getSimilarProducts } from '@/api/similarProducts'
 import { createWishlistClothes } from '@/api/wardrobe'
 import AuthenticatedImage from '@/components/common/AuthenticatedImage'
 import { Modal, ModalBody, ModalFooter, ModalHeader } from '@/components/common/Modal'
@@ -33,6 +33,8 @@ interface SimilarProductRecommendationsProps {
   onGoToCloset?: () => void
 }
 
+type BaseClothesFilter = 'all' | 'owned' | 'wishlist'
+
 const seasonOptions = [
   { code: '', label: '선택 안 함' },
   { code: 'SPRING', label: '봄' },
@@ -52,6 +54,9 @@ const productKey = (product: NaverShoppingProduct) =>
 
 const isAlreadySavedError = (reason: unknown) =>
   axios.isAxiosError(reason) && reason.response?.status === 409
+
+const baseClothesStatusLabel = (item: ClothesResponse) =>
+  item.ownershipStatus === 'OWNED' ? '보유' : '미보유'
 
 function defaultSaveForm(base: ClothesResponse): SimilarProductSaveForm {
   const category = (base.category in BE_CATEGORY_TO_UI
@@ -84,9 +89,9 @@ export default function SimilarProductRecommendations({
   onGoToCloset,
 }: SimilarProductRecommendationsProps) {
   const { showToast } = useToast() || { showToast: () => {} }
-  const [ownedClothes, setOwnedClothes] = useState<ClothesResponse[]>([])
-  const [ownedLoading, setOwnedLoading] = useState(true)
-  const [ownedError, setOwnedError] = useState<string | null>(null)
+  const [baseClothes, setBaseClothes] = useState<ClothesResponse[]>([])
+  const [baseClothesLoading, setBaseClothesLoading] = useState(true)
+  const [baseClothesError, setBaseClothesError] = useState<string | null>(null)
   const [selectedClothesId, setSelectedClothesId] = useState<number | null>(null)
   const [recommendation, setRecommendation] =
     useState<SimilarProductRecommendation | null>(null)
@@ -95,43 +100,45 @@ export default function SimilarProductRecommendations({
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set())
   const [savedProductKeys, setSavedProductKeys] = useState<Set<string>>(new Set())
   const [clothesPickerOpen, setClothesPickerOpen] = useState(false)
+  const [baseClothesFilter, setBaseClothesFilter] =
+    useState<BaseClothesFilter>('all')
   const [detailProduct, setDetailProduct] =
     useState<NaverShoppingProduct | null>(null)
   const [saveForm, setSaveForm] = useState<SimilarProductSaveForm | null>(null)
   const [saveOpen, setSaveOpen] = useState(false)
   const [saving, setSaving] = useState(false)
 
-  const loadOwnedClothes = useCallback(async () => {
+  const loadBaseClothes = useCallback(async () => {
     if (userId == null) {
-      setOwnedClothes([])
-      setOwnedLoading(false)
-      setOwnedError('로그인 후 유사 상품 추천을 이용할 수 있어요.')
+      setBaseClothes([])
+      setBaseClothesLoading(false)
+      setBaseClothesError('로그인 후 유사 상품 추천을 이용할 수 있어요.')
       return
     }
 
-    setOwnedLoading(true)
-    setOwnedError(null)
+    setBaseClothesLoading(true)
+    setBaseClothesError(null)
     try {
-      const items = await getOwnedClothesForSimilarProducts(userId)
-      setOwnedClothes(items)
+      const items = await getBaseClothesForSimilarProducts(userId)
+      setBaseClothes(items)
       setSelectedClothesId((current) =>
         current != null && !items.some((item) => item.clothesId === current)
           ? null
           : current,
       )
     } catch (error) {
-      setOwnedClothes([])
-      setOwnedError(
-        extractApiErrorMessage(error, '보유 옷 목록을 불러오지 못했습니다.'),
+      setBaseClothes([])
+      setBaseClothesError(
+        extractApiErrorMessage(error, '기준 옷 목록을 불러오지 못했습니다.'),
       )
     } finally {
-      setOwnedLoading(false)
+      setBaseClothesLoading(false)
     }
   }, [userId])
 
   useEffect(() => {
-    void loadOwnedClothes()
-  }, [loadOwnedClothes])
+    void loadBaseClothes()
+  }, [loadBaseClothes])
 
   const requestSimilarProducts = async (clothesId: number) => {
     if (userId == null || recommendLoading) return
@@ -205,9 +212,28 @@ export default function SimilarProductRecommendations({
 
   const selectedClothes = useMemo(
     () =>
-      ownedClothes.find((item) => item.clothesId === selectedClothesId) ?? null,
-    [ownedClothes, selectedClothesId],
+      baseClothes.find((item) => item.clothesId === selectedClothesId) ?? null,
+    [baseClothes, selectedClothesId],
   )
+
+  const baseClothesCounts = useMemo(
+    () => ({
+      all: baseClothes.length,
+      owned: baseClothes.filter((item) => item.ownershipStatus === 'OWNED').length,
+      wishlist: baseClothes.filter((item) => item.ownershipStatus === 'WISHLIST')
+        .length,
+    }),
+    [baseClothes],
+  )
+
+  const filteredBaseClothes = useMemo(() => {
+    if (baseClothesFilter === 'all') return baseClothes
+    return baseClothes.filter((item) =>
+      baseClothesFilter === 'owned'
+        ? item.ownershipStatus === 'OWNED'
+        : item.ownershipStatus === 'WISHLIST',
+    )
+  }, [baseClothes, baseClothesFilter])
 
   const selectBaseClothes = (clothesId: number) => {
     setClothesPickerOpen(false)
@@ -303,7 +329,7 @@ export default function SimilarProductRecommendations({
     if (successCount > 0) onWishlistAdded?.()
   }
 
-  if (ownedLoading) {
+  if (baseClothesLoading) {
     return (
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         {Array.from({ length: 6 }).map((_, index) => (
@@ -313,13 +339,13 @@ export default function SimilarProductRecommendations({
     )
   }
 
-  if (ownedError) {
+  if (baseClothesError) {
     return (
       <div className="rounded-2xl border border-red-100 bg-red-50 px-5 py-10 text-center">
-        <p className="text-sm font-black text-red-700">{ownedError}</p>
+        <p className="text-sm font-black text-red-700">{baseClothesError}</p>
         <button
           type="button"
-          onClick={() => void loadOwnedClothes()}
+          onClick={() => void loadBaseClothes()}
           className="mt-4 h-9 px-4 rounded-full bg-[#111827] text-white text-xs font-black"
         >
           다시 시도
@@ -328,11 +354,11 @@ export default function SimilarProductRecommendations({
     )
   }
 
-  if (ownedClothes.length === 0) {
+  if (baseClothes.length === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-5 py-10 text-center">
         <p className="text-sm font-black text-slate-700">
-          유사한 상품을 찾으려면 먼저 옷장에 옷을 추가해 주세요.
+          유사한 상품을 찾으려면 먼저 보유 옷이나 미보유 옷을 추가해 주세요.
         </p>
         <button
           type="button"
@@ -356,7 +382,7 @@ export default function SimilarProductRecommendations({
           <div>
             <h3 className="text-sm font-black text-slate-900">기준 옷 선택</h3>
             <p className="text-[11px] text-slate-400 font-bold mt-1">
-              보유 옷을 선택하면 비슷한 상품을 찾아드려요.
+              보유 옷이나 미보유 옷을 선택하면 비슷한 상품을 찾아드려요.
             </p>
           </div>
         </div>
@@ -381,9 +407,20 @@ export default function SimilarProductRecommendations({
                 <p className="mt-0.5 text-sm font-black text-slate-900 truncate">
                   {selectedClothes.name}
                 </p>
-                <p className="text-[11px] font-bold text-slate-400 truncate">
-                  {selectedClothes.brandName || selectedClothes.category}
-                </p>
+                <div className="mt-1 flex items-center gap-1.5 min-w-0">
+                  <span
+                    className={`shrink-0 h-5 px-2 rounded-full text-[10px] font-black grid place-items-center ${
+                      selectedClothes.ownershipStatus === 'OWNED'
+                        ? 'bg-emerald-50 text-emerald-700'
+                        : 'bg-orange-50 text-orange-700'
+                    }`}
+                  >
+                    {baseClothesStatusLabel(selectedClothes)}
+                  </span>
+                  <p className="text-[11px] font-bold text-slate-400 truncate">
+                    {selectedClothes.brandName || selectedClothes.category}
+                  </p>
+                </div>
               </div>
               <span className="shrink-0 h-8 px-3 rounded-full bg-[#111827] text-white text-[11px] font-black grid place-items-center">
                 옷 변경
@@ -399,7 +436,7 @@ export default function SimilarProductRecommendations({
                   유사 상품을 찾을 옷을 선택해 주세요
                 </p>
                 <p className="mt-1 text-[11px] font-bold text-slate-400">
-                  보유 옷 {ownedClothes.length}개
+                  기준 옷 {baseClothes.length}개
                 </p>
               </div>
               <span className="shrink-0 h-8 px-3 rounded-full bg-[#111827] text-white text-[11px] font-black grid place-items-center">
@@ -430,7 +467,7 @@ export default function SimilarProductRecommendations({
           <div className="mt-4 flex justify-center gap-2">
             <button
               type="button"
-              onClick={() => void loadOwnedClothes()}
+              onClick={() => void loadBaseClothes()}
               className="h-9 px-4 rounded-full border border-slate-200 bg-white text-xs font-black"
             >
               옷 목록 새로고침
@@ -464,7 +501,7 @@ export default function SimilarProductRecommendations({
             <>
               <div className="flex items-center justify-between gap-3">
                 <p className="text-xs font-black text-slate-500">
-                  최대 10개 결과 · {recommendation.products.length}개
+                  최대 50개 결과 · {recommendation.products.length}개
                 </p>
               </div>
 
@@ -584,13 +621,38 @@ export default function SimilarProductRecommendations({
       >
         <ModalHeader
           title="기준 옷 선택"
-          subtitle={`보유 옷 ${ownedClothes.length}개`}
+          subtitle={`보유 ${baseClothesCounts.owned}개 · 미보유 ${baseClothesCounts.wishlist}개`}
           onClose={() => setClothesPickerOpen(false)}
         />
         <ModalBody className="p-4 sm:p-6">
+          <div className="mb-4 grid grid-cols-3 gap-2 rounded-2xl bg-slate-100 p-1">
+            {[
+              ['all', '전체', baseClothesCounts.all],
+              ['owned', '보유', baseClothesCounts.owned],
+              ['wishlist', '미보유', baseClothesCounts.wishlist],
+            ].map(([value, label, count]) => {
+              const active = baseClothesFilter === value
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setBaseClothesFilter(value as BaseClothesFilter)}
+                  className={`h-10 rounded-xl text-[12px] font-black transition ${
+                    active
+                      ? 'bg-white text-slate-950 shadow-sm'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                  aria-pressed={active}
+                >
+                  {label} {count}
+                </button>
+              )
+            })}
+          </div>
           <div className="grid grid-cols-3 sm:grid-cols-5 gap-x-2.5 gap-y-4">
-            {ownedClothes.map((item) => {
+            {filteredBaseClothes.map((item) => {
               const selected = selectedClothesId === item.clothesId
+              const owned = item.ownershipStatus === 'OWNED'
               return (
                 <button
                   key={item.clothesId}
@@ -621,6 +683,15 @@ export default function SimilarProductRecommendations({
                         <Check className="w-3.5 h-3.5" />
                       </span>
                     )}
+                    <span
+                      className={`absolute left-1.5 bottom-1.5 h-5 px-2 rounded-full text-[10px] font-black shadow-sm ${
+                        owned
+                          ? 'bg-emerald-500 text-white'
+                          : 'bg-orange-500 text-white'
+                      }`}
+                    >
+                      {owned ? '보유' : '미보유'}
+                    </span>
                   </div>
                   <p className="mt-1.5 text-[11px] font-black text-slate-800 truncate">
                     {item.name}
@@ -632,6 +703,13 @@ export default function SimilarProductRecommendations({
               )
             })}
           </div>
+          {filteredBaseClothes.length === 0 && (
+            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-5 py-8 text-center">
+              <p className="text-sm font-black text-slate-600">
+                해당 상태의 기준 옷이 없습니다.
+              </p>
+            </div>
+          )}
         </ModalBody>
       </Modal>
 

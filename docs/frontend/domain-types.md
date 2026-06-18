@@ -2,7 +2,7 @@
 doc_type: fe_domain_types
 source_of_truth: AIBE5_FinalProject_Team4_FE
 be_domain_source_of_truth: AIBE5_FinalProject_Team4_BE/docs/domain
-last_updated: 2026-06-14
+last_updated: 2026-06-17
 ---
 
 # FE 도메인 타입 기준
@@ -173,12 +173,46 @@ type ClothesCardViewModel = {
 
 type MyProfileResponse = {
   userId: number;
-  email: string;
   nickname: string;
-  birthDate?: string | null;
-  gender?: string | null;
-  regionName?: string | null;
-  profileImageUrl?: string | null;
+  onboarded: boolean;
+  birthDate: string;
+  gender: "MALE" | "FEMALE" | "OTHER";
+  regionName: string;
+  regionCode: string;
+  profileImageUrl: string;
+  profileBio: string;
+  externalLinkUrl: string;
+  styleCodes: string[];
+  socialProviders: string[];
+};
+
+// 룩피드 타입 — src/types/feed.ts 기준
+type FeedAuthor = {
+  userId: number;
+  nickname: string;
+  profileImageUrl: string | null;
+  followedByMe?: boolean;  // 현재 로그인 사용자가 작성자를 팔로우 중인지 여부. undefined이면 팔로우 버튼 미표시. BE FeedAuthorResponse에 필드 추가 후 필수로 전환 예정
+};
+
+type FeedPost = {
+  feedPostId: number;
+  author: FeedAuthor;
+  outfit: FeedOutfit | null;
+  caption: string | null;
+  images: FeedImage[];
+  likeCount: number;
+  commentCount: number;
+  likedByMe: boolean;
+  savedByMe: boolean;
+  hidden: boolean;
+  mine: boolean;           // true이면 현재 사용자의 게시물 — 팔로우 버튼 미표시
+  createdAt: string;
+  updatedAt: string;
+};
+
+type FeedInteraction = {
+  active: boolean;   // 좋아요/저장/팔로우 현재 활성 상태
+  count: number;     // 좋아요/저장/팔로우 총 수
 };
 
 type UserProfileResponse = {
@@ -186,10 +220,7 @@ type UserProfileResponse = {
   nickname: string;
   profileImageUrl?: string | null;
   profileBio?: string | null;
-  externalLinks?: Array<{
-    title: string;
-    url: string;
-  }>;
+  externalLinkUrl?: string | null;
 };
 
 type OutfitResponse = {
@@ -219,7 +250,7 @@ API 응답 타입은 BE DTO 필드명과 code를 유지합니다. 화면 컴포�
 | --- | --- | --- |
 | 카테고리 | `Top`, `Bottom`, `Outer`, `Shoes` | `TOP`, `BOTTOM`, `OUTER`, `SHOES` |
 | 보유 상태 | `isWishlist: boolean` | `ownershipStatus: OWNED/WISHLIST` |
-| 스타일 | `Casual`, `Amekaji`, `Dandy`, `Tech Casual` 등 | BE catalog의 `StyleCode` |
+| 스타일 | legacy label 또는 static/mock 문자열 | BE catalog의 `StyleCode` |
 | 옷 대상 성별 | 등록/수정 화면에서 `MALE`, `FEMALE`, `UNISEX` 직접 선택 UI | 화면 비노출, 내부 저장 요청/추천 분류 code |
 | 옷 계절 | 생성 후 수정 화면에서 변경 가능한 값처럼 취급 | `CLOTHES.season`, 등록 시 확정하고 생성 후 변경하지 않음 |
 | 응답 타입 | `{ data, message, status }` | `{ success, data, message }` |
