@@ -611,7 +611,21 @@ export default function HomeTab({
                 )}
               </button>
               {matchLoading && <p className="text-xs text-slate-400 font-bold">어울리는 옷 추천을 불러오는 중…</p>}
-              {matchError && <p className="text-xs text-red-600 font-bold">{matchError}</p>}
+              {matchError && (
+                <div className="flex items-center gap-2">
+                  <p className="text-xs text-red-600 font-bold">{matchError}</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMatchError(null);
+                      setRefreshSignal(prev => prev + 1);
+                    }}
+                    className="text-[10px] font-black underline text-slate-900"
+                  >
+                    다시 시도
+                  </button>
+                </div>
+              )}
             </div>
         )}
 
@@ -656,7 +670,12 @@ export default function HomeTab({
                     <p className="text-sm font-black text-red-700">{(activeLabel === 'ootd' ? ootdError : styleError)}</p>
                     <button
                         type="button"
-                        onClick={() => onRefreshWardrobe?.()}
+                        onClick={() => {
+                          if (activeLabel === 'ootd') setOotdError(null);
+                          if (activeLabel === 'style') setStyleError(null);
+                          setRefreshSignal(prev => prev + 1);
+                          onRefreshWardrobe?.();
+                        }}
                         className="mt-4 h-9 px-4 rounded-full bg-[#111827] text-white text-xs font-black"
                     >
                       다시 시도
