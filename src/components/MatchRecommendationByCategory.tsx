@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import AuthenticatedImage from "@/components/common/AuthenticatedImage";
 import RecommendProductDetailModal from "@/components/RecommendProductDetailModal";
 import { ChevronRight, Heart, Sparkle, ThumbsDown } from "@/components/icons";
-import { MAX_TOP_RANK_LABEL, postRecommendationFeedback } from "@/api/recommendations";
+import { postRecommendationFeedback } from "@/api/recommendations";
 import { useRecommendWishlistToggle } from "@/hooks/useRecommendWishlistToggle";
 import type { Garment } from "@/types";
 import type {
@@ -28,61 +28,46 @@ interface MatchRecommendationByCategoryProps {
 
 function RecommendationCard({
   item,
-  rank,
-  showRankLabel,
   onClick,
   wishlisted,
   isSubmitting,
   onWishlistClick,
 }: {
   item: RecommendCardItem;
-  rank: number;
-  showRankLabel: boolean;
   onClick: () => void;
   wishlisted: boolean;
   isSubmitting: boolean;
   onWishlistClick: () => void;
 }) {
   const canWishlist = item.clothesId != null && !item.isAnchor;
-  const rankLabel = showRankLabel ? `TOP ${rank}` : null;
 
   return (
-    <div className="group relative rounded-2xl border border-slate-100 bg-white overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md flex flex-col text-left">
+    <div className="group relative rounded-2xl border border-slate-100 bg-slate-50 overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md cursor-pointer">
       <button
         type="button"
         onClick={onClick}
-        aria-label={
-          rankLabel
-            ? `${rankLabel} ${item.title} 상세 보기`
-            : `${item.title} 상세 보기`
-        }
-        className="flex flex-col flex-1 min-h-0 w-full cursor-pointer text-left"
+        aria-label={`${item.title} 상세 보기`}
+        className="block w-full"
       >
-        <div className="relative aspect-square bg-slate-50 overflow-hidden">
-          {rankLabel ? (
-            <span className="absolute top-1.5 left-1.5 z-[1] px-1.5 py-0.5 rounded-md bg-[#1E3A8A] text-[#BBF7D0] text-[10px] font-black tracking-tight">
-              {rankLabel}
-            </span>
-          ) : null}
+        <div className="relative h-44 sm:h-52 lg:h-72 bg-slate-100 overflow-hidden">
           <AuthenticatedImage
             src={item.imageUrl}
             alt={item.title}
-            className="w-full h-full object-contain p-2 transition-transform duration-300 group-hover:scale-[1.02]"
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.05]"
             fallback={
               <div className="w-full h-full flex items-center justify-center bg-slate-100 text-slate-400 text-xs font-bold">
                 이미지 없음
               </div>
             }
           />
-        </div>
-
-        <div className="shrink-0 p-2.5 space-y-0.5">
-          <h4 className="text-[11px] font-black text-slate-900 line-clamp-1 leading-snug">
-            {item.title}
-          </h4>
-          <p className="text-[10px] font-bold text-slate-500 truncate">
-            {item.itemTypeLabel} · {item.color}
-          </p>
+          <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/85 via-black/45 to-transparent text-white text-left">
+            <p className="text-[10px] font-bold text-white/75 truncate">
+              {item.brandLabel}
+            </p>
+            <h4 className="text-sm font-black line-clamp-2 leading-snug">
+              {item.title}
+            </h4>
+          </div>
         </div>
       </button>
 
@@ -181,12 +166,10 @@ function CategoryRecommendationSection({
       {!expanded ? (
         <div className="px-4 pb-4 space-y-3">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-            {previewItems.map((item, index) => (
+            {previewItems.map((item) => (
               <RecommendationCard
                 key={item.id}
                 item={item}
-                rank={index + 1}
-                showRankLabel={index + 1 <= MAX_TOP_RANK_LABEL}
                 onClick={() => onItemClick(item)}
                 wishlisted={isItemWishlisted(item)}
                 isSubmitting={isItemSubmitting(item)}
@@ -241,13 +224,11 @@ function CategoryRecommendationSection({
               선택한 타입의 추천이 없어요
             </p>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-              {filteredItems.map((item, index) => (
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+              {filteredItems.map((item) => (
                 <RecommendationCard
                   key={item.id}
                   item={item}
-                  rank={index + 1}
-                  showRankLabel={index + 1 <= MAX_TOP_RANK_LABEL}
                   onClick={() => onItemClick(item)}
                   wishlisted={isItemWishlisted(item)}
                   isSubmitting={isItemSubmitting(item)}

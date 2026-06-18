@@ -29,6 +29,10 @@ const BRAND_LOGO_URLS: Record<string, string> = {
   'PROJECT M': sstBrandIcon('projectm'),
   프로젝트엠: sstBrandIcon('projectm'),
   EDITION: sstBrandIcon('edition'),
+  TANDY: 'https://www.tandymall.com/_skin/tandy_new_250828/img/logo/ft_logo.png',
+  탠디: 'https://www.tandymall.com/_skin/tandy_new_250828/img/logo/ft_logo.png',
+  MISOPE: 'https://misopetr9708.cdn-nhncommerce.com/data/skin/front/dbook_20230601/img/banner/1bb87d41d15fe27b500a4bfcde01bb0e_65992.png',
+  미소페: 'https://misopetr9708.cdn-nhncommerce.com/data/skin/front/dbook_20230601/img/banner/1bb87d41d15fe27b500a4bfcde01bb0e_65992.png',
 }
 
 const BRAND_LOGO_DOMAINS: Record<string, string> = {
@@ -204,10 +208,10 @@ const BRAND_LOGO_DOMAINS: Record<string, string> = {
   'OLIVE DES OLIVE': 'olivedesolive.co.kr',
   'OLIVE DE OLIVE': 'olivedesolive.co.kr',
   올리브데올리브: 'olivedesolive.co.kr',
-  LIST: 'list.co.kr',
-  리스트: 'list.co.kr',
-  TANDY: 'tandy.co.kr',
-  탠디: 'tandy.co.kr',
+  LIST: 'idfmall.co.kr',
+  리스트: 'idfmall.co.kr',
+  TANDY: 'tandymall.com',
+  탠디: 'tandymall.com',
   CCCOLLECT: 'daehyuninside.com',
   'CC COLLECT': 'daehyuninside.com',
   씨씨콜렉트: 'daehyuninside.com',
