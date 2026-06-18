@@ -47,21 +47,24 @@ src/api/index.ts
 역할:
 
 - `VITE_API_BASE_URL`을 base URL로 사용합니다.
-- `localStorage.token`이 있으면 `Authorization: Bearer {token}` 헤더를 추가합니다.
+- 개발 환경에서는 Vite proxy 또는 `VITE_API_BASE_URL` 기준으로 BE OAuth 시작 URL로 이동합니다.
+- API 요청은 쿠키 기반 인증을 사용하며, 공통 API 클라이언트는 `withCredentials: true`로 쿠키를 함께 전송합니다.
+- 401 응답을 받으면 `/api/v1/auth/refresh`를 한 번 호출한 뒤 기존 요청을 재시도합니다.
+- FE는 access token 또는 refresh token 값을 직접 읽거나 `localStorage`에 저장하지 않습니다.
 - 500 서버 내부 오류는 `/error/server`로 이동합니다.
 - 502 외부 서비스 오류는 외부 서비스 오류 안내로 처리합니다.
 - 네트워크 오류는 `/error/network`로 이동합니다.
 
-## 인증 (현재 `LoginPage` + `App.tsx`)
+## 인증 (현재 `App.tsx` + 공통 API client)
 
-| 환경 | 로그인 시작 | 토큰 | `{userId}` |
+| 환경 | 로그인 시작 | 인증 유지 | `{userId}` |
 | --- | --- | --- | --- |
-| 개발(`DEV`) | `LoginPage` provider 버튼 → `App.handleSocialLogin` → `ensureDevToken` → `GET /api/v1/auth/mock-token?userId=1` | `localStorage.token` | JWT `sub` → `authUserId` |
-| 운영 | 동일 버튼 → `redirectToOAuthLogin(provider)` → `GET {VITE_API_BASE_URL}/oauth2/authorization/{provider}` | OAuth 콜백 `?token=` → `captureOAuthTokenFromUrl()` | 동일 |
+| 개발(`DEV`) | provider 버튼 → `App.handleSocialLogin` → `redirectToOAuthLogin(provider)` → `GET {VITE_API_BASE_URL}/oauth2/authorization/{provider}` | BE가 발급한 인증 쿠키를 공통 API client가 `withCredentials`로 전송합니다. 401 응답 시 `/api/v1/auth/refresh`를 호출합니다. | `GET /api/v1/users/profile` 응답의 `userId` |
+| 운영 | 동일 | 동일 | 동일 |
 
-옷장·보유/미보유 API path의 `{userId}`는 하드코딩 `1`이 아니라 **JWT `sub`** 를 사용합니다. dev의 `userId=1`은 mock-token 발급 파라미터에만 쓰입니다.
+옷장·보유/미보유 API path의 `{userId}`는 하드코딩 `1`이 아니라 로그인 후 조회한 현재 사용자 `userId`를 사용합니다.
 
-`DEV`이어도 `.env.local` 파일에 `VITE_USE_REAL_AUTH`가 `true`라면 실제 OAuth 경로를 타게 됩니다.
+`GET /api/v1/auth/mock-token`은 BE local profile에서만 사용하는 수동 개발 테스트용 API입니다. FE 공식 로그인 흐름에서는 자동으로 호출하지 않으며, 실제 로그인 검증은 개발과 운영 모두 OAuth redirect와 쿠키 기반 인증 상태 확인 기준으로 진행합니다.
 
 ## 경로 작성 기준
 
@@ -149,10 +152,19 @@ API를 호출하는 화면은 아래 상태를 구분합니다.
 | 화면/기능 | Method | API 기준 | FE 처리 |
 | --- | --- | --- | --- |
 | OAuth 로그인 | GET | `/oauth2/authorization/{provider}` | 로그인 시작 |
-| 내 프로필 | GET | `/api/v1/users/profile` | 로그인 사용자 본인의 마이페이지 정보 표시 |
+| 약관 원문 | GET | `/api/v1/legal/terms` | 서비스 이용약관 markdown 원문 표시 |
+| 약관 원문 | GET | `/api/v1/legal/privacy-policy` | 개인정보 처리방침 markdown 원문 표시 |
+| 약관 원문 | GET | `/api/v1/legal/marketing-consent` | 마케팅 정보 수신 동의 markdown 원문 표시 |
+| 탈퇴 계정 복구 | POST | `/api/v1/auth/restore-withdrawn` | 탈퇴 후 30일 이내 계정으로 OAuth 로그인을 시도한 경우, 사용자 확인 후 계정 복구와 인증 쿠키 발급 |
+| 내 프로필 | GET | `/api/v1/users/profile` | 로그인 사용자 본인의 마이페이지 정보와 편집 초기값 표시. 온보딩 완료 전 `nickname`, `birthDate`는 비어 있을 수 있음 |
+| 닉네임 중복 확인 | GET | `/api/v1/users/nickname/check` | 온보딩/마이페이지 편집에서 닉네임 규칙과 중복 여부 실시간 확인 |
+| 프로필 이미지 | POST | `/api/v1/users/profile/image` | 프로필 사진 파일을 업로드하고 반환된 `imageUrl`을 프로필 저장 요청에 사용 |
+| 내 프로필 | PATCH | `/api/v1/users/profile` | 닉네임, 생년월일, 사용자 성별, 지역, 프로필 이미지, 자기소개, 외부 링크 저장 |
+| 온보딩 완료 | POST | `/api/v1/users/onboarding` | 가입 직후 프로필, 선호 스타일, 마케팅 정보 수신 동의 여부를 한 번에 저장 |
+| 선호 스타일 | POST | `/api/v1/users/styles` | 마이페이지 편집에서 선택한 선호 스타일 저장 |
 | 사용자 프로필 | GET | `/api/v1/users/profile/{userId}` | 타 사용자 프로필 또는 룩피드 프로필 표시 |
 | 마케팅 동의 | GET | `/api/v1/users/{userId}/marketing-consent` | 마이페이지에서 마케팅 정보 수신 동의 상태 표시 |
-| 마케팅 동의 | PATCH | `/api/v1/users/{userId}/marketing-consent` | 온보딩 또는 마이페이지에서 마케팅 정보 수신 동의/철회 반영 |
+| 마케팅 동의 | PATCH | `/api/v1/users/{userId}/marketing-consent` | 마이페이지에서 마케팅 정보 수신 동의/철회 반영 |
 | 카탈로그 | GET | `/api/v1/categories` | 카테고리, 타입, 색상, 스타일 선택지 렌더링 |
 | 카탈로그 | GET | `/api/v1/categories/guide` | 카테고리 사용 가이드 표시 |
 | 카탈로그 | GET | `/api/v1/categories/ai-guide` | AI 분석용 카탈로그 가이드 확인 |
@@ -197,7 +209,7 @@ API를 호출하는 화면은 아래 상태를 구분합니다.
 | 코디북 | GET | `/api/v1/outfit-books/{bookId}` | 코디북 상세 표시 |
 | 코디 | POST | `/api/v1/outfit-books/{bookId}/outfits` | 코디 저장 |
 | 코디 | GET | `/api/v1/outfit-books/{bookId}/outfits/{outfitId}` | 저장 코디 상세와 구성 옷 표시 |
-| 코디 | PATCH | `/api/v1/outfit-books/{bookId}/outfits/{outfitId}` | 코디 수정 |
+| 코디 수정/좋아요 | PATCH | `/api/v1/outfit-books/{bookId}/outfits/{outfitId}` | 코디 수정 및 좋아요 토글. (title, description, situation, season 필수) |
 | 코디 | DELETE | `/api/v1/outfit-books/{bookId}/outfits/{outfitId}` | 코디 삭제 |
 | 이미지 | GET | `/api/v1/images/clothes/{userId}/{filename}` | 옷 이미지 표시 |
 | 이미지 | GET | `/api/v1/images/purchase-captures/{userId}/{filename}` | 구매내역 캡처 이미지 표시 |
@@ -286,8 +298,9 @@ AI MD 추천은 아래 기준을 함께 확인합니다.
 | --- | --- | --- | --- |
 | access token 재발급 | POST | `/api/v1/auth/refresh` | 401 처리, access token 갱신, 쿠키 전달 |
 | 로그아웃 | POST | `/api/v1/auth/logout` | local token 제거, 세션 종료, 로그인 화면 이동 |
+| 회원 탈퇴 | DELETE | `/api/v1/users/me` | 탈퇴 확인 후 local 사용자 상태 정리, 로그인 전 화면 이동 |
 
-`refresh_token`은 HttpOnly 쿠키 기준이므로 FE에서 값을 직접 읽지 않습니다. 실제 FE 구현 반영 전까지는 [implementation-gaps.md](../frontend/implementation-gaps.md)에 미연동 항목으로 둡니다.
+`refresh_token`은 HttpOnly 쿠키 기준이므로 FE에서 값을 직접 읽지 않습니다. 인증 유지 흐름은 공통 API client의 401 처리와 로그아웃/회원탈퇴 화면 상태 정리를 함께 확인합니다.
 
 ## 구매내역 복수 상품 등록 (`REG-002`)
 
@@ -313,7 +326,6 @@ analyze/draft 응답(`PurchaseCaptureDraftResponse`)과 save 응답(`PurchaseCap
 - FE는 FAILED·분석 API 오류 시 업로드 단계로 되돌리고 저장 버튼을 제공하지 않으며, 다른 캡처 선택 또는 **AI 분석 다시 시도**로 유도합니다.
 
 건너뛰기:
-
 ```ts
 POST /api/v1/users/{userId}/clothes/purchase-captures/{captureId}/items/{itemIndex}/skip
 ```

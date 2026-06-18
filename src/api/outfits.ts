@@ -61,16 +61,8 @@ export async function fetchMyOutfitBook(): Promise<OutfitBookResponse> {
 }
 
 /** POST /api/v1/outfit-books/{bookId}/outfits */
-export async function createOutfit(
-  bookId: number,
-  payload: OutfitSavePayload,
-): Promise<OutfitResponse> {
-  return unwrap(
-    api.post<BeApiResponse<OutfitResponse>>(
-      `/api/v1/outfit-books/${bookId}/outfits`,
-      payload,
-    ),
-  )
+export async function createOutfit(bookId: number, payload: OutfitSavePayload): Promise<OutfitResponse> {
+  return unwrap(api.post<BeApiResponse<OutfitResponse>>(`/api/v1/outfit-books/${bookId}/outfits`, payload))
 }
 
 /** GET /api/v1/outfit-books/{bookId}/outfits */

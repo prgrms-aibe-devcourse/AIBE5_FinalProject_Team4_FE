@@ -13,16 +13,13 @@ interface LegalConsentGroupProps {
 
 const documents = {
   terms: {
-    title: '서비스 이용약관',
-    src: '/legal/terms.md',
+    documentType: 'terms',
   },
   privacy: {
-    title: '개인정보처리방침',
-    src: '/legal/privacy-policy.md',
+    documentType: 'privacy-policy',
   },
   marketing: {
-    title: '마케팅 정보 수신 동의',
-    src: '/legal/marketing-consent.md',
+    documentType: 'marketing-consent',
   },
 } as const
 
@@ -62,9 +59,8 @@ export default function LegalConsentGroup({
         </label>
 
         <p className="mt-2.5 pl-8 text-[11px] leading-relaxed text-slate-500">
-          전체 동의에는 필수 및 선택 정보에 대한 동의가 포함되어 있으며,
-          개별적으로 동의를 선택 하실 수 있습니다. 선택 항목에 대한 동의를
-          거부하시는 경우에도 서비스 이용이 가능합니다.
+          필수와 선택 동의를 한 번에 선택할 수 있으며, 선택 동의는 거부해도
+          서비스 이용이 가능합니다.
         </p>
 
         <div className="mt-3 rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
@@ -100,8 +96,7 @@ export default function LegalConsentGroup({
       {currentDocument ? (
         <LegalDocumentModal
           open
-          title={currentDocument.title}
-          src={currentDocument.src}
+          documentType={currentDocument.documentType}
           onClose={() => setOpenedDocument(null)}
         />
       ) : null}

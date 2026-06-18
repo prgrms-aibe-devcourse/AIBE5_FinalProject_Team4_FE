@@ -5,7 +5,6 @@ import {
   fetchOotdRecommendations,
   fetchWardrobeRecommendations,
   DEFAULT_RECOMMENDATIONS_PER_CATEGORY,
-  postRecommendationFeedback,
 } from "@/api/recommendations";
 import { fetchWardrobeMeta } from '@/api/wardrobe'
 import { fetchWeather } from '@/api/weather'
@@ -28,6 +27,7 @@ import AiMdRecommendations from "@/components/AiMdRecommendations";
 import RecommendProductDetailModal from '@/components/RecommendProductDetailModal';
 import OutfitDetailModal from '@/components/OutfitDetailModal';
 import {fetchMyOutfitBook} from "@/api/outfits.ts";
+import { getGarmentColorLabel, getGarmentColor } from '@/data/garmentColors';
 
 interface HomeTabProps {
   clothes: Garment[];
@@ -59,6 +59,7 @@ type RecommendItem = {
   brand?: string;
   style: string;
   color: string;
+  colorHex?: string;
   price: string;
   matchRate: number;
   imageUrl: string;
@@ -84,6 +85,15 @@ const fallbackImages = {
   Outer: "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?auto=format&fit=crop&q=80&w=600",
   Shoes: "https://images.unsplash.com/photo-1520639888713-7851133b1ed0?auto=format&fit=crop&q=80&w=600",
 };
+
+const STYLE_LABELS: Record<string, string> = {
+  CASUAL: '캐주얼',
+  STREET: '스트릿',
+  FORMAL: '포멀',
+  SPORTY: '스포티',
+  VINTAGE: '빈티지',
+  MINIMAL: '미니멀',
+}
 
 
 export default function HomeTab({
@@ -118,7 +128,7 @@ export default function HomeTab({
   const [bookId, setBookId] = useState<number | null>(null);
   const [selectedItem, setSelectedItem] = useState<RecommendItem | null>(null);
   const [selectedCombo, setSelectedCombo] = useState<any | null>(null);
-  const [isDisliking, setIsDisliking] = useState(false);
+
   const labelSectionRef = useRef<HTMLElement | null>(null);
 
   const [refreshSignal, setRefreshSignal] = useState(0);
@@ -129,7 +139,6 @@ export default function HomeTab({
     isFeedbackSubmitting,
     toggleWishlist,
     handleFeedback,
-    toastMessage,
   } = useRecommendWishlistToggle({
     userId,
     existingGarments: clothes,
@@ -152,6 +161,7 @@ export default function HomeTab({
       setRefreshSignal(prev => prev + 1);
     },
   });
+  // we don't use toastMessage directly here
 
   // 추천 목록에서 중복된 clothesId를 제거하는 헬퍼
   const uniqueItems = useCallback(<T extends { clothesId?: number | null; id: string }>(items: T[]): T[] => {
@@ -278,8 +288,9 @@ export default function HomeTab({
                 id: item.outfitId ? `ootd-outfit-${item.outfitId}` : `ootd-${idx}`,
                 title,
                 category: mainItem.category ? (mainItem.category === 'TOP' ? 'Top' : mainItem.category === 'BOTTOM' ? 'Bottom' : mainItem.category === 'OUTER' ? 'Outer' : 'Shoes') : 'Outer',
-                style: (item.styleCodes && item.styleCodes[0]) || item.style || '—',
-                color: item.primaryColor ?? '',
+                style: STYLE_LABELS[(item.styleCodes && item.styleCodes[0]) || item.style] ?? (item.style || '—'),
+                color: getGarmentColorLabel(item.primaryColor ?? ''),
+                colorHex: getGarmentColor(item.primaryColor ?? '')?.hex ?? '',
                 price: '',
                 matchRate: Math.round((item.totalScore || 0) * 10),
                 imageUrl: (mainItem.imageUrl ?? mainItem.userImageUrl ?? item.imageUrl) || fallbackImages.Top,
@@ -313,12 +324,11 @@ export default function HomeTab({
               id: `style-${item.clothesId ?? idx}`,
               title: item.title,
               category: item.category ? (item.category === 'TOP' ? 'Top' : item.category === 'BOTTOM' ? 'Bottom' : item.category === 'OUTER' ? 'Outer' : 'Shoes') : 'Top',
-              style: item.primaryStyle ?? '—',
-              color: item.primaryColor ?? '',
+              style: STYLE_LABELS[item.primaryStyle] ?? (item.primaryStyle ?? '—'),
+              color: item.primaryColorDisplay?.name ?? getGarmentColorLabel(item.primaryColor ?? ''),
+              colorHex: item.primaryColorDisplay?.hex ?? getGarmentColor(item.primaryColor ?? '')?.hex ?? '',
               brand: item.brandName ?? '',
-              price: item.price && item.price !== '0'
-                  ? `${parseInt(item.price).toLocaleString()}원`
-                  : `${Math.round(parseFloat(item.score) * 100)}% 어울림`,
+              price: item.price && item.price !== '0' ? `${parseInt(item.price).toLocaleString()}원` : '',
               matchRate: Math.round(parseFloat(item.score) * 100),
               imageUrl: item.imageUrl || fallbackImages.Top,
               reason: item.reason ?? '',
@@ -426,6 +436,7 @@ export default function HomeTab({
       style: item.style,
       styles: [item.style].filter(Boolean),
       color: item.color,
+      colorHex: item.colorHex,
       secondaryColors: [],
       matchRate: item.matchRate,
       imageUrl: item.imageUrl,
@@ -674,10 +685,11 @@ export default function HomeTab({
                         ) : (
                             <div className="h-44 sm:h-52 lg:h-72 bg-slate-100 relative overflow-hidden">
                               <AuthenticatedImage src={item.imageUrl} alt={item.title} className="w-full h-full object-cover object-top transition-transform duration-300 group-hover:scale-105" fallback={<div className="w-full h-full flex items-center justify-center bg-slate-200 text-slate-400 text-xs font-bold">이미지 없음</div>} />
-                              <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/80 via-black/45 to-transparent text-white">
-                                <h3 className="text-sm font-black truncate">{item.title}</h3>
-                                <div className="mt-1"><strong className="text-sm">{item.price}</strong></div>
-                              </div>
+                              <div className="absolute left-0 bottom-0 p-3 bg-gradient-to-t from-black/80 via-black/40 to-transparent text-white flex flex-col items-start max-w-[66%]">
+                                  {item.brand ? <div className="text-[11px] font-bold text-white/90 uppercase tracking-wide truncate">{item.brand}</div> : null}
+                                  <h3 className="text-sm md:text-base font-black truncate mt-1 leading-tight">{item.title}</h3>
+                                  {item.price ? <div className="mt-1"><strong className="text-sm font-extrabold">{item.price}</strong></div> : null}
+                                </div>
                             </div>
                         )}
                       </article>
