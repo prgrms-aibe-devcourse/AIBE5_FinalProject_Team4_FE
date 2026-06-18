@@ -182,6 +182,7 @@ API를 호출하는 화면은 아래 상태를 구분합니다.
 | 미보유 옷 | GET | `/api/users/{userId}/wishlist-clothes` | 미보유 옷 목록 표시 |
 | 미보유 옷 | GET | `/api/users/{userId}/wishlist-clothes/favorites` | 즐겨찾기 미보유 옷 표시 |
 | 미보유 옷 저장 | POST | `/api/users/{userId}/wishlist-clothes` | 추천/외부 상품을 미보유 옷으로 저장 |
+| 미보유 옷 연결 | POST | `/api/users/{userId}/wishlist-clothes/{clothesId}` | 기존 `EXTERNAL_SHOPPING` 공용 옷을 미보유 옷으로 연결 |
 | 미보유 옷 전환 | PATCH | `/api/v1/clothes/{clothesId}/convert-to-owned` | 미보유에서 보유 전환 |
 | 사진 기반 등록 | POST | `/api/v1/users/{userId}/clothes/photos` | 옷 사진 업로드 |
 | 사진 기반 등록 | POST | `/api/v1/users/{userId}/clothes/photos/{photoId}/analyze` | 사진 분석 요청 |
