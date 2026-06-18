@@ -245,7 +245,6 @@ export default function ClosetGarmentDetail({
         name: editDraft.name.trim(),
         size: editDraft.size.trim() || 'FREE',
         imageUrl,
-        ...(editDraft.season.trim() ? { season: editDraft.season.trim() } : {}),
       })
       setDetail(updated)
       onGarmentUpdated(updated)

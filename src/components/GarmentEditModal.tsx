@@ -17,9 +17,7 @@ import {
   GARMENT_NAME_MAX_LENGTH,
   BRAND_NAME_MAX_LENGTH,
   GARMENT_SIZE_MAX_LENGTH,
-  GARMENT_SEASON_OPTIONS,
   getSizeOptionsByCategory,
-  getGarmentSeasonLabel,
   type GarmentFormFieldErrors,
   type GarmentRegisterDraft,
 } from '@/utils/garmentRegisterValidation'
@@ -195,21 +193,6 @@ export default function GarmentEditModal({
                   onChange={(e) => onDraftChange({ size: e.target.value })} placeholder="직접 입력"
                   className={`w-full h-9 px-3 rounded-lg border text-sm bg-white ${fieldErrors.size ? 'border-red-400' : 'border-slate-200'}`} />
                 {fieldErrors.size && <p className="text-xs text-red-600">{fieldErrors.size}</p>}
-              </div>
-              {/* 시즌 */}
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-500">시즌 <span className="text-slate-400 font-normal">(선택)</span></label>
-                <div className="flex flex-wrap gap-1.5">
-                  {GARMENT_SEASON_OPTIONS.map(({ code, label }) => {
-                    const active = draft.season === code
-                    return (
-                      <button key={code} type="button" onClick={() => onDraftChange({ season: active ? '' : code })}
-                        className={`h-8 px-3 rounded-lg text-xs font-bold border transition ${active ? 'bg-[#1E3A8A] text-white border-transparent' : 'bg-white text-slate-500 border-slate-200'}`}>
-                        {label}
-                      </button>
-                    )
-                  })}
-                </div>
               </div>
             </>
           ) : (
