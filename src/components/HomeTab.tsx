@@ -113,7 +113,6 @@ export default function HomeTab({
   const [showStickyLabels, setShowStickyLabels] = useState(false);
   const [anchorClothesId, setAnchorClothesId] = useState<string | null>(null);
   const [matchPickerOpen, setMatchPickerOpen] = useState(false);
-  const [matchOwnershipFilter, setMatchOwnershipFilter] = useState<'all' | 'owned' | 'wishlist'>('all');
   const [matchCategoryFilter, setMatchCategoryFilter] = useState<'all' | 'Top' | 'Bottom' | 'Outer' | 'Shoes'>('all');
   const [matchRecommendationGroups, setMatchRecommendationGroups] = useState<RecommendCategoryGroup[]>([]);
   const [matchLoading, setMatchLoading] = useState(false);
@@ -186,30 +185,22 @@ export default function HomeTab({
       () => ownedClothes.filter((item) => parseBeClothesId(item.id) != null),
       [ownedClothes],
   );
-  const matchEligibleAllClothes = useMemo(
-      () => clothes.filter((item) => parseBeClothesId(item.id) != null),
-      [clothes],
-  );
   const anchorClothesIdNumeric = useMemo(
       () => (anchorClothesId ? parseBeClothesId(anchorClothesId) : null),
       [anchorClothesId],
   );
   const selectedAnchorClothes = useMemo(
-      () => matchEligibleAllClothes.find((item) => item.id === anchorClothesId) ?? null,
-      [matchEligibleAllClothes, anchorClothesId],
+      () => matchEligibleOwnedClothes.find((item) => item.id === anchorClothesId) ?? null,
+      [matchEligibleOwnedClothes, anchorClothesId],
   );
   const matchPickerCounts = useMemo(() => ({
-    all: matchEligibleAllClothes.length,
-    owned: matchEligibleAllClothes.filter((item) => !item.isWishlist).length,
-    wishlist: matchEligibleAllClothes.filter((item) => item.isWishlist).length,
-  }), [matchEligibleAllClothes]);
+    all: matchEligibleOwnedClothes.length,
+  }), [matchEligibleOwnedClothes]);
   const filteredMatchPickerClothes = useMemo(() => {
-    let list = matchEligibleAllClothes;
-    if (matchOwnershipFilter === 'owned') list = list.filter((item) => !item.isWishlist);
-    else if (matchOwnershipFilter === 'wishlist') list = list.filter((item) => item.isWishlist);
+    let list = matchEligibleOwnedClothes;
     if (matchCategoryFilter !== 'all') list = list.filter((item) => item.category === matchCategoryFilter);
     return list;
-  }, [matchEligibleAllClothes, matchOwnershipFilter, matchCategoryFilter]);
+  }, [matchEligibleOwnedClothes, matchCategoryFilter]);
   const registeredCount = ownedClothes.length;
   const hasRecommendationData = registeredCount > 0;
 
@@ -561,7 +552,7 @@ export default function HomeTab({
                     <div className="w-14 h-14 rounded-xl bg-slate-100 grid place-items-center text-xl shrink-0">+</div>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-black text-slate-900">어울리는 코디를 찾을 옷을 선택해 주세요</p>
-                      <p className="mt-1 text-[11px] font-bold text-slate-400">보유 {matchPickerCounts.owned}개 · 미보유 {matchPickerCounts.wishlist}개</p>
+                      <p className="mt-1 text-[11px] font-bold text-slate-400">보유 {matchPickerCounts.all}개</p>
                     </div>
                     <span className="shrink-0 h-8 px-3 rounded-full bg-[#111827] text-white text-[11px] font-black grid place-items-center">옷 선택</span>
                   </>
@@ -708,26 +699,10 @@ export default function HomeTab({
       >
         <ModalHeader
             title="기준 옷 선택"
-            subtitle={`보유 ${matchPickerCounts.owned}개 · 미보유 ${matchPickerCounts.wishlist}개`}
+            subtitle={`보유 ${matchPickerCounts.all}개`}
             onClose={() => setMatchPickerOpen(false)}
         />
         <ModalBody className="p-4 sm:p-6">
-          <div className="mb-3 grid grid-cols-3 gap-2 rounded-2xl bg-slate-100 p-1">
-            {([['all', '전체', matchPickerCounts.all], ['owned', '보유', matchPickerCounts.owned], ['wishlist', '미보유', matchPickerCounts.wishlist]] as const).map(([value, label, count]) => {
-              const active = matchOwnershipFilter === value;
-              return (
-                  <button
-                      key={value}
-                      type="button"
-                      onClick={() => setMatchOwnershipFilter(value)}
-                      aria-pressed={active}
-                      className={`h-10 rounded-xl text-[12px] font-black transition ${active ? "bg-white text-slate-950 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
-                  >
-                    {label} {count}
-                  </button>
-              );
-            })}
-          </div>
           <div className="mb-4 flex flex-wrap gap-1.5">
             {(['all', 'Top', 'Bottom', 'Outer', 'Shoes'] as const).map((cat) => {
               const labels: Record<string, string> = { all: '전체', Top: '상의', Bottom: '하의', Outer: '아우터', Shoes: '신발' };
