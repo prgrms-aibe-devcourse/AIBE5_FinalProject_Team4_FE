@@ -1,10 +1,12 @@
 ﻿import { useCallback, useEffect, useMemo, useState } from 'react'
 import axios from 'axios'
+import { postRecommendationFeedback } from '@/api/recommendations'
 import { getBaseClothesForSimilarProducts, getSimilarProducts } from '@/api/similarProducts'
-import { createWishlistClothes } from '@/api/wardrobe'
+import { connectWishlistClothes, createWishlistClothes } from '@/api/wardrobe'
 import AuthenticatedImage from '@/components/common/AuthenticatedImage'
 import { Modal, ModalBody, ModalFooter, ModalHeader } from '@/components/common/Modal'
-import { Check, ShoppingBag } from '@/components/icons'
+import { Check, Heart } from '@/components/icons'
+import RecommendProductDetailModal from '@/components/RecommendProductDetailModal'
 import { useToast } from './Toast'
 import {
   BE_CATEGORY_TO_UI,
@@ -15,8 +17,17 @@ import {
   type UiCategory,
 } from '@/data/categoryItemTypes'
 import { resolveClothesGender } from '@/data/garmentGender'
-import { GARMENT_COLORS, resolveGarmentColorCode } from '@/data/garmentColors'
-import { GARMENT_STYLES, resolveGarmentStyleCode } from '@/data/garmentStyles'
+import {
+  GARMENT_COLORS,
+  getGarmentColor,
+  getGarmentColorLabel,
+  resolveGarmentColorCode,
+} from '@/data/garmentColors'
+import {
+  GARMENT_STYLES,
+  getGarmentStyleLabel,
+  resolveGarmentStyleCode,
+} from '@/data/garmentStyles'
 import type { ClothesResponse } from '@/types/be'
 import type { Garment } from '@/types'
 import type {
@@ -25,6 +36,7 @@ import type {
   SimilarProductSaveForm,
 } from '@/types/similarProducts'
 import { extractApiErrorMessage } from '@/utils/apiError'
+import type { RecommendCardItem, RecommendColorChip } from '@/utils/recommendationMapper'
 
 interface SimilarProductRecommendationsProps {
   userId: number | null
@@ -46,17 +58,96 @@ const seasonOptions = [
 const stripHtml = (value: string) =>
   value.replace(/<[^>]*>/g, '').replace(/&quot;/g, '"').replace(/&amp;/g, '&').trim()
 
-const formatPrice = (value: number) =>
-  value > 0 ? `${new Intl.NumberFormat('ko-KR').format(value)}원` : '가격 정보 없음'
-
 const productKey = (product: NaverShoppingProduct) =>
-  product.productId || product.link
+  product.candidateSource === 'INTERNAL' && product.clothesId != null
+    ? `internal-${product.clothesId}`
+    : `naver-${product.productId || product.link}`
 
 const isAlreadySavedError = (reason: unknown) =>
   axios.isAxiosError(reason) && reason.response?.status === 409
 
 const baseClothesStatusLabel = (item: ClothesResponse) =>
   item.ownershipStatus === 'OWNED' ? '보유' : '미보유'
+
+function inferProductCategory(product: NaverShoppingProduct): BeCategoryCode {
+  const text = [
+    product.title,
+    product.category2,
+    product.category3,
+    product.category4,
+  ].join(' ')
+
+  if (/신발|운동화|스니커즈|로퍼|부츠|샌들|슬리퍼|구두/.test(text)) return 'SHOES'
+  if (/바지|팬츠|데님|슬랙스|스커트|치마|반바지/.test(text)) return 'BOTTOM'
+  if (/아우터|재킷|자켓|점퍼|코트|패딩|블레이저|가디건/.test(text)) return 'OUTER'
+  return 'TOP'
+}
+
+function mapSimilarProductToCard(
+  product: NaverShoppingProduct,
+  styles: string[] = [],
+  color?: RecommendColorChip,
+  secondaryColors: RecommendColorChip[] = [],
+): RecommendCardItem {
+  const category = inferProductCategory(product)
+  const uiCategory = BE_CATEGORY_TO_UI[category]
+  const itemTypeLabel = product.category4 || product.category3 || CATEGORY_ITEM_TYPES[uiCategory][0].label
+  const brandLabel = product.brand || product.mallName || (
+    product.candidateSource === 'INTERNAL' ? '서비스 상품' : '네이버쇼핑'
+  )
+  const showProductMetadata = product.candidateSource !== 'NAVER'
+
+  return {
+    id: productKey(product),
+    clothesId: product.clothesId,
+    title: stripHtml(product.title),
+    brandLabel,
+    brandLogoUrl: null,
+    category: uiCategory,
+    categoryLabel: category === 'TOP'
+      ? '상의'
+      : category === 'BOTTOM'
+        ? '하의'
+        : category === 'OUTER'
+          ? '아우터'
+          : '신발',
+    itemTypeCode: product.category4 || product.category3 || CATEGORY_ITEM_TYPES[uiCategory][0].code,
+    itemTypeLabel,
+    style: showProductMetadata ? styles[0] ?? '—' : '—',
+    styles: showProductMetadata ? styles : [],
+    color: showProductMetadata ? color?.label ?? '—' : '—',
+    colorHex: showProductMetadata ? color?.hex : undefined,
+    secondaryColors: showProductMetadata ? secondaryColors : [],
+    matchRate: 0,
+    imageUrl: product.image,
+    reason: product.candidateSource === 'INTERNAL'
+      ? '서비스에 등록된 유사 상품입니다.'
+      : '네이버쇼핑에서 찾은 유사 상품입니다.',
+    purchaseUrl: product.link,
+    hasDirectPurchaseUrl: product.link.trim().length > 0,
+  }
+}
+
+function colorCodeToChip(code: string): RecommendColorChip {
+  return {
+    label: getGarmentColorLabel(code),
+    hex: getGarmentColor(code)?.hex,
+  }
+}
+
+function uniqueSecondaryColors(
+  primary: RecommendColorChip | undefined,
+  colors: RecommendColorChip[],
+): RecommendColorChip[] {
+  const seen = new Set<string>()
+  if (primary) seen.add(primary.label)
+  return colors.filter((color) => {
+    const key = color.label
+    if (!key || seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
 
 function defaultSaveForm(base: ClothesResponse): SimilarProductSaveForm {
   const category = (base.category in BE_CATEGORY_TO_UI
@@ -107,6 +198,7 @@ export default function SimilarProductRecommendations({
   const [saveForm, setSaveForm] = useState<SimilarProductSaveForm | null>(null)
   const [saveOpen, setSaveOpen] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [feedbackSubmittingKey, setFeedbackSubmittingKey] = useState<string | null>(null)
 
   const loadBaseClothes = useCallback(async () => {
     if (userId == null) {
@@ -168,6 +260,11 @@ export default function SimilarProductRecommendations({
     )
   }, [recommendation, savedProductKeys, selectedProducts])
 
+  const selectedNaverItems = useMemo(
+    () => selectedItems.filter((product) => product.candidateSource === 'NAVER'),
+    [selectedItems],
+  )
+
   const existingOwnedProductKeys = useMemo(
     () =>
       new Set(
@@ -192,6 +289,19 @@ export default function SimilarProductRecommendations({
     product: NaverShoppingProduct,
   ): 'owned' | 'saved' | null => {
     const key = productKey(product)
+    if (product.candidateSource === 'INTERNAL' && product.clothesId != null) {
+      const clothesId = String(product.clothesId)
+      if (existingGarments.some((garment) => !garment.isWishlist && garment.id === clothesId)) {
+        return 'owned'
+      }
+      if (
+        savedProductKeys.has(key) ||
+        existingGarments.some((garment) => garment.isWishlist && garment.id === clothesId)
+      ) {
+        return 'saved'
+      }
+      return null
+    }
     if (product.productId && existingOwnedProductKeys.has(product.productId)) {
       return 'owned'
     }
@@ -215,6 +325,57 @@ export default function SimilarProductRecommendations({
       baseClothes.find((item) => item.clothesId === selectedClothesId) ?? null,
     [baseClothes, selectedClothesId],
   )
+
+  const getProductCard = (product: NaverShoppingProduct) => {
+    const internalGarment = product.clothesId != null
+      ? existingGarments.find((garment) => garment.id === String(product.clothesId))
+      : undefined
+    const productStyleLabel = product.primaryStyle
+      ? getGarmentStyleLabel(product.primaryStyle)
+      : null
+    const internalStyleLabels = internalGarment?.be?.styleCodes
+      ?.map(getGarmentStyleLabel)
+      .filter(Boolean)
+    const styleLabels = productStyleLabel
+      ? [productStyleLabel]
+      : internalStyleLabels?.length
+        ? internalStyleLabels
+        : internalGarment?.style
+          ? [internalGarment.style]
+          : product.candidateSource === 'NAVER'
+            ? selectedClothes?.styles.map((style) => style.name || getGarmentStyleLabel(style.code)) ?? []
+            : []
+    const fallbackColorCode = internalGarment?.be?.primaryColorCode
+    const productColorCode = product.primaryColor ??
+      fallbackColorCode ??
+      (product.candidateSource === 'NAVER' ? selectedClothes?.primaryColor : null)
+    const primaryColorDisplay = product.candidateSource === 'NAVER'
+      ? selectedClothes?.primaryColorDisplay
+      : null
+    const colorChip: RecommendColorChip | undefined = productColorCode
+      ? {
+          label: primaryColorDisplay?.name ?? getGarmentColorLabel(productColorCode),
+          hex: primaryColorDisplay?.hex ?? getGarmentColor(productColorCode)?.hex,
+        }
+      : internalGarment
+      ? {
+          label: internalGarment.color,
+          hex: undefined,
+        }
+      : undefined
+    const secondaryColors = uniqueSecondaryColors(
+      colorChip,
+      internalGarment?.be?.secondaryColorCodes?.map(colorCodeToChip) ??
+        (product.candidateSource === 'NAVER'
+          ? selectedClothes?.secondaryColors.map((color) => ({
+              label: color.colorDisplay?.name ?? getGarmentColorLabel(color.code),
+              hex: color.colorDisplay?.hex ?? getGarmentColor(color.code)?.hex,
+            })) ?? []
+          : []),
+    )
+
+    return mapSimilarProductToCard(product, styleLabels, colorChip, secondaryColors)
+  }
 
   const baseClothesCounts = useMemo(
     () => ({
@@ -240,19 +401,12 @@ export default function SimilarProductRecommendations({
     void requestSimilarProducts(clothesId)
   }
 
-  const toggleProduct = (product: NaverShoppingProduct) => {
-    if (isProductSaved(product)) return
-    const key = productKey(product)
-    setSelectedProducts((prev) => {
-      const next = new Set(prev)
-      if (next.has(key)) next.delete(key)
-      else next.add(key)
-      return next
-    })
-  }
-
   const openSaveModal = () => {
     if (!recommendation || selectedItems.length === 0) return
+    if (selectedNaverItems.length === 0) {
+      void saveSelectedProducts()
+      return
+    }
     setSaveForm(defaultSaveForm(recommendation.baseClothes))
     setSaveOpen(true)
   }
@@ -262,11 +416,37 @@ export default function SimilarProductRecommendations({
     const key = productKey(product)
     setSelectedProducts((prev) => new Set(prev).add(key))
     setDetailProduct(null)
+    if (product.candidateSource === 'INTERNAL') {
+      window.setTimeout(() => void saveSelectedProducts([product]), 0)
+      return
+    }
     window.setTimeout(() => {
       if (!recommendation) return
       setSaveForm(defaultSaveForm(recommendation.baseClothes))
       setSaveOpen(true)
     }, 0)
+  }
+
+  const handleDislike = async (product: NaverShoppingProduct) => {
+    if (userId == null) return
+    if (product.clothesId == null) {
+      showToast('error', '저장 전 네이버 상품은 추천 피드백을 보낼 수 없어요.')
+      return
+    }
+    const key = productKey(product)
+    setFeedbackSubmittingKey(key)
+    try {
+      await postRecommendationFeedback(userId, {
+        feedbackType: 'DISLIKE',
+        clothesId: product.clothesId,
+      })
+      showToast('success', '이런 추천을 줄일게요.')
+      setDetailProduct(null)
+    } catch {
+      showToast('error', '요청에 실패했습니다.')
+    } finally {
+      setFeedbackSubmittingKey(null)
+    }
   }
 
   const updateCategory = (category: BeCategoryCode) => {
@@ -282,13 +462,23 @@ export default function SimilarProductRecommendations({
     )
   }
 
-  const saveSelectedProducts = async () => {
-    if (userId == null || !saveForm || selectedItems.length === 0) return
+  const saveSelectedProducts = async (items = selectedItems) => {
+    if (userId == null || items.length === 0) return
+    const hasNaverItems = items.some((product) => product.candidateSource === 'NAVER')
+    if (hasNaverItems && !saveForm) return
     setSaving(true)
 
     const results = await Promise.allSettled(
-      selectedItems.map((product) =>
-        createWishlistClothes(userId, {
+      items.map((product) => {
+        if (product.candidateSource === 'INTERNAL' && product.clothesId != null) {
+          return connectWishlistClothes(userId, product.clothesId)
+        }
+
+        if (!saveForm) {
+          throw new Error('상품 정보 확인이 필요합니다.')
+        }
+
+        return createWishlistClothes(userId, {
           name: stripHtml(product.title),
           brandName: (product.brand || product.mallName || 'UNKNOWN').slice(0, 100),
           productCode: product.productId,
@@ -304,11 +494,11 @@ export default function SimilarProductRecommendations({
           externalSource: 'NAVER_SHOPPING',
           externalProductId: product.productId,
           externalProductUrl: product.link,
-        }),
-      ),
+        })
+      }),
     )
 
-    const savedKeys = selectedItems
+    const savedKeys = items
       .filter((_, index) => {
         const result = results[index]
         return result.status === 'fulfilled' || isAlreadySavedError(result.reason)
@@ -496,87 +686,53 @@ export default function SimilarProductRecommendations({
               <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
                 {recommendation.products.map((product) => {
                   const key = productKey(product)
-                  const selected = selectedProducts.has(key)
+                  const card = getProductCard(product)
                   const storageStatus = getProductStorageStatus(product)
-                  const saved = storageStatus != null
-                  const statusLabel =
-                    storageStatus === 'owned' ? '보유 중' : '저장됨'
+                  const wishlisted = storageStatus === 'saved'
+                  const canWishlist = storageStatus !== 'owned'
                   return (
                     <article
                       key={key}
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => setDetailProduct(product)}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Enter' || event.key === ' ') {
-                          event.preventDefault()
-                          setDetailProduct(product)
-                        }
-                      }}
-                      className={`group rounded-2xl border overflow-hidden bg-slate-50 transition-all hover:-translate-y-1 hover:shadow-lg ${
-                        saved
-                          ? 'border-emerald-200'
-                          : selected
-                          ? 'border-[#111827] ring-2 ring-[#C4B5FD]'
-                          : 'border-slate-100'
-                      } cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#C4B5FD]`}
+                      className="group relative rounded-[24px] border overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:rotate-[0.5deg] hover:shadow-xl active:scale-[0.99] cursor-pointer border-slate-100 bg-slate-50"
                     >
-                      <div className="relative h-44 sm:h-52 lg:h-72 bg-slate-100 overflow-hidden">
-                        <img
-                          src={product.image}
-                          alt={stripHtml(product.title)}
-                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                          loading="lazy"
-                          referrerPolicy="no-referrer"
-                          onError={(event) => {
-                            event.currentTarget.style.display = 'none'
-                          }}
-                        />
+                      <button
+                        type="button"
+                        onClick={() => setDetailProduct(product)}
+                        className="block w-full cursor-pointer text-left"
+                      >
+                        <div className="h-44 sm:h-52 lg:h-72 bg-slate-100 relative overflow-hidden">
+                          <AuthenticatedImage
+                            src={card.imageUrl}
+                            alt={card.title}
+                            className="w-full h-full object-cover object-top transition-transform duration-300 group-hover:scale-105"
+                            fallback={<div className="w-full h-full flex items-center justify-center bg-slate-200 text-slate-400 text-xs font-bold">이미지 없음</div>}
+                          />
+                          <div className="absolute left-0 bottom-0 p-3 bg-gradient-to-t from-black/80 via-black/40 to-transparent text-white flex flex-col items-start max-w-[66%]">
+                            {card.brandLabel ? <div className="text-[11px] font-bold text-white/90 uppercase tracking-wide truncate">{card.brandLabel}</div> : null}
+                            <h3 className="text-sm md:text-base font-black truncate mt-1 leading-tight">{card.title}</h3>
+                          </div>
+                        </div>
+                      </button>
+
+                      {canWishlist ? (
                         <button
                           type="button"
-                          disabled={saved}
                           onClick={(event) => {
                             event.stopPropagation()
-                            toggleProduct(product)
+                            if (!wishlisted) saveFromDetail(product)
                           }}
-                          aria-pressed={selected}
-                          className={`absolute top-2 right-2 ${saved ? 'w-12' : 'w-8'} h-8 rounded-full grid place-items-center border shadow-sm transition ${
-                            saved
-                              ? 'bg-emerald-500 text-white border-emerald-500'
-                              : selected
-                              ? 'bg-[#111827] text-white border-[#111827]'
-                              : 'bg-white/90 text-slate-500 border-white'
+                          disabled={saving}
+                          aria-pressed={wishlisted}
+                          aria-label={wishlisted ? '위시리스트에서 빼기' : '위시리스트에 추가'}
+                          className={`absolute top-1.5 right-1.5 z-10 p-1.5 rounded-full border bg-white/95 shadow-sm transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed ${
+                            wishlisted
+                              ? 'border-rose-200 text-rose-500 hover:bg-rose-50 hover:border-rose-300'
+                              : 'border-slate-200/90 text-slate-400 hover:text-rose-500 hover:border-rose-200 hover:bg-rose-50 disabled:hover:text-slate-400 disabled:hover:border-slate-200 disabled:hover:bg-white/95'
                           }`}
-                          aria-label={saved ? statusLabel : selected ? '선택 해제' : '저장할 상품 선택'}
                         >
-                          {saved ? (
-                            <span className="text-[9px] font-black">{statusLabel}</span>
-                          ) : (
-                            <Check className="w-4 h-4" />
-                          )}
+                          <Heart className={`w-3.5 h-3.5 ${wishlisted ? 'text-rose-500 fill-rose-500' : ''}`} />
                         </button>
-                        <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/85 via-black/45 to-transparent text-white">
-                          <p className="text-[10px] font-bold text-white/75 truncate">
-                            {product.brand || product.mallName || '네이버쇼핑'}
-                          </p>
-                          <h4 className="text-sm font-black line-clamp-2 leading-snug">
-                            {stripHtml(product.title)}
-                          </h4>
-                          <strong className="block mt-1 text-sm">
-                            {formatPrice(product.lowestPrice)}
-                          </strong>
-                        </div>
-                      </div>
-                      <a
-                        href={product.link}
-                        target="_blank"
-                        rel="noreferrer"
-                        onClick={(event) => event.stopPropagation()}
-                        className="h-10 flex items-center justify-center gap-1.5 text-xs font-black text-slate-700 hover:bg-white"
-                      >
-                        <ShoppingBag className="w-4 h-4" />
-                        구매 페이지
-                      </a>
+                      ) : null}
                     </article>
                   )
                 })}
@@ -701,88 +857,27 @@ export default function SimilarProductRecommendations({
         </ModalBody>
       </Modal>
 
-      <Modal
+      <RecommendProductDetailModal
         open={detailProduct != null}
+        item={detailProduct ? getProductCard(detailProduct) : null}
+        userId={userId}
         onClose={() => setDetailProduct(null)}
-        size="md"
-        placement="sheet"
-      >
-        {detailProduct && (
-          <>
-            <ModalHeader
-              title="상품 상세"
-              eyebrow={detailProduct.brand || detailProduct.mallName || '네이버쇼핑'}
-              onClose={() => setDetailProduct(null)}
-            />
-            <ModalBody className="p-5 sm:p-6">
-              <div className="aspect-[4/3] rounded-2xl overflow-hidden bg-slate-100">
-                <img
-                  src={detailProduct.image}
-                  alt={stripHtml(detailProduct.title)}
-                  className="w-full h-full object-contain bg-white"
-                  referrerPolicy="no-referrer"
-                />
-              </div>
-
-              <div className="mt-5 text-left">
-                <p className="text-xs font-black text-slate-400">
-                  {detailProduct.mallName || '네이버쇼핑'}
-                </p>
-                <h3 className="mt-1 text-xl font-black text-slate-950 leading-snug">
-                  {stripHtml(detailProduct.title)}
-                </h3>
-                <strong className="block mt-3 text-xl text-slate-950">
-                  {formatPrice(detailProduct.lowestPrice)}
-                </strong>
-                {detailProduct.highestPrice &&
-                  detailProduct.highestPrice > detailProduct.lowestPrice && (
-                    <p className="mt-1 text-xs font-bold text-slate-400">
-                      최고가 {formatPrice(detailProduct.highestPrice)}
-                    </p>
-                  )}
-
-                <dl className="mt-4 grid grid-cols-2 gap-3 text-left">
-                  <div className="rounded-xl border border-slate-100 p-3">
-                    <dt className="text-[10px] font-black text-slate-400">브랜드</dt>
-                    <dd className="mt-1 text-xs font-black text-slate-700 truncate">
-                      {detailProduct.brand || '정보 없음'}
-                    </dd>
-                  </div>
-                  <div className="rounded-xl border border-slate-100 p-3">
-                    <dt className="text-[10px] font-black text-slate-400">판매처</dt>
-                    <dd className="mt-1 text-xs font-black text-slate-700 truncate">
-                      {detailProduct.mallName || '정보 없음'}
-                    </dd>
-                  </div>
-                </dl>
-              </div>
-            </ModalBody>
-            <ModalFooter className="p-4 grid grid-cols-2 gap-2">
-              <a
-                href={detailProduct.link}
-                target="_blank"
-                rel="noreferrer"
-                className="h-11 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm font-black flex items-center justify-center gap-1.5"
-              >
-                <ShoppingBag className="w-4 h-4" />
-                구매 페이지
-              </a>
-              <button
-                type="button"
-                disabled={isProductSaved(detailProduct)}
-                onClick={() => saveFromDetail(detailProduct)}
-                className="h-11 rounded-xl bg-[#111827] text-white text-sm font-black disabled:bg-emerald-500"
-              >
-                {getProductStorageStatus(detailProduct) === 'owned'
-                  ? '보유 중'
-                  : isProductSaved(detailProduct)
-                    ? '저장됨'
-                    : '저장하기'}
-              </button>
-            </ModalFooter>
-          </>
-        )}
-      </Modal>
+        wishlisted={detailProduct ? getProductStorageStatus(detailProduct) === 'saved' : false}
+        wishlistSubmitting={saving}
+        onWishlistToggle={
+          detailProduct && getProductStorageStatus(detailProduct) !== 'owned'
+            ? () => {
+                if (!isProductSaved(detailProduct)) saveFromDetail(detailProduct)
+              }
+            : undefined
+        }
+        onDislike={
+          detailProduct?.clothesId != null
+            ? () => { void handleDislike(detailProduct) }
+            : undefined
+        }
+        dislikeSubmitting={detailProduct ? feedbackSubmittingKey === productKey(detailProduct) : false}
+      />
 
       <Modal
         open={saveOpen}
@@ -793,7 +888,7 @@ export default function SimilarProductRecommendations({
       >
         <ModalHeader
           title="상품 정보 확인"
-          subtitle={`선택한 ${selectedItems.length}개 상품에 공통으로 적용됩니다.`}
+          subtitle={`선택한 네이버 상품 ${selectedNaverItems.length}개에 공통으로 적용됩니다.`}
           onClose={() => setSaveOpen(false)}
           closeDisabled={saving}
         />
