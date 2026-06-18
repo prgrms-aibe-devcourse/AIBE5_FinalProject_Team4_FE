@@ -173,12 +173,17 @@ type ClothesCardViewModel = {
 
 type MyProfileResponse = {
   userId: number;
-  email: string;
   nickname: string;
-  birthDate?: string | null;
-  gender?: string | null;
-  regionName?: string | null;
-  profileImageUrl?: string | null;
+  onboarded: boolean;
+  birthDate: string;
+  gender: "MALE" | "FEMALE" | "OTHER";
+  regionName: string;
+  regionCode: string;
+  profileImageUrl: string;
+  profileBio: string;
+  externalLinkUrl: string;
+  styleCodes: string[];
+  socialProviders: string[];
 };
 
 // 룩피드 타입 — src/types/feed.ts 기준
@@ -215,10 +220,7 @@ type UserProfileResponse = {
   nickname: string;
   profileImageUrl?: string | null;
   profileBio?: string | null;
-  externalLinks?: Array<{
-    title: string;
-    url: string;
-  }>;
+  externalLinkUrl?: string | null;
 };
 
 type OutfitResponse = {
@@ -248,7 +250,7 @@ API 응답 타입은 BE DTO 필드명과 code를 유지합니다. 화면 컴포�
 | --- | --- | --- |
 | 카테고리 | `Top`, `Bottom`, `Outer`, `Shoes` | `TOP`, `BOTTOM`, `OUTER`, `SHOES` |
 | 보유 상태 | `isWishlist: boolean` | `ownershipStatus: OWNED/WISHLIST` |
-| 스타일 | `Casual`, `Amekaji`, `Dandy`, `Tech Casual` 등 | BE catalog의 `StyleCode` |
+| 스타일 | legacy label 또는 static/mock 문자열 | BE catalog의 `StyleCode` |
 | 옷 대상 성별 | 등록/수정 화면에서 `MALE`, `FEMALE`, `UNISEX` 직접 선택 UI | 화면 비노출, 내부 저장 요청/추천 분류 code |
 | 옷 계절 | 생성 후 수정 화면에서 변경 가능한 값처럼 취급 | `CLOTHES.season`, 등록 시 확정하고 생성 후 변경하지 않음 |
 | 응답 타입 | `{ data, message, status }` | `{ success, data, message }` |

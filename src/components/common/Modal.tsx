@@ -133,6 +133,7 @@ interface ModalHeaderProps {
   closeDisabled?: boolean
   className?: string
   trailing?: ReactNode
+  align?: 'start' | 'center'
 }
 
 export function ModalHeader({
@@ -144,10 +145,11 @@ export function ModalHeader({
   closeDisabled = false,
   className = '',
   trailing,
+  align = 'start',
 }: ModalHeaderProps) {
   return (
     <div
-      className={`flex items-start justify-between gap-3 px-5 sm:px-7 pt-5 sm:pt-6 pb-3 sm:pb-4 border-b border-slate-100 shrink-0 ${className}`}
+      className={`flex ${align === 'center' ? 'items-center' : 'items-start'} justify-between gap-3 px-5 sm:px-7 pt-5 sm:pt-6 pb-3 sm:pb-4 border-b border-slate-100 shrink-0 ${className}`}
     >
       <div className="min-w-0 text-left leading-tight">
         {eyebrow ? (

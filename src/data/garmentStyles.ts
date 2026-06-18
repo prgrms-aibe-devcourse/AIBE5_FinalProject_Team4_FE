@@ -14,6 +14,7 @@ export type GarmentStyleCode =
 export type GarmentStyle = {
   code: GarmentStyleCode
   label: string
+  description?: string
 }
 
 export const GARMENT_STYLES: GarmentStyle[] = [
