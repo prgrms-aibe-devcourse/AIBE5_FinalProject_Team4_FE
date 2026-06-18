@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AuthenticatedImage from "@/components/common/AuthenticatedImage";
 import {
   fetchClothesRecommendations,
@@ -68,9 +68,6 @@ type RecommendItem = {
   clothesId?: number | null;
   outfitId?: number | null;
   bookId?: number | null;
-  top?: any;
-  bottom?: any;
-  outer?: any;
   purchaseUrl?: string;
 };
 
@@ -166,16 +163,9 @@ export default function HomeTab({
   // we don't use toastMessage directly here
 
   // 추천 목록에서 중복된 clothesId를 제거하는 헬퍼
-  const uniqueItems = useCallback(<T extends { clothesId?: number | null; id: string; top?: any; bottom?: any; outer?: any; shoes?: any }>(items: T[]): T[] => {
+  const uniqueItems = useCallback(<T extends { clothesId?: number | null; id: string }>(items: T[]): T[] => {
     const seen = new Set();
     return items.filter(item => {
-      // OOTD 조합인 경우 구성 요소들의 ID 조합으로 중복 체크 가능
-      if (item.top || item.bottom || item.outer || item.shoes) {
-        const comboKey = [item.top?.clothesId, item.bottom?.clothesId, item.outer?.clothesId, item.shoes?.clothesId].filter(Boolean).sort().join(',');
-        if (seen.has(comboKey)) return false;
-        seen.add(comboKey);
-        return true;
-      }
       // clothesId가 있으면 그것을 키로 쓰고, 없으면 id를 키로 씀
       const key = item.clothesId != null ? String(item.clothesId) : item.id;
       if (seen.has(key)) return false;
@@ -184,41 +174,13 @@ export default function HomeTab({
     });
   }, []);
 
-  const ownedClothes = useMemo(() => clothes.filter((item) => !item.isWishlist), [clothes]);
-
   const selectedRecommendations = useMemo(() => {
     if (activeLabel === "match" || activeLabel === "similar" || activeLabel === "aimd") return [];
     const items = activeLabel === "ootd" ? ootdItems : styleItems;
-    const uniques = uniqueItems(items);
+    return uniqueItems(items);
+  }, [activeLabel, ootdItems, styleItems, uniqueItems]);
 
-    if (activeLabel !== 'ootd') return uniques;
-
-    // For OOTD: prefer outfits that use user's own clothes, then fill with others up to 6
-    const ownedSet = new Set<number>();
-    ownedClothes.forEach((c) => {
-      const num = parseBeClothesId(c.id);
-      if (num != null) ownedSet.add(num);
-    });
-
-    const owned = [] as typeof uniques;
-    const notOwned = [] as typeof uniques;
-    uniques.forEach((it) => {
-      // outfit을 구성하는 아이템 중 하나라도 보유 중이면 owned로 분류
-      const itemClothesIds = [
-        it.top?.clothesId,
-        it.bottom?.clothesId,
-        it.outer?.clothesId,
-        it.shoes?.clothesId,
-        it.clothesId,
-      ].filter((id): id is number => id != null);
-
-      const isOwned = itemClothesIds.some(id => ownedSet.has(id));
-      if (isOwned) owned.push(it);
-      else notOwned.push(it);
-    });
-
-    return [...owned, ...notOwned].slice(0, 6);
-  }, [activeLabel, ootdItems, styleItems, uniqueItems, ownedClothes]);
+  const ownedClothes = useMemo(() => clothes.filter((item) => !item.isWishlist), [clothes]);
   const matchEligibleOwnedClothes = useMemo(
       () => ownedClothes.filter((item) => parseBeClothesId(item.id) != null),
       [ownedClothes],
@@ -295,46 +257,26 @@ export default function HomeTab({
             }
 
             const res = await fetchOotdRecommendations(wardrobeId, currentTemp ?? 20);
-            let outfits = res?.combinations || res?.outfits || (Array.isArray(res) ? res : []);
-            console.log('[OOTD DEBUG] raw outfits count:', outfits.length, outfits);
+            const outfits = res?.combinations || res?.outfits || (Array.isArray(res) ? res : []);
             const weatherLabel = res?.weatherLabel || "";
-
-            // 랜덤성 추가 (조합 셔플링)
-            if (Array.isArray(outfits)) {
-              outfits = [...outfits].sort(() => Math.random() - 0.5);
-            }
 
             if (cancelled) return;
             setOotdError(null);
-
-            const generateOotdId = (item: any, idx: number) => {
-              if (item.outfitId) return `ootd-outfit-${item.outfitId}`;
-              // outfitId가 없는 경우 구성 요소들의 ID 조합으로 고유 ID 생성 (안정성)
-              const components = [item.top?.clothesId, item.bottom?.clothesId, item.outer?.clothesId, item.shoes?.clothesId].filter(Boolean).sort().join('-');
-              return components ? `ootd-comp-${components}` : `ootd-${idx}`;
-            };
-
-            const combos = outfits.map((item: any, idx: number) => {
-              const id = generateOotdId(item, idx);
-              return {
-                id,
-                top: item.top ?? null,
-                bottom: item.bottom ?? null,
-                outer: item.outer ?? null,
-                shoes: item.shoes ?? null,
-                totalScore: item.totalScore ?? null,
-                weatherLabel: weatherLabel || item.weatherLabel,
-                outfitId: item.outfitId ?? null,
-                bookId: currentBookId || null,
-              };
-            });
+            const combos = outfits.map((item: any) => ({
+              top: item.top ?? null,
+              bottom: item.bottom ?? null,
+              outer: item.outer ?? null,
+              totalScore: item.totalScore ?? null,
+              weatherLabel: weatherLabel || item.weatherLabel,
+              outfitId: item.outfitId ?? null,
+              bookId: currentBookId || null,
+            }));
 
             const mapped = outfits.map((item: any, idx: number) => {
-              const id = generateOotdId(item, idx);
               const mainItem = item.top || item.outer || item.bottom || item;
               const title = [item.top?.name, item.bottom?.name].filter(Boolean).join(' + ') || (item.name ?? item.title ?? `추천 코디 ${idx + 1}`);
               return {
-                id,
+                id: item.outfitId ? `ootd-outfit-${item.outfitId}` : `ootd-${idx}`,
                 title,
                 category: mainItem.category ? (mainItem.category === 'TOP' ? 'Top' : mainItem.category === 'BOTTOM' ? 'Bottom' : mainItem.category === 'OUTER' ? 'Outer' : 'Shoes') : 'Outer',
                 style: STYLE_LABELS[(item.styleCodes && item.styleCodes[0]) || item.style] ?? (item.style || '—'),
@@ -349,10 +291,6 @@ export default function HomeTab({
                 clothesId: mainItem.clothesId ?? null,
                 outfitId: item.outfitId ?? null,
                 bookId: currentBookId || null,
-                top: item.top,
-                bottom: item.bottom,
-                outer: item.outer,
-                shoes: item.shoes,
               } as RecommendItem;
             });
             setOotdCombinations(combos);
@@ -369,29 +307,11 @@ export default function HomeTab({
         if (activeLabel === 'style' && styleItems.length === 0) {
           setStyleLoading(true);
           try {
-            let currentTemp: number | undefined = undefined;
-            try {
-              const weather = await fetchWeather(region || '서울');
-              if (Array.isArray(weather) && weather.length > 0) {
-                const raw = weather[0].temp as string;
-                const parsed = parseFloat(raw.replace(/°\s*C/i, '').trim());
-                if (!isNaN(parsed)) currentTemp = parsed;
-              } else if (weather && typeof weather === 'object') {
-                currentTemp = (weather.currentTemp ?? weather.temp ?? weather.temperature) as number | undefined;
-              }
-            } catch (e) {
-              console.error('[DEBUG] weather fetch failed:', e);
-            }
-
-            const res = await fetchWardrobeRecommendations(wardrobeId, currentTemp ?? 20);
+            const res = await fetchWardrobeRecommendations(wardrobeId);
             if (cancelled) return;
             setStyleError(null);
             const items = Array.isArray(res) ? res : [];
-
-            // 다양성을 위해 결과 셔플링 (상위 10개는 유지하되 그 안에서 섞거나, 전체를 섞음)
-            const shuffled = [...items].sort(() => Math.random() - 0.5);
-
-            const mapped = shuffled.slice(0, DEFAULT_RECOMMENDATIONS_PER_CATEGORY).map((item: any, idx: number) => ({
+            const mapped = items.slice(0, DEFAULT_RECOMMENDATIONS_PER_CATEGORY).map((item: any, idx: number) => ({
               id: `style-${item.clothesId ?? idx}`,
               title: item.title,
               category: item.category ? (item.category === 'TOP' ? 'Top' : item.category === 'BOTTOM' ? 'Bottom' : item.category === 'OUTER' ? 'Outer' : 'Shoes') : 'Top',
@@ -703,7 +623,7 @@ export default function HomeTab({
                           key={item.id}
                           onClick={() => {
                             if (activeLabel === 'ootd') {
-                              const combo = ootdCombinations.find(c => c.id === item.id) ?? null;
+                              const combo = ootdCombinations[selectedRecommendations.indexOf(item)] ?? null;
                               setSelectedCombo(combo);
                               setSelectedItem(null);
                             } else {
@@ -716,7 +636,8 @@ export default function HomeTab({
                         {activeLabel === 'ootd' ? (
                             <div className="h-44 sm:h-52 lg:h-72 bg-slate-100 relative overflow-hidden">
                               {(() => {
-                                const combo = ootdCombinations.find(c => c.id === item.id);
+                                const idx = selectedRecommendations.indexOf(item);
+                                const combo = ootdCombinations[idx];
                                 if (combo && !combo.outer && combo.top && combo.bottom) {
                                   return (
                                       <div className="w-full h-full flex flex-col">

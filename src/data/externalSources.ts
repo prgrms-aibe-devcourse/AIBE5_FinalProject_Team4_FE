@@ -1,7 +1,7 @@
 /** BE `external_source` / docs/domain/catalog.md 기준 */
 export const EXTERNAL_SOURCES = [
   { code: 'MUSINSA', label: '무신사', logoDomain: 'www.musinsa.com' },
-  { code: 'NAVER_SHOPPING', label: '네이버쇼핑', logoDomain: 'shopping.naver.com' },
+  { code: 'NAVER_SHOPPING', label: '네이버쇼핑', logoDomain: 'naver.com' },
   { code: 'COUPANG', label: '쿠팡', logoDomain: 'www.coupang.com' },
   { code: 'ABLY', label: '에이블리', logoDomain: 'm.a-bly.com' },
   { code: 'ZIGZAG', label: '지그재그', logoDomain: 'zigzag.kr' },

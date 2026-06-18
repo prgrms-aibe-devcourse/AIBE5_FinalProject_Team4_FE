@@ -73,6 +73,12 @@ last_updated: 2026-06-14
 
 FE의 `similar` 탭은 유사상품 결과를 최대 50개까지 표시하는 것을 기준으로 합니다. 기준 옷 후보는 `GET /api/v1/users/{userId}/clothes` 응답에서 `OWNED`와 `WISHLIST`를 모두 포함하되, 사용자가 선택 모달에서 상태별로 나눠 볼 수 있어야 합니다.
 
+유사 상품 저장은 `candidateSource` 기준으로 분기합니다.
+
+- `candidateSource="INTERNAL"`이고 `clothesId`가 있으면 신규 생성하지 않고 `POST /api/users/{userId}/wishlist-clothes/{clothesId}`로 기존 `EXTERNAL_SHOPPING` 공용 옷을 사용자 미보유 옷에 연결합니다.
+- `candidateSource="NAVER"`인 후보는 저장 전 상품 정보 확인 모달에서 필수 분류값을 확보한 뒤 `POST /api/users/{userId}/wishlist-clothes`로 신규 미보유 옷을 생성합니다.
+- 추천 피드백은 `candidateSource="INTERNAL"`처럼 `clothesId`가 있는 후보에만 보냅니다.
+
 ## 어울리는 옷 추천 (`match`, `RECO-005`)
 
 현재 FE는 `HomeTab` `match` 라벨에서 아래 흐름을 사용합니다.
@@ -105,7 +111,7 @@ FE는 카테고리당 최대 50건을 요청합니다. BE API 계약도 `limitPe
 **샀어요** BE 호출 순서:
 
 1. 위시리스트에 없으면 `POST /api/users/{userId}/wishlist-clothes` (추천 item body, `REC-{clothesId}` productCode)
-2. `PATCH /api/clothes/{clothesId}/convert-to-owned` 로 `WISHLIST` → `OWNED` 전환
+2. `PATCH /api/v1/clothes/{clothesId}/convert-to-owned` 로 `WISHLIST` → `OWNED` 전환
 
 이미 보유 옷장에 있으면 API 호출 없이 안내 토스트만 표시합니다. 성공 시 옷장 목록 refresh 콜백(`onRefreshWardrobe`)을 호출합니다.
 
@@ -123,6 +129,7 @@ FE는 카테고리당 최대 50건을 요청합니다. BE API 계약도 `limitPe
 
 - 저장 대상은 `WISHLIST` 상태로 사용자 옷장에 연결됩니다.
 - 추천 응답의 `brandName`, `season`, `externalProductUrl`은 미보유 저장 payload 구성에 사용할 수 있습니다.
+- 유사 상품 및 AI MD 상품 추천은 `candidateSource` 기준으로 저장 방식을 나눕니다. `INTERNAL` 후보는 `POST /api/users/{userId}/wishlist-clothes/{clothesId}` 연결 API를 사용하고, `NAVER` 후보만 `POST /api/users/{userId}/wishlist-clothes` 신규 생성 플로우를 사용합니다.
 - 저장 완료 후 사용자는 옷장 미보유 탭에서 확인할 수 있어야 합니다.
 - 이미 저장된 상품이면 중복 저장을 막거나 저장됨 상태를 표시합니다.
 
