@@ -119,8 +119,30 @@ export default function OutfitDetailModal({
       showToast('error', '코디북 정보를 불러오지 못했습니다.')
       return
     }
+
     setFavLoading(true)
     try {
+      // 중복 체크
+      const existingOutfits = await fetchOutfits(editCombo.bookId)
+      const currentItemIds = [
+        editCombo.top?.clothesId,
+        editCombo.bottom?.clothesId,
+        editCombo.outer?.clothesId,
+        editCombo.shoes?.clothesId
+      ].filter(Boolean).sort()
+
+      const isDuplicate = existingOutfits.some(outfit => {
+        const outfitItemIds = outfit.items.map(it => it.clothes.clothesId).filter(Boolean).sort()
+        if (currentItemIds.length !== outfitItemIds.length) return false
+        return currentItemIds.every((id, idx) => id === outfitItemIds[idx])
+      })
+
+      if (isDuplicate) {
+        showToast('info', '이미 코디북에 동일한 코디가 있습니다.')
+        setFavLoading(false)
+        return
+      }
+
       const payload = {
         title: editCombo.title || [editCombo.top?.name, editCombo.bottom?.name].filter(Boolean).join(' + ') || '추천 코디',
         description: editCombo.description || editCombo.weatherLabel || '추천 코디',
@@ -188,6 +210,29 @@ export default function OutfitDetailModal({
     }
     setSaving(true)
     try {
+      if (!editCombo.outfitId) {
+        // 새로 저장하는 경우 중복 체크
+        const existingOutfits = await fetchOutfits(editCombo.bookId)
+        const currentItemIds = [
+          editCombo.top?.clothesId,
+          editCombo.bottom?.clothesId,
+          editCombo.outer?.clothesId,
+          editCombo.shoes?.clothesId
+        ].filter(Boolean).sort()
+
+        const isDuplicate = existingOutfits.some(outfit => {
+          const outfitItemIds = outfit.items.map(it => it.clothes.clothesId).filter(Boolean).sort()
+          if (currentItemIds.length !== outfitItemIds.length) return false
+          return currentItemIds.every((id, idx) => id === outfitItemIds[idx])
+        })
+
+        if (isDuplicate) {
+          showToast('info', '이미 코디북에 동일한 코디가 있습니다.')
+          setSaving(false)
+          return
+        }
+      }
+
       const payload = {
         title: editCombo.title || [editCombo.top?.name, editCombo.bottom?.name].filter(Boolean).join(' + ') || '추천 코디',
         description: editCombo.description || editCombo.weatherLabel || '추천 코디',
