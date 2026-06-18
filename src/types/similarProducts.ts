@@ -8,7 +8,7 @@ export interface NaverShoppingProduct {
   title: string
   link: string
   image: string
-  lowestPrice: number
+  lowestPrice: number | null
   highestPrice: number | null
   mallName: string
   productId: string
@@ -19,6 +19,10 @@ export interface NaverShoppingProduct {
   category2: string
   category3: string
   category4: string
+  clothesId: number | null
+  candidateSource: 'NAVER' | 'INTERNAL'
+  primaryColor: string | null
+  primaryStyle: string | null
 }
 
 export interface SimilarProductRecommendation {

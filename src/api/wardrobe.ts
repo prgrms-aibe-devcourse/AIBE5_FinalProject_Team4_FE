@@ -183,7 +183,7 @@ export async function convertWishlistToOwned(
 ): Promise<Garment> {
   const updated = await unwrap(
     api.patch<BeApiResponse<ClothesResponse>>(
-      `/api/clothes/${clothesId}/convert-to-owned`,
+      `/api/v1/clothes/${clothesId}/convert-to-owned`,
       payload,
     ),
   )
@@ -199,6 +199,18 @@ export async function createWishlistClothes(
     api.post<BeApiResponse<ClothesResponse>>(
       wishlistClothesPath(userId),
       payload,
+    ),
+  )
+  return mapClothesToGarment(data)
+}
+
+export async function connectWishlistClothes(
+  userId: number,
+  clothesId: number,
+): Promise<Garment> {
+  const data = await unwrap(
+    api.post<BeApiResponse<ClothesResponse>>(
+      `${wishlistClothesPath(userId)}/${clothesId}`,
     ),
   )
   return mapClothesToGarment(data)
