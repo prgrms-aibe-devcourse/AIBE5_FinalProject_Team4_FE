@@ -76,12 +76,20 @@ export default function RecommendProductDetailModal({
 
     const categoryLabel = item.categoryLabel
         ?? ({ Top: '상의', Bottom: '하의', Outer: '아우터', Shoes: '신발' } as const)[item.category]
-    const styles = item.styles.length > 0 ? item.styles : item.style !== '-' ? [item.style] : []
+    const styles = item.styles.length > 0
+        ? item.styles
+        : item.style !== '-' && item.style !== '—'
+            ? [item.style]
+            : []
     const allColors: RecommendColorChip[] = [
-        { label: item.color, hex: item.colorHex },
+        ...(item.color !== '-' && item.color !== '—'
+            ? [{ label: item.color, hex: item.colorHex }]
+            : []),
         ...item.secondaryColors,
     ]
-    const canToggleWishlist = !item.isAnchor && item.clothesId != null && onWishlistToggle
+    const hasStyles = styles.length > 0
+    const hasColors = allColors.length > 0
+    const canToggleWishlist = !item.isAnchor && Boolean(onWishlistToggle)
 
     const handleFeedback = async (type: RecommendationFeedbackType) => {
         const uid = userId
@@ -183,8 +191,8 @@ export default function RecommendProductDetailModal({
                             {item.itemTypeLabel ? <p className="text-xs font-bold text-slate-500">{item.itemTypeLabel}</p> : null}
                         </div>
                     </DetailRow>
-                    <DetailRow label="스타일">
-                        {styles.length > 0 ? (
+                    {hasStyles && (
+                        <DetailRow label="스타일">
                             <div className="flex flex-wrap gap-1.5">
                                 {styles.map((style) => (
                                     <span key={style} className="inline-flex rounded-full bg-[#F3E8FF] text-[#1E3A8A] px-2.5 py-1 text-xs font-black">
@@ -192,17 +200,17 @@ export default function RecommendProductDetailModal({
                   </span>
                                 ))}
                             </div>
-                        ) : (
-                            <p className="text-sm font-bold text-slate-400">-</p>
-                        )}
-                    </DetailRow>
-                    <DetailRow label="컬러">
-                        <div className="flex flex-wrap gap-1.5">
-                            {allColors.map((color, index) => (
-                                <ColorSwatch key={`${color.label}-${index}`} color={color} />
-                            ))}
-                        </div>
-                    </DetailRow>
+                        </DetailRow>
+                    )}
+                    {hasColors && (
+                        <DetailRow label="컬러">
+                            <div className="flex flex-wrap gap-1.5">
+                                {allColors.map((color, index) => (
+                                    <ColorSwatch key={`${color.label}-${index}`} color={color} />
+                                ))}
+                            </div>
+                        </DetailRow>
+                    )}
                 </div>
             </ModalBody>
 
