@@ -1082,6 +1082,7 @@ export default function App() {
                   resetSignal={homeResetSignal}
                   onRefreshWardrobe={() => void refreshWardrobe()}
                   onGoToCloset={() => setCurrentTab("closet")}
+                  onLoginRequired={() => setIsLoginModalOpen(true)}
                   authReady={authReady}
                   region={regionLabel}
                 />
