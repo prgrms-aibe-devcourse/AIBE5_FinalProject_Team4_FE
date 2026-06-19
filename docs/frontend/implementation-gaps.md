@@ -51,7 +51,7 @@ last_updated: 2026-06-17
 | `WARDROBE-011`~`WARDROBE-030`, 옷 수정 | 옷 등록/수정 modal | `PhotoGarmentRegisterModal.tsx`, `PurchaseGarmentRegisterModal.tsx`, `GarmentEditModal.tsx` | [garment-registration.md](../features/garment-registration.md), [domain-types.md](domain-types.md) | 등록/수정 API 연동 자체가 아니라, 옷 대상 성별 UI 노출과 `season` 수정 payload/검증 주석 확인 필요 |
 | `RECO-001` | `home` tab `ootd` 라벨 | `HomeTab.tsx` | [home-recommendation.md](../features/home-recommendation.md) | BE `GET /api/v1/ootd/{wardrobeId}` 연동 |
 | `RECO-002` | `home` tab `style` 라벨 | `HomeTab.tsx` | [home-recommendation.md](../features/home-recommendation.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | BE `GET /api/v1/recommendations/{wardrobeId}` 연동 |
-| `RECO-005` | `home` tab `match` 라벨 | `HomeTab.tsx`, `MatchRecommendationByCategory.tsx`, `src/api/recommendations.ts` | [home-recommendation.md](../features/home-recommendation.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | BE recommendations API 연동. 추천 피드백 API와 별개로 동작 |
+| `RECO-005` | `home` tab `match` 라벨 | `HomeTab.tsx`, `MatchRecommendationByCategory.tsx`, `src/api/recommendations.ts` | [home-recommendation.md](../features/home-recommendation.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | BE recommendations API 연동. 기본 `limitPerCategory=50` (BE 허용 `1`~`50`). 추천 피드백 API와 별개로 동작 |
 | `RECO-013`~`RECO-014` | 추천 카드 액션 | `HomeTab.tsx`, `MatchRecommendationByCategory.tsx`, `RecommendProductDetailModal.tsx`, `OutfitDetailModal.tsx` | [home-recommendation.md](../features/home-recommendation.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | 싫어요/추천 제외와 일부 저장 액션은 피드백 API에 연결. 외부 상품 저장/AI MD 등 세부 액션의 피드백 기록 범위 확인 필요 |
 | `FEED-001` | `lookfeed-profile` view | `App.tsx` 내부 lookfeed profile section | [feature-index.md](../requirements/feature-index.md), [routing.md](routing.md) | 2열 피드 목록 UI 틀만 있음. 게시/저장 피드 API 미연동 |
 | `FEED-008` | `feed` tab 상세 모달 팔로우 버튼 | `FeedPostDetailModal.tsx`, `src/types/feed.ts` | [frontend-api-usage.md](../api/frontend-api-usage.md), [domain-types.md](domain-types.md) | `FeedAuthor.followedByMe`가 BE 응답에 없으면 팔로우 버튼 미표시. BE PR #128 `FeedAuthorResponse`에 필드 추가 후 FE 타입 필수로 전환 필요 |
@@ -73,7 +73,7 @@ last_updated: 2026-06-17
 
 1. 네이버쇼핑 구매 링크 새 탭 오픈
 2. 확인 모달(「옷이 마음에 드셨나요?」)에서 **샀어요** / **안 샀어요**
-3. **샀어요**: 필요 시 `POST /api/users/{userId}/wishlist-clothes` → `PATCH /api/v1/clothes/{id}/convert-to-owned`
+3. **샀어요**: 필요 시 `POST /api/users/{userId}/wishlist-clothes/{clothesId}` → `PATCH /api/v1/clothes/{id}/convert-to-owned`
 4. **안 샀어요**: 모달만 닫음
 
 기준 문서: [home-recommendation.md](../features/home-recommendation.md) 「추천 상세 — 구매 후 보유 옷장 등록」. 보유 전환 경로는 공식 `/api/v1` 경로를 사용하며, 남은 gap은 이 흐름을 `RECO-013` 피드백 API로도 기록해야 하는지 여부입니다.

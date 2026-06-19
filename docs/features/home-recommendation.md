@@ -85,19 +85,18 @@ FE의 `similar` 탭은 유사상품 결과를 최대 50개까지 표시하는 �
 
 - 기준 옷: 사용자 보유 옷(`OWNED`) 중 카테고리·성별 필터를 통과한 항목
 - API: `GET /api/v1/users/{userId}/clothes/{clothesId}/recommendations?limitPerCategory={n}`
-- FE 기본 요청: `limitPerCategory=50` (`src/api/recommendations.ts`)
+- FE 기본 요청: `limitPerCategory=50` (`src/api/recommendations.ts`, BE 허용 범위 `1`~`50`, BE 기본값 `5`)
 - UI: 카테고리(상의/하의/아우터/신발)별 섹션, 접기/더보기 그리드
-- 카드 액션: 상세 모달, 위시리스트 토글(`POST /api/users/{userId}/wishlist-clothes`)
+- 카드 액션: 상세 모달, 위시리스트 토글(`POST /api/users/{userId}/wishlist-clothes/{clothesId}`)
 
 ### 어울리는 옷 추천 요청 수 (`limitPerCategory`)
 
 FE는 카테고리당 최대 50건을 요청합니다. BE API 계약도 `limitPerCategory` 허용 범위를 `1`~`50`으로 봅니다.
 
-| 항목 | 기준 |
-| --- | --- |
-| 기본 요청값 | `50` |
-| 허용 범위 | `1`~`50` |
-| 화면 표시 | 카테고리별 접기/더보기 그리드로 추가 후보 확인 |
+| 항목 | BE | FE |
+| --- | --- | --- |
+| query `limitPerCategory` | 기본 `5`, 허용 `1`~`50` | 기본 요청 `50` (명시 전달) |
+| 화면 표시 | — | 카테고리별 접기/더보기 그리드로 추가 후보 확인 |
 
 ## 추천 상세 — 구매 후 보유 옷장 등록 (`match`)
 
@@ -110,7 +109,7 @@ FE는 카테고리당 최대 50건을 요청합니다. BE API 계약도 `limitPe
 
 **샀어요** BE 호출 순서:
 
-1. 위시리스트에 없으면 `POST /api/users/{userId}/wishlist-clothes` (추천 item body, `REC-{clothesId}` productCode)
+1. 위시리스트에 없으면 `POST /api/users/{userId}/wishlist-clothes/{clothesId}` 로 기존 `EXTERNAL_SHOPPING` 마스터 연결
 2. `PATCH /api/v1/clothes/{clothesId}/convert-to-owned` 로 `WISHLIST` → `OWNED` 전환
 
 이미 보유 옷장에 있으면 API 호출 없이 안내 토스트만 표시합니다. 성공 시 옷장 목록 refresh 콜백(`onRefreshWardrobe`)을 호출합니다.
