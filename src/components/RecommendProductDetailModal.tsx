@@ -143,7 +143,6 @@ export default function RecommendProductDetailModal({
             panelClassName="max-h-[92vh]"
         >
             <ModalHeader
-                eyebrow={<span className="text-[11px] font-black text-slate-900">{item.brandLabel}</span>}
                 title="상품 상세"
                 titleId="recommend-product-detail-title"
                 className="[&_h3]:text-lg [&_h3]:font-black"
@@ -185,6 +184,11 @@ export default function RecommendProductDetailModal({
                     <div className="mb-3">
                         <h4 className="text-lg font-black text-slate-900 leading-tight">{item.title}</h4>
                     </div>
+                    {item.brandLabel && (
+                        <DetailRow label="브랜드">
+                            <BrandDisplay label={item.brandLabel} logoUrl={item.brandLogoUrl ?? null} />
+                        </DetailRow>
+                    )}
                     <DetailRow label="카테고리">
                         <div className="space-y-1">
                             <p className="text-sm font-black text-slate-900">{categoryLabel}</p>

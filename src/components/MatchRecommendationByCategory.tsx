@@ -270,7 +270,6 @@ export default function MatchRecommendationByCategory({
   }, [groups]);
 
   const {
-    toastMessage,
     isWishlisted,
     isSubmitting,
     isFeedbackSubmitting,
@@ -334,17 +333,6 @@ export default function MatchRecommendationByCategory({
 
   return (
     <>
-      {toastMessage ? (
-        <div
-          role="status"
-          aria-live="polite"
-          className="fixed bottom-24 left-1/2 z-[110] -translate-x-1/2 bg-[#1E3A8A] text-[#BBF7D0] px-5 py-3 rounded-2xl shadow-xl text-xs font-black border border-emerald-400 flex items-center gap-2 animate-bounce pointer-events-none"
-        >
-          <Sparkle className="w-4 h-4 text-emerald-300 animate-spin shrink-0" />
-          <span>{toastMessage}</span>
-        </div>
-      ) : null}
-
       <div className="space-y-4">
         {groups.map((group) => (
           <CategoryRecommendationSection
