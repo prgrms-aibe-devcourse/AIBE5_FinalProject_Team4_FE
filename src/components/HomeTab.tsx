@@ -1,4 +1,5 @@
 ﻿import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { fetchAuthenticatedImageObjectUrl } from '@/utils/authenticatedImageUrl';
 import AuthenticatedImage from "@/components/common/AuthenticatedImage";
 import {
   fetchClothesRecommendations,
@@ -46,14 +47,23 @@ function OotdCanvas({ top, bottom, outer, shoes }: {
     ctx.fillStyle = '#F8F8F8';
     ctx.fillRect(0, 0, W, H);
 
-    const loadImage = (src: string): Promise<HTMLImageElement> =>
-      new Promise((resolve, reject) => {
+    const loadImage = async (src: string): Promise<HTMLImageElement> => {
+      // 인증 필요한 URL이면 blob URL로 변환
+      let url = src;
+      try {
+        const authUrl = await fetchAuthenticatedImageObjectUrl(src);
+        if (authUrl) url = authUrl;
+      } catch {
+        url = src; // 실패하면 원본 URL 그대로 사용
+      }
+      return new Promise((resolve, reject) => {
         const img = new Image();
         img.crossOrigin = 'anonymous';
         img.onload = () => resolve(img);
         img.onerror = reject;
-        img.src = src;
+        img.src = url;
       });
+    };
 
     const cropTransparent = (img: HTMLImageElement) => {
       const offscreen = document.createElement('canvas');
@@ -135,6 +145,16 @@ function OotdCanvas({ top, bottom, outer, shoes }: {
         console.error('Canvas 합성 실패:', e);
       }
     })();
+
+    // useEffect 반환값에 cleanup 추가
+    return () => {
+      // blob URL 해제는 개별 loadImage 내에서 처리 어려우므로
+      // canvas만 초기화
+      if (canvasRef.current) {
+        const ctx = canvasRef.current.getContext('2d');
+        ctx?.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+      }
+    };
   }, [top, bottom, outer, shoes]);
 
   return <canvas ref={canvasRef} className="w-full h-full" style={{ display: 'block' }} />;
@@ -162,7 +182,7 @@ interface HomeTabProps {
   onLoginRequired?: () => void;
 }
 
-type RecommendationLabel = "ootd" | "style" | "similar" | "match" | "aimd";
+type RecommendationLabel = "style" | "similar" | "match" | "aimd";
 
 type RecommendItem = {
   id: string;
@@ -188,7 +208,6 @@ type RecommendItem = {
 };
 
 const labelConfig: Record<RecommendationLabel, { title: string; subtitle: string; icon: string }> = {
-  ootd: { title: "OOTD 추천", subtitle: "오늘 입기 좋은 코디", icon: "✨" },
   style: { title: "스타일 기반 추천", subtitle: "사용자 취향 기반", icon: "\ud83c\udfaf" },
   similar: { title: "유사 상품 추천", subtitle: "보유/미보유 옷과 유사", icon: "\ud83d\udecd️" },
   match: { title: "어울리는 옷 추천", subtitle: "", icon: "\ud83d\udc55" },
@@ -226,7 +245,7 @@ export default function HomeTab({
                                   region = '서울',
                                   onLoginRequired,
                                 }: HomeTabProps) {
-  const [activeLabel, setActiveLabel] = useState<RecommendationLabel>("ootd");
+  const [activeLabel, setActiveLabel] = useState<RecommendationLabel>("style");
   const [showStickyLabels, setShowStickyLabels] = useState(false);
   const [anchorClothesId, setAnchorClothesId] = useState<string | null>(null);
   const [matchPickerOpen, setMatchPickerOpen] = useState(false);
@@ -265,9 +284,6 @@ export default function HomeTab({
       if (activeLabel === 'style') {
         setStyleItems([]);
         setStyleLoading(true); // 로딩 상태 강제 설정
-      } else if (activeLabel === 'ootd') {
-        setOotdItems([]);
-        setOotdLoading(true); // 로딩 상태 강제 설정
       } else if (activeLabel === 'match') {
         // match의 경우 anchorClothesId가 바뀔 때 useEffect에서 처리되지만,
         // refreshSignal을 통해 강제로 새로고침되도록 유도합니다.
@@ -300,7 +316,7 @@ export default function HomeTab({
 
   const selectedRecommendations = useMemo(() => {
     if (activeLabel === "match" || activeLabel === "similar" || activeLabel === "aimd") return [];
-    const items = activeLabel === "ootd" ? ootdItems : styleItems;
+    const items = styleItems;
     const uniques = uniqueItems(items);
 
     const ownedSet = new Set(clothes.map(c => parseBeClothesId(c.id)).filter((id): id is number => id != null));
@@ -321,9 +337,9 @@ export default function HomeTab({
       else notOwned.push(it);
     });
 
-    const limit = activeLabel === "style" ? 20 : 6;
+    const limit = 20;
     return [...owned, ...notOwned].slice(0, limit);
-  }, [activeLabel, ootdItems, styleItems, uniqueItems, clothes]);
+  }, [activeLabel, styleItems, uniqueItems, clothes]);
 
   const ownedClothes = useMemo(() => clothes.filter((item) => !item.isWishlist), [clothes]);
   const matchEligibleOwnedClothes = useMemo(
@@ -384,7 +400,7 @@ export default function HomeTab({
           }
         }
 
-        if (activeLabel === 'ootd' && ootdItems.length === 0) {
+        if (ootdItems.length === 0) {
           setOotdLoading(true);
           try {
             let currentTemp: number | undefined = undefined;
@@ -558,7 +574,7 @@ export default function HomeTab({
   }, []);
 
   useEffect(() => {
-    setActiveLabel("ootd");
+    setActiveLabel("style");
     setShowStickyLabels(false);
     setOotdItems([]);
     setStyleItems([]);
@@ -603,6 +619,70 @@ export default function HomeTab({
 
   return (
       <div className="space-y-6 animate-fade-in font-sans">
+        <section className="bg-white border border-slate-100 rounded-[28px] p-4 md:p-5 shadow-sm text-left">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-xl">✨</span>
+            <h2 className="text-xl md:text-2xl font-black text-slate-950">오늘의 OOTD 추천</h2>
+          </div>
+          {ootdLoading && ootdItems.length === 0 ? (
+            <div className="grid grid-cols-1 gap-6">
+              <div className="h-96 sm:h-[28rem] lg:h-[32rem] rounded-[24px] bg-slate-100 animate-pulse" />
+            </div>
+          ) : ootdError ? (
+            <div className="rounded-2xl border border-red-100 bg-red-50 px-5 py-8 text-center">
+              <p className="text-sm font-black text-red-700">{ootdError}</p>
+              <button
+                type="button"
+                onClick={() => setRefreshSignal(p => p + 1)}
+                className="mt-3 h-8 px-4 rounded-full bg-[#111827] text-white text-[10px] font-black"
+              >
+                다시 시도
+              </button>
+            </div>
+          ) : ootdItems.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-5 py-8 text-center">
+              <p className="text-sm font-black text-slate-600">추천된 OOTD가 없습니다.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-6">
+              {ootdItems.slice(0, 3).map((item) => (
+                <article
+                  key={item.id}
+                  onClick={() => {
+                    const combo = ootdCombinations.find(c => c.id === item.id) ?? null;
+                    setSelectedCombo(combo);
+                    setSelectedItem(null);
+                  }}
+                  className="group rounded-[24px] border border-slate-100 bg-slate-50 overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:rotate-[0.5deg] hover:shadow-xl active:scale-[0.99] cursor-pointer"
+                >
+                  <div className="h-96 sm:h-[28rem] lg:h-[32rem] bg-slate-100 relative overflow-hidden">
+                    {(() => {
+                      const combo = ootdCombinations.find(c => c.id === item.id);
+                      if (combo) {
+                        return (
+                          <OotdCanvas
+                            top={combo.top?.imageUrl || combo.top?.userImageUrl}
+                            bottom={combo.bottom?.imageUrl || combo.bottom?.userImageUrl}
+                            outer={combo.outer?.imageUrl || combo.outer?.userImageUrl}
+                            shoes={combo.shoes?.imageUrl || combo.shoes?.userImageUrl}
+                          />
+                        );
+                      }
+                      return (
+                        <AuthenticatedImage src={item.imageUrl} alt={item.title} className="w-full h-full object-cover object-top transition-transform duration-300 group-hover:scale-105" fallback={<div className="w-full h-full flex items-center justify-center bg-slate-200 text-slate-400 text-xs font-bold">이미지 없음</div>} />
+                      );
+                    })()}
+                    <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/80 via-black/45 to-transparent text-white">
+                      <p className="text-[10px] font-bold text-white/70 mb-1">{item.reason}</p>
+                      <h3 className="text-base font-black truncate">{item.title}</h3>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+
         {showStickyLabels && (
             <div className="fixed top-[72px] left-0 right-0 z-20 bg-white/95 backdrop-blur-md border-b border-slate-100 px-4 py-2 shadow-sm">
               <div className="flex gap-1.5 overflow-x-auto scrollbar-none">
@@ -623,7 +703,7 @@ export default function HomeTab({
         )}
 
         <section ref={labelSectionRef} className="bg-white border border-slate-100 rounded-[28px] p-3 shadow-sm">
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
             {labelKeys.map((label) => {
               const config = labelConfig[label];
               const isActive = activeLabel === label;
@@ -648,9 +728,8 @@ export default function HomeTab({
             <h2 className="text-xl md:text-2xl font-black text-slate-950 mt-1">{activeConfig.title}</h2>
             {activeConfig.subtitle ? <p className="text-xs text-slate-400 font-bold mt-1">{activeConfig.subtitle}</p> : null}
           </div>
-          {activeLabel === 'ootd' && ootdError && <p className="text-[10px] text-rose-500 font-bold max-w-[150px] text-right leading-tight">{ootdError}</p>}
-          {activeLabel === 'style' && styleError && <p className="text-[10px] text-rose-500 font-bold max-w-[150px] text-right leading-tight">{styleError}</p>}
-          {activeLabel !== "match" && !ootdError && !styleError && (
+          {styleError && <p className="text-[10px] text-rose-500 font-bold max-w-[150px] text-right leading-tight">{styleError}</p>}
+          {activeLabel !== "match" && !styleError && (
               <span className="text-xs font-black text-slate-400 shrink-0">{`${selectedRecommendations.length}개`}</span>
           )}
         </div>
@@ -665,10 +744,10 @@ export default function HomeTab({
             </div>
         )}
 
-        {hasRecommendationData && activeLabel !== "match" && (activeLabel === 'ootd' ? ootdLoading : styleLoading) && (
-            <div className={`grid gap-4 ${activeLabel === "ootd" ? "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3" : "grid-cols-2 lg:grid-cols-3"} mb-6`}>
-              {Array.from({ length: activeLabel === 'style' ? 20 : 6 }).map((_, idx) => (
-                  <div key={idx} className={`${activeLabel === 'ootd' ? "h-96 sm:h-[28rem] lg:h-[32rem]" : "h-44 sm:h-52 lg:h-72"} rounded-[24px] bg-slate-100 animate-pulse`} />
+        {hasRecommendationData && activeLabel !== "match" && styleLoading && (
+            <div className="grid gap-4 grid-cols-2 lg:grid-cols-3 mb-6">
+              {Array.from({ length: 20 }).map((_, idx) => (
+                  <div key={idx} className="h-44 sm:h-52 lg:h-72 rounded-[24px] bg-slate-100 animate-pulse" />
               ))}
             </div>
         )}
@@ -771,19 +850,18 @@ export default function HomeTab({
                 onWishlistAdded={onRefreshWardrobe}
             />
         ) : (
-            <div className={`grid gap-4 ${activeLabel === "ootd" ? "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3" : "grid-cols-2 lg:grid-cols-3"}`}>
-              {(activeLabel === 'ootd' && ootdLoading) || (activeLabel === 'style' && styleLoading) ? (
-                  Array.from({ length: activeLabel === 'style' ? 20 : 6 }).map((_, idx) => (
-                      <div key={idx} className={`${activeLabel === 'ootd' ? "h-96 sm:h-[28rem] lg:h-[32rem]" : "h-44 sm:h-52 lg:h-72"} rounded-[24px] bg-slate-100 animate-pulse`} />
+            <div className="grid gap-4 grid-cols-2 lg:grid-cols-3">
+              {styleLoading ? (
+                  Array.from({ length: 20 }).map((_, idx) => (
+                      <div key={idx} className="h-44 sm:h-52 lg:h-72 rounded-[24px] bg-slate-100 animate-pulse" />
                   ))
-              ) : (activeLabel === 'ootd' && ootdError) || (activeLabel === 'style' && styleError) ? (
+              ) : styleError ? (
                   <div className="col-span-full rounded-2xl border border-red-100 bg-red-50 px-5 py-10 text-center">
-                    <p className="text-sm font-black text-red-700">{(activeLabel === 'ootd' ? ootdError : styleError)}</p>
+                    <p className="text-sm font-black text-red-700">{styleError}</p>
                     <button
                         type="button"
                         onClick={() => {
-                          if (activeLabel === 'ootd') setOotdError(null);
-                          if (activeLabel === 'style') setStyleError(null);
+                          setStyleError(null);
                           setRefreshSignal(prev => prev + 1);
                           onRefreshWardrobe?.();
                         }}
@@ -793,7 +871,7 @@ export default function HomeTab({
                     </button>
                   </div>
               ) : selectedRecommendations.length === 0 ? (
-                  !(activeLabel === 'ootd' ? ootdLoading : styleLoading) && (
+                  !styleLoading && (
                       <div className="col-span-full rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-5 py-10 text-center">
                         <p className="text-sm font-black text-slate-700">추천 결과가 없습니다.</p>
                         <p className="text-xs text-slate-400 font-bold mt-2">옷장에 아이템을 더 등록하거나 나중에 다시 시도해 주세요.</p>
@@ -804,49 +882,19 @@ export default function HomeTab({
                       <article
                           key={item.id}
                           onClick={() => {
-                            if (activeLabel === 'ootd') {
-                              const combo = ootdCombinations.find(c => c.id === item.id) ?? null;
-                              setSelectedCombo(combo);
-                              setSelectedItem(null);
-                            } else {
-                              setSelectedItem(item);
-                              setSelectedCombo(null);
-                            }
+                            setSelectedItem(item);
+                            setSelectedCombo(null);
                           }}
                           className={`group rounded-[24px] border overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:rotate-[0.5deg] hover:shadow-xl active:scale-[0.99] cursor-pointer ${item.isAnchor ? "border-[#1E3A8A]/30 bg-indigo-50/40 ring-1 ring-[#1E3A8A]/20" : "border-slate-100 bg-slate-50"}`}
                       >
-                        {activeLabel === 'ootd' ? (
-                            <div className="h-96 sm:h-[28rem] lg:h-[32rem] bg-slate-100 relative overflow-hidden">
-                              {(() => {
-                                const combo = ootdCombinations.find(c => c.id === item.id);
-                                if (combo) {
-                                  return (
-                                    <OotdCanvas
-                                      top={combo.top?.imageUrl || combo.top?.userImageUrl}
-                                      bottom={combo.bottom?.imageUrl || combo.bottom?.userImageUrl}
-                                      outer={combo.outer?.imageUrl || combo.outer?.userImageUrl}
-                                      shoes={combo.shoes?.imageUrl || combo.shoes?.userImageUrl}
-                                    />
-                                  );
-                                }
-                                return (
-                                    <AuthenticatedImage src={item.imageUrl} alt={item.title} className="w-full h-full object-cover object-top transition-transform duration-300 group-hover:scale-105" fallback={<div className="w-full h-full flex items-center justify-center bg-slate-200 text-slate-400 text-xs font-bold">이미지 없음</div>} />
-                                );
-                              })()}
-                              <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/80 via-black/45 to-transparent text-white">
-                                <h3 className="text-sm font-black truncate">{item.title}</h3>
-                              </div>
+                        <div className="h-44 sm:h-52 lg:h-72 bg-slate-100 relative overflow-hidden">
+                          <AuthenticatedImage src={item.imageUrl} alt={item.title} className="w-full h-full object-cover object-top transition-transform duration-300 group-hover:scale-105" fallback={<div className="w-full h-full flex items-center justify-center bg-slate-200 text-slate-400 text-xs font-bold">이미지 없음</div>} />
+                          <div className="absolute left-0 bottom-0 p-3 bg-gradient-to-t from-black/80 via-black/40 to-transparent text-white flex flex-col items-start max-w-[66%]">
+                              {item.brand ? <div className="text-[11px] font-bold text-white/90 uppercase tracking-wide truncate">{item.brand}</div> : null}
+                              <h3 className="text-sm md:text-base font-black truncate mt-1 leading-tight">{item.title}</h3>
+                              {item.price ? <div className="mt-1"><strong className="text-sm font-extrabold">{item.price}</strong></div> : null}
                             </div>
-                        ) : (
-                            <div className="h-44 sm:h-52 lg:h-72 bg-slate-100 relative overflow-hidden">
-                              <AuthenticatedImage src={item.imageUrl} alt={item.title} className="w-full h-full object-cover object-top transition-transform duration-300 group-hover:scale-105" fallback={<div className="w-full h-full flex items-center justify-center bg-slate-200 text-slate-400 text-xs font-bold">이미지 없음</div>} />
-                              <div className="absolute left-0 bottom-0 p-3 bg-gradient-to-t from-black/80 via-black/40 to-transparent text-white flex flex-col items-start max-w-[66%]">
-                                  {item.brand ? <div className="text-[11px] font-bold text-white/90 uppercase tracking-wide truncate">{item.brand}</div> : null}
-                                  <h3 className="text-sm md:text-base font-black truncate mt-1 leading-tight">{item.title}</h3>
-                                  {item.price ? <div className="mt-1"><strong className="text-sm font-extrabold">{item.price}</strong></div> : null}
-                                </div>
-                            </div>
-                        )}
+                        </div>
                       </article>
                   ))
               )}
