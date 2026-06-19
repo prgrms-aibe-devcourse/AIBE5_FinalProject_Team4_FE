@@ -309,6 +309,7 @@ export default function OutfitDetailModal({
         )
       )
       showToast('success', '이 코디를 싫어요 처리했습니다.')
+      onSaved?.()
       onClose()
     } catch {
       showToast('error', '싫어요 처리에 실패했습니다.')

@@ -268,6 +268,17 @@ export default function HomeTab({
 
   const [refreshSignal, setRefreshSignal] = useState(0);
 
+  const handleRefreshAll = useCallback(() => {
+    onRefreshWardrobe?.();
+    setOotdItems([]);
+    setOotdLoading(true);
+    setStyleItems([]);
+    setStyleLoading(true);
+    setMatchRecommendationGroups([]);
+    setMatchLoading(true);
+    setRefreshSignal(prev => prev + 1);
+  }, [onRefreshWardrobe]);
+
   const {
     isWishlisted,
     isSubmitting: isWishlistSubmitting,
@@ -277,21 +288,7 @@ export default function HomeTab({
   } = useRecommendWishlistToggle({
     userId,
     existingGarments: clothes,
-    onWishlistChanged: () => {
-      onRefreshWardrobe?.();
-      // 위시리스트 상태가 변경되면 현재 보고 있는 추천 목록을 초기화합니다.
-      // useEffect의 의존성에 refreshSignal을 추가하여 즉시 다시 불러오게 합니다.
-      if (activeLabel === 'style') {
-        setStyleItems([]);
-        setStyleLoading(true); // 로딩 상태 강제 설정
-      } else if (activeLabel === 'match') {
-        // match의 경우 anchorClothesId가 바뀔 때 useEffect에서 처리되지만,
-        // refreshSignal을 통해 강제로 새로고침되도록 유도합니다.
-        setMatchRecommendationGroups([]);
-        setMatchLoading(true); // 로딩 상태 강제 설정
-      }
-      setRefreshSignal(prev => prev + 1);
-    },
+    onWishlistChanged: handleRefreshAll,
   });
   // we don't use toastMessage directly here
 
@@ -368,6 +365,7 @@ export default function HomeTab({
   const handleDislike = async () => {
     if (!selectedItem?.clothesId) return;
     await handleFeedback(toCardItem(selectedItem), 'DISLIKE');
+    handleRefreshAll();
   };
 
   useEffect(() => {
@@ -834,20 +832,21 @@ export default function HomeTab({
               <p className="text-xs text-slate-400 font-bold mt-2">다른 옷을 선택하거나 옷장에 아이템을 더 등록해 보세요.</p>
             </div>
         ) : activeLabel === "match" && matchEligibleOwnedClothes.length > 0 ? (
-            <MatchRecommendationByCategory groups={matchRecommendationGroups} userId={userId} existingGarments={clothes} onWishlistAdded={onRefreshWardrobe} />
+            <MatchRecommendationByCategory groups={matchRecommendationGroups} userId={userId} existingGarments={clothes} onWishlistAdded={handleRefreshAll} />
         ) : activeLabel === "similar" ? (
             <SimilarProductRecommendations
                 userId={userId}
                 existingGarments={clothes}
-                onWishlistAdded={onRefreshWardrobe}
+                onWishlistAdded={handleRefreshAll}
                 onGoToCloset={onGoToCloset}
+                onRefreshWardrobe={handleRefreshAll}
             />
         ) : activeLabel === "aimd" ? (
             <AiMdRecommendations
                 userId={userId}
                 gender={gender}
                 existingGarments={clothes}
-                onWishlistAdded={onRefreshWardrobe}
+                onWishlistAdded={handleRefreshAll}
             />
         ) : (
             <div className="grid gap-4 grid-cols-2 lg:grid-cols-3">
@@ -1008,7 +1007,7 @@ export default function HomeTab({
           open={selectedCombo != null}
           combination={selectedCombo}
           onClose={() => setSelectedCombo(null)}
-          onSaved={onRefreshWardrobe}
+          onSaved={handleRefreshAll}
           userId={userId}
       />
       </div>
