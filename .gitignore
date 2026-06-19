@@ -12,9 +12,10 @@ build/
 .env
 .env.local
 .env.*.local
+deploy/.env
 
 # .env.production은 실제 서버 주소가 들어가므로 제외
-# 공유가 필요하면 .env.example을 사용하세요
+# 공유가 필요하면 .env.production.example 또는 deploy/env.prod.example 사용
 .env.production
 
 # Logs

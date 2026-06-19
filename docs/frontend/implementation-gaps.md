@@ -1,7 +1,7 @@
 ---
 doc_type: fe_implementation_gaps
 source_of_truth: AIBE5_FinalProject_Team4_FE
-last_updated: 2026-06-17
+last_updated: 2026-06-19
 ---
 
 # FE 구현 정합성 현황
@@ -47,11 +47,12 @@ last_updated: 2026-06-17
 
 | F-ID | 화면/Route/Tab | 현재 주요 코드 | 기준 문서 | 현재 구현 상태 |
 | --- | --- | --- | --- | --- |
+| `ONBOARD-001`~`ONBOARD-010`, `STYLE-001` | 온보딩, 마이페이지 | `OnboardingPage.tsx`, `ProfileEditTab.tsx`, `App.tsx` | [feature-index.md](../requirements/feature-index.md), [catalog.md](../domain/catalog.md) | local state와 일부 하드코딩 스타일 값 사용. 공식 style code 및 사용자 스타일 API 연동 확인 필요 |
 | `WARDROBE-002` | `closet` tab 요약 | `ClosetTab.tsx` | [feature-index.md](../requirements/feature-index.md), [wardrobe.md](../features/wardrobe.md) | 옷장 전체 요약 기준과 현재 BE 통계 API 범위가 다르게 읽힐 수 있음 |
 | `WARDROBE-011`~`WARDROBE-030`, 옷 수정 | 옷 등록/수정 modal | `PhotoGarmentRegisterModal.tsx`, `PurchaseGarmentRegisterModal.tsx`, `GarmentEditModal.tsx` | [garment-registration.md](../features/garment-registration.md), [domain-types.md](domain-types.md) | 등록/수정 API 연동 자체가 아니라, 옷 대상 성별 UI 노출과 `season` 수정 payload/검증 주석 확인 필요 |
-| `RECO-001` | `home` tab `ootd` 라벨 | `HomeTab.tsx` | [home-recommendation.md](../features/home-recommendation.md) | BE `GET /api/v1/ootd/{wardrobeId}` 연동 |
+| `RECO-001` | `home` tab 상단 고정 OOTD 섹션 | `HomeTab.tsx` | [home-recommendation.md](../features/home-recommendation.md) | BE `GET /api/v1/ootd/{wardrobeId}` 연동. `RecommendationLabel`에서 `ootd` 라벨 제거 후 탭과 별개로 항상 로드 |
 | `RECO-002` | `home` tab `style` 라벨 | `HomeTab.tsx` | [home-recommendation.md](../features/home-recommendation.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | BE `GET /api/v1/recommendations/{wardrobeId}` 연동 |
-| `RECO-005` | `home` tab `match` 라벨 | `HomeTab.tsx`, `MatchRecommendationByCategory.tsx`, `src/api/recommendations.ts` | [home-recommendation.md](../features/home-recommendation.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | BE recommendations API 연동. 추천 피드백 API와 별개로 동작 |
+| `RECO-005` | `home` tab `match` 라벨 | `HomeTab.tsx`, `MatchRecommendationByCategory.tsx`, `src/api/recommendations.ts` | [home-recommendation.md](../features/home-recommendation.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | BE recommendations API 연동. 기본 `limitPerCategory=50` (BE 허용 `1`~`50`). 추천 피드백 API와 별개로 동작 |
 | `RECO-013`~`RECO-014` | 추천 카드 액션 | `HomeTab.tsx`, `MatchRecommendationByCategory.tsx`, `RecommendProductDetailModal.tsx`, `OutfitDetailModal.tsx` | [home-recommendation.md](../features/home-recommendation.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | 싫어요/추천 제외와 일부 저장 액션은 피드백 API에 연결. 외부 상품 저장/AI MD 등 세부 액션의 피드백 기록 범위 확인 필요 |
 | `FEED-001` | `lookfeed-profile` view | `App.tsx` 내부 lookfeed profile section | [feature-index.md](../requirements/feature-index.md), [routing.md](routing.md) | 2열 피드 목록 UI 틀만 있음. 게시/저장 피드 API 미연동 |
 | `FEED-008` | `feed` tab 상세 모달 팔로우 버튼 | `FeedPostDetailModal.tsx`, `src/types/feed.ts` | [frontend-api-usage.md](../api/frontend-api-usage.md), [domain-types.md](domain-types.md) | `FeedAuthor.followedByMe`가 BE 응답에 없으면 팔로우 버튼 미표시. BE PR #128 `FeedAuthorResponse`에 필드 추가 후 FE 타입 필수로 전환 필요 |
@@ -60,7 +61,7 @@ last_updated: 2026-06-17
 
 ### 홈 추천 연동 상태
 
-현재 `HomeTab.tsx`는 OOTD, 취향 기반, 유사 상품, 어울리는 옷, AI MD 모든 라벨이 공통 API client를 통해 BE API를 호출합니다.
+현재 `HomeTab.tsx`는 OOTD를 상단 고정 섹션으로 분리하고, 취향 기반(`style`), 유사 상품(`similar`), 어울리는 옷(`match`), AI MD(`aimd`) 4개 탭으로 구성됩니다. `RecommendationLabel` 타입에서 `ootd`가 제거되었으며, OOTD 섹션은 탭과 독립적으로 컴포넌트 마운트 시 항상 로드됩니다.
 
 남은 gap:
 
@@ -73,7 +74,7 @@ last_updated: 2026-06-17
 
 1. 네이버쇼핑 구매 링크 새 탭 오픈
 2. 확인 모달(「옷이 마음에 드셨나요?」)에서 **샀어요** / **안 샀어요**
-3. **샀어요**: 필요 시 `POST /api/users/{userId}/wishlist-clothes` → `PATCH /api/v1/clothes/{id}/convert-to-owned`
+3. **샀어요**: 필요 시 `POST /api/users/{userId}/wishlist-clothes/{clothesId}` → `PATCH /api/v1/clothes/{id}/convert-to-owned`
 4. **안 샀어요**: 모달만 닫음
 
 기준 문서: [home-recommendation.md](../features/home-recommendation.md) 「추천 상세 — 구매 후 보유 옷장 등록」. 보유 전환 경로는 공식 `/api/v1` 경로를 사용하며, 남은 gap은 이 흐름을 `RECO-013` 피드백 API로도 기록해야 하는지 여부입니다.
@@ -236,18 +237,16 @@ FE 배포 또는 CD workflow가 구현되면 [system-architecture.md](../archite
 
 | 우선순위 | 대상 | 이유 |
 | --- | --- | --- |
-| 1 | `AUTH-005` refresh/logout 연동 | 로그인 상태 유지와 세션 만료 처리에 직접 영향 |
-| 2 | 옷 대상 성별(`gender`) UI 비노출 전환 | 공통 문서 기준과 현재 등록/수정 UI가 다르게 동작 |
-| 3 | 옷 계절(`season`) 수정 payload/검증 주석 정리 | ERD v2.3 기준과 등록/수정 화면 payload 해석에 영향 |
-| 4 | AI MD 채팅 mock API 전환 | 사용자가 보는 AI MD 채팅의 실제 데이터 연동 여부에 영향 |
-| 5 | 추천 피드백 기록 범위 확정 | 저장/싫어요/추천 제외 정책과 사용자 스타일 점수에 영향 |
-| 6 | `ApiResponse<T>` 타입과 500/502 에러 분기 | 모든 API parsing과 공통 error handling에 영향 |
-| 7 | BE 신규 API 타입 정리 | 추천/OOTD/코디/인증 유지 API 연동 시 타입 안정성에 영향 |
-| 8 | `WARDROBE-002` 옷장 통계 범위 | 옷장 전체 요약과 보유 옷 통계 해석에 영향 |
-| 9 | 룩피드 프로필 피드 목록 API 연동 | 룩피드 프로필의 게시/저장 피드 표시와 실제 사용자 데이터 연결에 영향 |
-| 10 | 피드 팔로우 초기 상태 | 피드 상세의 팔로우 버튼 표시와 FE 타입 안정성에 영향 |
-| 11 | 프로필 이미지 저장소 URL 전환 확인 | BE가 S3 또는 CDN URL 반환으로 바뀔 때 FE 이미지 표시, CORS, cache 기준 확인 필요 |
-| 12 | 배포/인프라 목표 구조와 현재 FE/CI 상태 | AWS 배포 및 CD 구현 시 공통 시스템 문서와 실제 FE 레포 설정 정합성에 영향 |
+| 1 | 옷 대상 성별(`gender`) UI 비노출 전환 | 공통 문서 기준과 현재 등록/수정 UI가 다르게 동작 |
+| 2 | 옷 계절(`season`) 수정 payload/검증 주석 정리 | ERD v2.3 기준과 등록/수정 화면 payload 해석에 영향 |
+| 3 | AI MD 채팅 mock API 전환 | 사용자가 보는 AI MD 채팅의 실제 데이터 연동 여부에 영향 |
+| 4 | 추천 피드백 기록 범위 확정 | 저장/싫어요/추천 제외 정책과 사용자 스타일 점수에 영향 |
+| 5 | `ApiResponse<T>` 타입과 500/502 에러 분기 | 모든 API parsing과 공통 error handling에 영향 |
+| 6 | BE 신규 API 타입 정리 | 추천/OOTD/코디 API 연동 시 타입 안정성에 영향 |
+| 7 | `WARDROBE-002` 옷장 통계 범위 | 옷장 전체 요약과 보유 옷 통계 해석에 영향 |
+| 8 | 온보딩/스타일/피드 local·static 데이터 경계 | 실제 사용자 데이터와 mock/local 데이터 구분에 영향 |
+| 9 | 약관 원문 제공 경로 전환 | AWS 배포 이후 BE 제공 경로와 FE 표시용 사본 정리에 영향 |
+| 10 | 배포/인프라 목표 구조와 현재 FE/CI 상태 | AWS 배포 및 CD 구현 시 공통 시스템 문서와 실제 FE 레포 설정 정합성에 영향 |
 
 ## 문서 변경 기준
 

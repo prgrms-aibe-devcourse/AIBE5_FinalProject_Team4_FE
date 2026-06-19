@@ -33,11 +33,6 @@ import { useChat } from "@/hooks/useChat";
 import { useCloset } from "@/hooks/useCloset";
 import { useWardrobeLoader } from "@/hooks/useWardrobeLoader";
 import {
-  clearUserProfile,
-  loadUserProfile,
-  saveUserProfile,
-} from "@/utils/userProfileStorage";
-import {
   fetchMarketingConsent,
   updateMarketingConsent,
 } from "@/api/marketingConsent";
@@ -342,7 +337,10 @@ export default function App() {
   // 비로그인 상태면 모달을 열고 false를 반환, 로그인 상태면 true를 반환
   const requireLogin = (destination?: "closet" | "profile"): boolean => {
     if(!isLoggedIn){
-      if(destination) setPendingTab(destination);
+      if(destination) {
+        setPendingTab(destination);
+        sessionStorage.setItem("pendingTab", destination);
+      }
       setIsLoginModalOpen(true);
       return false;
     }
@@ -352,19 +350,13 @@ export default function App() {
   const [authReady, setAuthReady] = useState(false);
 
   // User Profile Setup State
-  const [profile, setProfile] = useState<UserProfile>(() => {
-    const stored = loadUserProfile();
-    return stored ?? EMPTY_PROFILE;
-  });
+  const [profile, setProfile] = useState<UserProfile>(EMPTY_PROFILE);
   const [catalogStyles, setCatalogStyles] = useState<CatalogStyle[]>([]);
   const [catalogStylesLoading, setCatalogStylesLoading] = useState(true);
   const [catalogStylesError, setCatalogStylesError] = useState(false);
 
   const persistProfile = (next: UserProfile) => {
     setProfile(next);
-    if (next.onboarded) {
-      saveUserProfile(next);
-    }
   };
 
   const { gamyagiChatOpen, setGamyagiChatOpen, chatMessages, pendingMsg, setPendingMsg, chatSending, handleSendChatToMD } = useChat();
@@ -448,9 +440,6 @@ export default function App() {
           ?? prev.socialAccounts
           ?? [],
       };
-      if (nextProfile.onboarded) {
-        saveUserProfile(nextProfile);
-      }
       return nextProfile;
     });
     setAuthUserId(userId);
@@ -477,6 +466,13 @@ export default function App() {
   // 앱 시작 시 쿠키인증 상태 확인
   useEffect(() => {
     checkAuthProfile()
+        .then(() => {
+          const pending = sessionStorage.getItem("pendingTab") as "closet" | "profile" | null;
+          if (pending) {
+            setCurrentTab(pending);
+            sessionStorage.removeItem("pendingTab");
+          }
+        })
         .catch(() => {
           setIsLoggedIn(false);
           setAuthUserId(null);
@@ -539,7 +535,7 @@ export default function App() {
     setIsLoggedIn(false);
     setAuthUserId(null);
     setPendingTab(null);
-    clearUserProfile();
+    sessionStorage.removeItem("pendingTab");
     setProfile(EMPTY_PROFILE);
     setProfileMarketingAgreed(null);
     setCurrentTab("home");
@@ -914,7 +910,7 @@ export default function App() {
       {/* ========================================================= */}
       {/* 1. AUTH / LOGIN FLOW MODAL VIEW */}
       {/* ========================================================= */}
-      {isLoginModalOpen && (<LoginPage isModal onClose={() => setIsLoginModalOpen(false)} onSocialLogin={handleSocialLogin} />)}
+      {isLoginModalOpen && (<LoginPage isModal onClose={() => { setIsLoginModalOpen(false); setPendingTab(null); sessionStorage.removeItem("pendingTab"); }} onSocialLogin={handleSocialLogin} />)}
 
       {isWithdrawnRestoreOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/45 px-4">
