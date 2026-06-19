@@ -839,7 +839,6 @@ export default function HomeTab({
                 existingGarments={clothes}
                 onWishlistAdded={handleRefreshAll}
                 onGoToCloset={onGoToCloset}
-                onRefreshWardrobe={handleRefreshAll}
             />
         ) : activeLabel === "aimd" ? (
             <AiMdRecommendations
