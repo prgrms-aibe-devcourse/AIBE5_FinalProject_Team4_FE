@@ -48,7 +48,7 @@ BE 기준으로 마이페이지 프로필 조회 API는 아래 경로를 사용�
 
 ## 현재 구현 확인 대상
 
-현재 FE 구현은 `ProfileEditTab.tsx`, `App.tsx`, `userProfileStorage.ts`를 중심으로 local state와 localStorage를 사용합니다.
+현재 FE 구현은 `ProfileEditTab.tsx`, `App.tsx`를 중심으로 local state를 사용합니다. 프로필 데이터는 앱 시작 시 `GET /api/v1/users/profile` 응답을 기반으로 초기화하며, localStorage 캐시는 사용하지 않습니다.
 
 프로필 API 연동 PR에서는 아래를 함께 확인합니다.
 

@@ -9,7 +9,6 @@ import {
 } from "@/api/wardrobe";
 import { getGarmentStyleLabel } from "@/data/garmentStyles";
 import type { WardrobeStatisticsResponse } from "@/types/be";
-import { clearDevToken } from "@/utils/ensureDevToken";
 import axios from "axios";
 import ClosetGarmentDetail from "@/components/ClosetGarmentDetail";
 import ClosetWardrobeMascot from "@/components/ClosetWardrobeMascot";
@@ -102,9 +101,6 @@ export default function ClosetTab({
           axios.isAxiosError(err) &&
           (err.code === "ERR_NETWORK" || err.message === "Network Error");
 
-      if (axios.isAxiosError(err) && err.response?.status === 401) {
-        clearDevToken();
-      }
 
       setError(
           isNetwork
