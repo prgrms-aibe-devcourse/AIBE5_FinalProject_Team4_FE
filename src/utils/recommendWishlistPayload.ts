@@ -1,4 +1,4 @@
-import { resolveClothesGender } from '@/data/garmentGender'
+import { resolveClothesGenderWithBrand } from '@/data/brandGender'
 import type { Garment } from '@/types'
 import type { ClothesGender } from '@/types/be'
 import type { RecommendedClothesItem } from '@/types/recommendations'
@@ -6,6 +6,8 @@ import { resolveClothesDisplayImageUrl } from '@/utils/clothesImageUrl'
 import { resolveNaverShoppingPurchaseUrl } from '@/utils/naverShoppingUrl'
 import type { RecommendCardItem } from '@/utils/recommendationMapper'
 import { UI_CATEGORY_TO_BE, CATEGORY_ITEM_TYPES } from '@/data/categoryItemTypes'
+import { resolveGarmentStyleCode } from '@/data/garmentStyles'
+import { resolveGarmentColorCode } from '@/data/garmentColors'
 
 /** BE `WishlistClothesCreateRequest` — POST /api/users/{userId}/wishlist-clothes */
 export interface WishlistClothesCreatePayload {
@@ -38,17 +40,17 @@ export function buildWishlistPayloadFromRecommendedItem(
   }
 
   const externalProductUrl = resolveNaverShoppingPurchaseUrl(
-    item.name,
-    item.externalProductUrl,
+      item.name,
+      item.externalProductUrl,
   )
 
   const finalProductUrl =
-    externalProductUrl &&
-    (externalProductUrl.startsWith('http://') || externalProductUrl.startsWith('https://')) &&
-    !externalProductUrl.includes('localhost') &&
-    !externalProductUrl.includes('127.0.0.1')
-      ? externalProductUrl
-      : 'https://search.shopping.naver.com/search/all?query=' + encodeURIComponent(item.name)
+      externalProductUrl &&
+      (externalProductUrl.startsWith('http://') || externalProductUrl.startsWith('https://')) &&
+      !externalProductUrl.includes('localhost') &&
+      !externalProductUrl.includes('127.0.0.1')
+          ? externalProductUrl
+          : 'https://search.shopping.naver.com/search/all?query=' + encodeURIComponent(item.name)
 
   return {
     name: item.name.trim(),
@@ -57,9 +59,9 @@ export function buildWishlistPayloadFromRecommendedItem(
     imageUrl,
     category: item.category,
     itemType: item.itemType,
-    gender: resolveClothesGender(item.gender),
-    primaryColor: item.primaryColor,
-    secondaryColors: item.secondaryColors ?? [],
+    gender: resolveClothesGenderWithBrand(item.gender, item.brandName),
+    primaryColor: resolveGarmentColorCode(item.primaryColor),  // 수정
+    secondaryColors: (item.secondaryColors ?? []).map(c => resolveGarmentColorCode(c)),  // 수정
     styles: item.styleCodes?.length ? item.styleCodes : ['CASUAL'],
     size: 'FREE',
     season: item.season ?? undefined,
@@ -98,9 +100,11 @@ export function buildWishlistPayloadFromCardItem(
     category: UI_CATEGORY_TO_BE[item.category],
     itemType,
     gender: 'UNISEX',
-    primaryColor: item.color || 'UNKNOWN',
-    secondaryColors: item.secondaryColors?.map((c) => c.label) ?? [],
-    styles: item.styles?.length ? item.styles : ['CASUAL'],
+    primaryColor: resolveGarmentColorCode(item.color),  // 수정
+    secondaryColors: item.secondaryColors?.map((c) => resolveGarmentColorCode(c.label)) ?? [],
+    styles: item.styles?.length
+        ? item.styles.map(s => resolveGarmentStyleCode(s))
+        : ['CASUAL'],
     size: 'FREE',
     season: undefined,
     externalSource: 'NAVER_SHOPPING',

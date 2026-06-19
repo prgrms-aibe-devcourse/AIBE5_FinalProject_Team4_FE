@@ -30,9 +30,6 @@ api.interceptors.response.use(
               await api.post('/api/v1/auth/refresh');
               return api(originalConfig);
           } catch {
-              if (!import.meta.env.DEV) {
-                window.location.href = '/login';
-              }
               return Promise.reject(error);
           }
       }

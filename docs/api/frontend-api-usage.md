@@ -47,16 +47,24 @@ src/api/index.ts
 역할:
 
 - `VITE_API_BASE_URL`을 base URL로 사용합니다.
-- `withCredentials: true` 쿠키 자동 전송
+- 개발 환경에서는 Vite proxy 또는 `VITE_API_BASE_URL` 기준으로 BE OAuth 시작 URL로 이동합니다.
+- API 요청은 쿠키 기반 인증을 사용하며, 공통 API 클라이언트는 `withCredentials: true`로 쿠키를 함께 전송합니다.
+- 401 응답을 받으면 `/api/v1/auth/refresh`를 한 번 호출한 뒤 기존 요청을 재시도합니다.
+- FE는 access token 또는 refresh token 값을 직접 읽거나 `localStorage`에 저장하지 않습니다.
 - 500 서버 내부 오류는 `/error/server`로 이동합니다.
 - 502 외부 서비스 오류는 외부 서비스 오류 안내로 처리합니다.
 - 네트워크 오류는 `/error/network`로 이동합니다.
 
-## 인증 (현재 `LoginPage` + `App.tsx`)
+## 인증 (현재 `App.tsx` + 공통 API client)
 
-| 환경 | 로그인 시작 | 토큰 | `{userId}` |
-|---|---|---|---|
-| 개발/운영 공통 | `LoginPage` provider 버튼 → `redirectToOAuthLogin(provider)` → `GET {VITE_API_BASE_URL}/oauth2/authorization/{provider}` | HttpOnly 쿠키 (`access_token`) — BE가 자동 발급 | `GET /api/v1/users/profile` 응답의 `userId` → `authUserId` |
+| 환경 | 로그인 시작 | 인증 유지 | `{userId}` |
+| --- | --- | --- | --- |
+| 개발(`DEV`) | provider 버튼 → `App.handleSocialLogin` → `redirectToOAuthLogin(provider)` → `GET {VITE_API_BASE_URL}/oauth2/authorization/{provider}` | BE가 발급한 인증 쿠키를 공통 API client가 `withCredentials`로 전송합니다. 401 응답 시 `/api/v1/auth/refresh`를 호출합니다. | `GET /api/v1/users/profile` 응답의 `userId` |
+| 운영 | 동일 | 동일 | 동일 |
+
+옷장·보유/미보유 API path의 `{userId}`는 하드코딩 `1`이 아니라 로그인 후 조회한 현재 사용자 `userId`를 사용합니다.
+
+`GET /api/v1/auth/mock-token`은 BE local profile에서만 사용하는 수동 개발 테스트용 API입니다. FE 공식 로그인 흐름에서는 자동으로 호출하지 않으며, 실제 로그인 검증은 개발과 운영 모두 OAuth redirect와 쿠키 기반 인증 상태 확인 기준으로 진행합니다.
 
 ## 경로 작성 기준
 
@@ -74,7 +82,7 @@ fetch('/api/chat-gamyagi') // mock 경로 — 공통 api client·BE 계약 경�
 api.get('api/v1/categories')
 ```
 
-홈 추천은 라벨별로 다릅니다. OOTD(`RECO-001`), 취향 기반 추천(`RECO-002`), 유사 상품(`RECO-003`), AI MD(`RECO-006`), 어울리는 옷(`RECO-005`) 모두 실제 BE API를 호출합니다. 유사 상품(`RECO-003`)은 `src/api/similarProducts.ts`, AI MD(`RECO-006`)는 `src/api/aiMd.ts`, 나머지는 `src/api/recommendations.ts`를 통해 연동됩니다. `RECO-003`의 기준 옷은 `GET /api/v1/users/{userId}/clothes`에서 반환된 `OWNED`와 `WISHLIST` 옷을 모두 허용하며, 유사 상품 결과는 최대 50개 표시를 기준으로 합니다. `RECO-005`는 `limitPerCategory=50`을 기본값으로 사용합니다. ([implementation-gaps.md](../frontend/implementation-gaps.md), [home-recommendation.md](../features/home-recommendation.md))
+홈 추천은 라벨별로 다릅니다. OOTD(`RECO-001`), 취향 기반 추천(`RECO-002`), 유사 상품(`RECO-003`), AI MD(`RECO-006`), 어울리는 옷(`RECO-005`) 모두 실제 BE API를 호출합니다. 유사 상품(`RECO-003`)은 `src/api/similarProducts.ts`, AI MD(`RECO-006`)는 `src/api/aiMd.ts`, 나머지는 `src/api/recommendations.ts`를 통해 연동됩니다. `RECO-003`의 기준 옷은 `GET /api/v1/users/{userId}/clothes`에서 반환된 `OWNED`와 `WISHLIST` 옷을 모두 허용하며, 유사 상품 결과는 최대 50개 표시를 기준으로 합니다. `RECO-005`는 `limitPerCategory=50`을 기본값으로 사용합니다. BE 계약: `limitPerCategory` 기본 `5`, 허용 `1`~`50`. ([implementation-gaps.md](../frontend/implementation-gaps.md), [home-recommendation.md](../features/home-recommendation.md))
 
 직접 `fetch`를 사용하는 경우에도 인증, 에러 처리, base URL 기준이 동일하게 적용되어야 하므로 공통 API 클라이언트로 옮기는 것을 우선합니다.
 
@@ -144,10 +152,19 @@ API를 호출하는 화면은 아래 상태를 구분합니다.
 | 화면/기능 | Method | API 기준 | FE 처리 |
 | --- | --- | --- | --- |
 | OAuth 로그인 | GET | `/oauth2/authorization/{provider}` | 로그인 시작 |
-| 내 프로필 | GET | `/api/v1/users/profile` | 로그인 사용자 본인의 마이페이지 정보 표시 |
+| 약관 원문 | GET | `/api/v1/legal/terms` | 서비스 이용약관 markdown 원문 표시 |
+| 약관 원문 | GET | `/api/v1/legal/privacy-policy` | 개인정보 처리방침 markdown 원문 표시 |
+| 약관 원문 | GET | `/api/v1/legal/marketing-consent` | 마케팅 정보 수신 동의 markdown 원문 표시 |
+| 탈퇴 계정 복구 | POST | `/api/v1/auth/restore-withdrawn` | 탈퇴 후 30일 이내 계정으로 OAuth 로그인을 시도한 경우, 사용자 확인 후 계정 복구와 인증 쿠키 발급 |
+| 내 프로필 | GET | `/api/v1/users/profile` | 로그인 사용자 본인의 마이페이지 정보와 편집 초기값 표시. 온보딩 완료 전 `nickname`, `birthDate`는 비어 있을 수 있음 |
+| 닉네임 중복 확인 | GET | `/api/v1/users/nickname/check` | 온보딩/마이페이지 편집에서 닉네임 규칙과 중복 여부 실시간 확인 |
+| 프로필 이미지 | POST | `/api/v1/users/profile/image` | 프로필 사진 파일을 업로드하고 반환된 `imageUrl`을 프로필 저장 요청에 사용 |
+| 내 프로필 | PATCH | `/api/v1/users/profile` | 닉네임, 생년월일, 사용자 성별, 지역, 프로필 이미지, 자기소개, 외부 링크 저장 |
+| 온보딩 완료 | POST | `/api/v1/users/onboarding` | 가입 직후 프로필, 선호 스타일, 마케팅 정보 수신 동의 여부를 한 번에 저장 |
+| 선호 스타일 | POST | `/api/v1/users/styles` | 마이페이지 편집에서 선택한 선호 스타일 저장 |
 | 사용자 프로필 | GET | `/api/v1/users/profile/{userId}` | 타 사용자 프로필 또는 룩피드 프로필 표시 |
 | 마케팅 동의 | GET | `/api/v1/users/{userId}/marketing-consent` | 마이페이지에서 마케팅 정보 수신 동의 상태 표시 |
-| 마케팅 동의 | PATCH | `/api/v1/users/{userId}/marketing-consent` | 온보딩 또는 마이페이지에서 마케팅 정보 수신 동의/철회 반영 |
+| 마케팅 동의 | PATCH | `/api/v1/users/{userId}/marketing-consent` | 마이페이지에서 마케팅 정보 수신 동의/철회 반영 |
 | 카탈로그 | GET | `/api/v1/categories` | 카테고리, 타입, 색상, 스타일 선택지 렌더링 |
 | 카탈로그 | GET | `/api/v1/categories/guide` | 카테고리 사용 가이드 표시 |
 | 카탈로그 | GET | `/api/v1/categories/ai-guide` | AI 분석용 카탈로그 가이드 확인 |
@@ -164,7 +181,8 @@ API를 호출하는 화면은 아래 상태를 구분합니다.
 | 옷 삭제 | DELETE | `/api/v1/clothes/{clothesId}` | 옷장 목록에서 제거 |
 | 미보유 옷 | GET | `/api/users/{userId}/wishlist-clothes` | 미보유 옷 목록 표시 |
 | 미보유 옷 | GET | `/api/users/{userId}/wishlist-clothes/favorites` | 즐겨찾기 미보유 옷 표시 |
-| 미보유 옷 저장 | POST | `/api/users/{userId}/wishlist-clothes` | 추천/외부 상품을 미보유 옷으로 저장 |
+| 미보유 옷 저장 | POST | `/api/users/{userId}/wishlist-clothes` | 외부 상품 신규 등록( body ) |
+| 추천 상품 저장 | POST | `/api/users/{userId}/wishlist-clothes/{clothesId}` | 기존 `EXTERNAL_SHOPPING` 마스터를 위시리스트에 연결. FE `match` 추천 카드/상세 |
 | 미보유 옷 전환 | PATCH | `/api/v1/clothes/{clothesId}/convert-to-owned` | 미보유에서 보유 전환 |
 | 사진 기반 등록 | POST | `/api/v1/users/{userId}/clothes/photos` | 옷 사진 업로드 |
 | 사진 기반 등록 | POST | `/api/v1/users/{userId}/clothes/photos/{photoId}/analyze` | 사진 분석 요청 |
@@ -179,7 +197,7 @@ API를 호출하는 화면은 아래 상태를 구분합니다.
 | 외부 상품 | POST | `/api/v1/external/clothes/naver` | 외부 상품을 옷 정보로 저장 |
 | 추천 | GET | `/api/v1/recommendations/{wardrobeId}?currentTemp={temp}` | 취향 기반 상품 추천 표시. FE 홈 `style` 라벨 연동 |
 | 추천 | GET | `/api/v1/users/{userId}/clothes/{clothesId}/similar-products` | `OWNED`/`WISHLIST` 기준 옷의 유사 상품 추천 표시. FE 홈 `similar` 라벨 연동. 결과 안내는 최대 50개 기준 |
-| 추천 | GET | `/api/v1/users/{userId}/clothes/{clothesId}/recommendations?limitPerCategory={n}` | 옷장 기반 어울리는 옷 추천. FE `match` 라벨 연동. 기본 `n=50` |
+| 추천 | GET | `/api/v1/users/{userId}/clothes/{clothesId}/recommendations?limitPerCategory={n}` | 옷장 기반 어울리는 옷 추천. FE `match` 라벨 연동. 기본 `n=50` (BE 허용 `1`~`50`) |
 | 추천 | GET | `/api/v1/ootd/{wardrobeId}?currentTemp={temp}` | OOTD 추천 표시. FE 홈 `ootd` 라벨 연동 |
 | 추천 | POST | `/api/v1/users/{userId}/recommendations/feedback` | 추천 저장/싫어요/추천 제외 피드백 제출 |
 | AI MD | GET | `/api/v1/users/{userId}/recommendations/ai-md/personas` | 사용자 성별에 맞는 AI MD 목록 표시 |
@@ -192,10 +210,49 @@ API를 호출하는 화면은 아래 상태를 구분합니다.
 | 코디북 | GET | `/api/v1/outfit-books/{bookId}` | 코디북 상세 표시 |
 | 코디 | POST | `/api/v1/outfit-books/{bookId}/outfits` | 코디 저장 |
 | 코디 | GET | `/api/v1/outfit-books/{bookId}/outfits/{outfitId}` | 저장 코디 상세와 구성 옷 표시 |
-| 코디 | PATCH | `/api/v1/outfit-books/{bookId}/outfits/{outfitId}` | 코디 수정 |
+| 코디 수정/좋아요 | PATCH | `/api/v1/outfit-books/{bookId}/outfits/{outfitId}` | 코디 수정 및 좋아요 토글. (title, description, situation, season 필수) |
 | 코디 | DELETE | `/api/v1/outfit-books/{bookId}/outfits/{outfitId}` | 코디 삭제 |
 | 이미지 | GET | `/api/v1/images/clothes/{userId}/{filename}` | 옷 이미지 표시 |
 | 이미지 | GET | `/api/v1/images/purchase-captures/{userId}/{filename}` | 구매내역 캡처 이미지 표시 |
+| 이미지 | GET | `/api/v1/images/feed/{userId}/{filename}` | 룩피드 게시물 이미지 표시 |
+| 룩피드 목록 | GET | `/api/v1/feed/posts?page={p}&size={s}` | 피드 목록 페이지네이션 표시 (`FEED-002`). `FeedPage` 응답 |
+| 룩피드 상세 | GET | `/api/v1/feed/posts/{postId}` | 피드 상세 모달 표시 (`FEED-003`). `FeedPost` 응답 |
+| 룩피드 작성 | POST | `/api/v1/feed/posts` | 피드 게시물 생성 (`FEED-001`). `FeedCreatePayload` 요청 |
+| 룩피드 수정 | PUT | `/api/v1/feed/posts/{postId}` | 내 피드 caption 수정. `{ caption }` 요청 |
+| 룩피드 삭제 | DELETE | `/api/v1/feed/posts/{postId}` | 내 피드 게시물 삭제 |
+| 룩피드 이미지 업로드 | POST | `/api/v1/feed/images` | 피드 이미지 업로드. `multipart/form-data`. `{ imageUrl }` 응답 |
+| 좋아요 토글 | POST | `/api/v1/feed/posts/{postId}/likes` | 좋아요/취소 토글 (`FEED-004`). `FeedInteraction` 응답 |
+| 저장 토글 | POST | `/api/v1/feed/posts/{postId}/saves` | 코디 저장/취소 토글 (`FEED-005`). `FeedInteraction` 응답. 연결 코디(`outfit`)가 없으면 FE에서 요청하지 않음 |
+| 댓글 목록 | GET | `/api/v1/feed/posts/{postId}/comments` | 댓글 목록 표시 (`FEED-006`). `FeedComment[]` 응답 |
+| 댓글 작성 | POST | `/api/v1/feed/posts/{postId}/comments` | 댓글/대댓글 작성 (`FEED-007`). `FeedCommentPayload` 요청 |
+| 댓글 수정 | PUT | `/api/v1/feed/posts/{postId}/comments/{commentId}` | 내 댓글 수정 |
+| 댓글 삭제 | DELETE | `/api/v1/feed/posts/{postId}/comments/{commentId}` | 내 댓글 삭제 |
+| 팔로우 토글 | POST | `/api/v1/feed/users/{followeeId}/follows` | 팔로우/언팔로우 토글 (`FEED-008`). `FeedInteraction` 응답. 현재 팔로우 상태는 `FeedPost.author.followedByMe`로 초기화. BE가 해당 필드를 내려주지 않으면 버튼 미표시 |
+
+## 룩피드 API 동기화 기준
+
+`src/api/feed.ts`와 `src/components/feed/`, `src/components/FeedTab.tsx`에서 실제 API를 호출합니다.
+
+| 세부기능 ID | BE API | FE 파일 | 현재 FE 상태 |
+| --- | --- | --- | --- |
+| `FEED-001` | `POST /api/v1/feed/posts` | `src/api/feed.ts` `createFeedPost` | 피드 게시물 작성 연동 |
+| `FEED-002` | `GET /api/v1/feed/posts` | `src/api/feed.ts` `fetchFeedPosts` | 피드 목록 조회 연동. 페이지네이션 `page`/`size` 사용 |
+| `FEED-003` | `GET /api/v1/feed/posts/{postId}` | `src/api/feed.ts` `fetchFeedPost` | 피드 상세 모달 연동 |
+| `FEED-004` | `POST /api/v1/feed/posts/{postId}/likes` | `src/api/feed.ts` `toggleFeedLike` | 좋아요 토글 연동. `FeedInteraction.active`/`count`로 화면 상태 갱신 |
+| `FEED-005` | `POST /api/v1/feed/posts/{postId}/saves` | `src/api/feed.ts` `toggleFeedSave` | 코디 저장 토글 연동. `outfit`이 없으면 FE에서 요청하지 않음 |
+| `FEED-006` | `GET /api/v1/feed/posts/{postId}/comments` | `src/api/feed.ts` `fetchFeedComments` | 댓글 목록 조회 연동 |
+| `FEED-007` | `POST /api/v1/feed/posts/{postId}/comments` | `src/api/feed.ts` `createFeedComment` | 댓글/대댓글 작성 연동 |
+| `FEED-008` | `POST /api/v1/feed/users/{followeeId}/follows` | `src/api/feed.ts` `toggleFollow` | 팔로우 토글 연동. 초기 상태는 `FeedPost.author.followedByMe`로 설정. BE 응답에 해당 필드가 없으면 버튼 미표시 |
+
+팔로우 버튼 초기 상태:
+
+- `GET /api/v1/feed/posts/{postId}` 상세 응답의 `author.followedByMe`로 초기화합니다.
+- `mine: true`인 게시물에는 팔로우 버튼을 표시하지 않습니다.
+- `author.followedByMe`가 `undefined`(BE 미제공)이면 팔로우 버튼을 표시하지 않습니다. 팔로우 상태를 알 수 없는 상태에서 toggle을 허용하면 기존 팔로우 관계가 의도치 않게 해제될 수 있습니다.
+- BE `FeedAuthorResponse`에 `followedByMe` 필드가 추가되면 버튼이 자동으로 표시됩니다.
+- 팔로우 토글 성공 후 `FeedInteraction.active`를 UI 상태에 반영합니다.
+
+`FeedAuthor.followedByMe`는 FE 타입(`src/types/feed.ts`)에 optional(`boolean | undefined`)로 선언되어 있습니다. BE `FeedAuthorResponse`에 해당 필드가 추가되면 필수(`boolean`)로 전환합니다.
 
 ## 추천 API 동기화 기준
 
@@ -203,10 +260,10 @@ BE 추천 API 중 현재 FE에서 실제 호출하는 API와 아직 mock/static 
 
 | 세부기능 ID | BE API | 현재 FE 상태 |
 | --- | --- | --- |
-| `RECO-001` | `GET /api/v1/ootd/{wardrobeId}?currentTemp={temp}` | `HomeTab` `ootd` 라벨 연동 |
+| `RECO-001` | `GET /api/v1/ootd/{wardrobeId}?currentTemp={temp}` | `HomeTab` 상단 고정 OOTD 섹션. `RecommendationLabel`에서 분리되어 탭과 독립적으로 항상 로드 |
 | `RECO-002` | `GET /api/v1/recommendations/{wardrobeId}?currentTemp={temp}` | `HomeTab` `style` 라벨 연동 |
 | `RECO-003` | `GET /api/v1/users/{userId}/clothes/{clothesId}/similar-products` | `HomeTab` `similar` 라벨 연동. 기준 옷은 `OWNED`와 `WISHLIST` 모두 노출, 결과 안내는 최대 50개 기준 |
-| `RECO-005` | `GET /api/v1/users/{userId}/clothes/{clothesId}/recommendations?limitPerCategory={n}` | `HomeTab` `match` 라벨 연동. FE 기본 `n=50` |
+| `RECO-005` | `GET /api/v1/users/{userId}/clothes/{clothesId}/recommendations?limitPerCategory={n}` | `HomeTab` `match` 라벨 연동. FE 기본 `n=50` (BE 허용 `1`~`50`) |
 | `RECO-006` | `/api/v1/users/{userId}/recommendations/ai-md/**` | `HomeTab` `aimd` 라벨 연동. MD 목록·코디/상품 추천·코디 저장 사용 |
 | `RECO-013`~`RECO-014` | `POST /api/v1/users/{userId}/recommendations/feedback` | 저장/싫어요/추천 제외 액션 연동 필요 |
 
@@ -226,7 +283,7 @@ AI MD 추천은 아래 기준을 함께 확인합니다.
 - AI MD 상품 추천은 BE가 사용자 스타일 점수와 외부 상품 다양성 기준을 반영해 내려준 결과를 표시합니다.
 - 상세 연동 기준이 필요하면 BE `docs/api/ai-md-api-spec.md`와 `docs/api/similar-product-api-spec.md`를 원본으로 확인합니다.
 
-`RECO-005` `match` 상세에서 구매 링크 클릭 후 **샀어요** 선택 시 FE는 `POST /api/users/{userId}/wishlist-clothes`(필요 시)와 `PATCH /api/clothes/{id}/convert-to-owned`로 보유 옷장 등록합니다. 흐름 상세는 [home-recommendation.md](../features/home-recommendation.md)를 따릅니다.
+`RECO-005` `match` 상세에서 구매 링크 클릭 후 **샀어요** 선택 시 FE는 `POST /api/users/{userId}/wishlist-clothes/{clothesId}`(필요 시)와 `PATCH /api/v1/clothes/{id}/convert-to-owned`로 보유 옷장 등록합니다. 흐름 상세는 [home-recommendation.md](../features/home-recommendation.md)를 따릅니다.
 
 날씨, 지역, 체감온도 정보(`EXT-004`~`EXT-006`)는 독립 추천 기능이 아니라 `RECO-001`, `RECO-002` 등 추천 기능의 보조 조건입니다. `/api/weather`는 추천 보조 정보 API로 설명합니다.
 
@@ -242,8 +299,11 @@ AI MD 추천은 아래 기준을 함께 확인합니다.
 | --- | --- | --- | --- |
 | access token 재발급 | POST | `/api/v1/auth/refresh` | 401 처리, access token 갱신, 쿠키 전달 |
 | 로그아웃 | POST | `/api/v1/auth/logout` | local token 제거, 세션 종료, 로그인 화면 이동 |
+| 회원 탈퇴 | DELETE | `/api/v1/users/me` | 탈퇴 확인 후 local 사용자 상태 정리, 로그인 전 화면 이동 |
 
-`src/api/index.ts` 응답 인터셉터에서 구현 완료. 401 수신 시 자동으로 refresh를 호출하고 원래 요청을 재시도합니다.
+`src/api/index.ts` 응답 인터셉터에서 구현 완료. 401 수신 시 자동으로 refresh를 호출하고 원래 요청을 재시도합니다. `refresh_token`은 HttpOnly 쿠키 기준이므로 FE에서 값을 직접 읽지 않습니다.
+
+
 ## 구매내역 복수 상품 등록 (`REG-002`)
 
 analyze/draft 응답(`PurchaseCaptureDraftResponse`)과 save 응답(`PurchaseCaptureRegistrationResponse`)은 아래 필드를 공통으로 사용합니다.
@@ -268,7 +328,6 @@ analyze/draft 응답(`PurchaseCaptureDraftResponse`)과 save 응답(`PurchaseCap
 - FE는 FAILED·분석 API 오류 시 업로드 단계로 되돌리고 저장 버튼을 제공하지 않으며, 다른 캡처 선택 또는 **AI 분석 다시 시도**로 유도합니다.
 
 건너뛰기:
-
 ```ts
 POST /api/v1/users/{userId}/clothes/purchase-captures/{captureId}/items/{itemIndex}/skip
 ```

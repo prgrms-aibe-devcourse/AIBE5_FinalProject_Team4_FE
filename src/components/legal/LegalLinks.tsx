@@ -10,12 +10,10 @@ const legalLinkClass =
 
 const legalDocuments = {
   terms: {
-    title: '서비스 이용약관',
-    src: '/legal/terms.md',
+    documentType: 'terms',
   },
   privacy: {
-    title: '개인정보처리방침',
-    src: '/legal/privacy-policy.md',
+    documentType: 'privacy-policy',
   },
 } as const
 
@@ -28,7 +26,7 @@ export default function LegalLinks({ className }: LegalLinksProps) {
   return (
     <>
       <p className={className ?? 'text-center text-[11px] leading-relaxed text-slate-400'}>
-        로그인 시 옷장난감의{' '}
+        로그인 시{' '}
         <button
           type="button"
           className={legalLinkClass}
@@ -42,15 +40,13 @@ export default function LegalLinks({ className }: LegalLinksProps) {
           className={legalLinkClass}
           onClick={() => setSelectedDocument('privacy')}
         >
-          개인정보처리방침
-        </button>
-        에 동의하게 됩니다.
+          개인정보 처리방침
+        </button>에 동의하게 됩니다.
       </p>
       {openedDocument ? (
         <LegalDocumentModal
           open
-          title={openedDocument.title}
-          src={openedDocument.src}
+          documentType={openedDocument.documentType}
           onClose={() => setSelectedDocument(null)}
         />
       ) : null}

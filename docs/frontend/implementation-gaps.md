@@ -37,10 +37,10 @@ last_updated: 2026-06-19
 | 옷장 통계 범위 | `ClosetTab` local count와 현재 BE `totalOwnedCount`만으로 전체 요약을 해석할 수 있음 | 옷장 전체 요약은 `OWNED`와 `WISHLIST`를 함께 고려 | [wardrobe.md](../features/wardrobe.md) |
 | 공통 응답 | `src/types/index.ts`의 `ApiResponse<T>`에 `status` 필드 포함 | `success`, `data`, `message` 기준 | [domain-types.md](domain-types.md) |
 | 에러 분기 | `src/api/index.ts`에서 `status >= 500`을 모두 `/error/server`로 이동 | 500 서버 내부 오류와 502 외부 서비스 오류 구분 | [frontend-api-usage.md](../api/frontend-api-usage.md), [common-loading-error.md](../features/common-loading-error.md) |
-| 온보딩/스타일 | 온보딩, 프로필, 스타일 값 일부가 local state와 하드코딩 문자열 중심 | 공식 style code와 사용자 스타일 API 기준 | [catalog.md](../domain/catalog.md), [domain-types.md](domain-types.md) |
-| 피드 | `feed` tab이 static feed mock 중심 | 룩피드 API와 실제 사용자 데이터 기준 | [feature-index.md](../requirements/feature-index.md), [routing.md](routing.md) |
-| 약관 원문 제공 | FE `public/legal/*.md`에 BE 약관 원본과 동기화된 표시용 사본을 둠 | AWS 배포 이후 BE가 약관 원문을 API 또는 정적 경로로 제공하면 FE는 해당 경로를 fetch하고 표시용 사본 제거 | [auth-and-onboarding.md](../features/auth-and-onboarding.md), [legal/README.md](../legal/README.md) |
+| 룩피드 프로필 피드 목록 | 프로필 화면의 2열 피드 영역은 UI 틀만 있으며 실제 피드 데이터와 연결되지 않음 | 피드 API 연동 후 게시/저장 피드 개수에 따라 최신순 2열 grid와 빈 상태 문구를 조건부 표시 | [feature-index.md](../requirements/feature-index.md), [routing.md](routing.md) |
+| 피드 팔로우 초기 상태 | `FeedAuthor.followedByMe`가 optional. BE `FeedAuthorResponse`에 해당 필드가 없으면 팔로우 버튼 미표시 | BE PR #128 `FeedAuthorResponse`에 `followedByMe` 추가 후 FE 타입을 필수로 전환 | [frontend-api-usage.md](../api/frontend-api-usage.md), [domain-types.md](domain-types.md) |
 | BE 신규 API 타입 | 일부 신규 API 응답/요청 타입이 `src/types/be.ts`에 모두 정리되어 있지 않을 수 있음 | BE develop 기준 API 계약 타입 반영 | [frontend-api-usage.md](../api/frontend-api-usage.md), [domain-types.md](domain-types.md) |
+| 프로필 이미지 저장소 전환 | FE는 `POST /api/v1/users/profile/image` 업로드 후 BE가 반환한 `imageUrl`을 저장/표시. 현재 BE 반환 URL은 로컬 `/api/v1/images/profile/**` 조회 endpoint 기준 | 운영 기준은 BE가 AWS S3 또는 CDN URL을 반환하고 FE는 반환된 이미지 URL을 그대로 표시 | [frontend-api-usage.md](../api/frontend-api-usage.md), [mypage.md](../features/mypage.md), [system-architecture.md](../architecture/system-architecture.md) |
 | 배포/인프라 목표 구조 | GitHub Actions는 lint/build CI를 수행하고, AWS 배포와 CD 자동화는 진행 예정. 공통 시스템 아키텍처는 목표 구조 기준 | FE/BE 배포 구현 시 시스템 아키텍처, 기술 스택, 기획서, gap 문서 동시 갱신 | [system-architecture.md](../architecture/system-architecture.md), [tech-stack.md](../architecture/tech-stack.md) |
 
 ## Feature ID 연결표
@@ -50,33 +50,34 @@ last_updated: 2026-06-19
 | `ONBOARD-001`~`ONBOARD-010`, `STYLE-001` | 온보딩, 마이페이지 | `OnboardingPage.tsx`, `ProfileEditTab.tsx`, `App.tsx` | [feature-index.md](../requirements/feature-index.md), [catalog.md](../domain/catalog.md) | local state와 일부 하드코딩 스타일 값 사용. 공식 style code 및 사용자 스타일 API 연동 확인 필요 |
 | `WARDROBE-002` | `closet` tab 요약 | `ClosetTab.tsx` | [feature-index.md](../requirements/feature-index.md), [wardrobe.md](../features/wardrobe.md) | 옷장 전체 요약 기준과 현재 BE 통계 API 범위가 다르게 읽힐 수 있음 |
 | `WARDROBE-011`~`WARDROBE-030`, 옷 수정 | 옷 등록/수정 modal | `PhotoGarmentRegisterModal.tsx`, `PurchaseGarmentRegisterModal.tsx`, `GarmentEditModal.tsx` | [garment-registration.md](../features/garment-registration.md), [domain-types.md](domain-types.md) | 등록/수정 API 연동 자체가 아니라, 옷 대상 성별 UI 노출과 `season` 수정 payload/검증 주석 확인 필요 |
-| `RECO-001` | `home` tab `ootd` 라벨 | `HomeTab.tsx` | [home-recommendation.md](../features/home-recommendation.md) | BE `GET /api/v1/ootd/{wardrobeId}` 연동 |
+| `RECO-001` | `home` tab 상단 고정 OOTD 섹션 | `HomeTab.tsx` | [home-recommendation.md](../features/home-recommendation.md) | BE `GET /api/v1/ootd/{wardrobeId}` 연동. `RecommendationLabel`에서 `ootd` 라벨 제거 후 탭과 별개로 항상 로드 |
 | `RECO-002` | `home` tab `style` 라벨 | `HomeTab.tsx` | [home-recommendation.md](../features/home-recommendation.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | BE `GET /api/v1/recommendations/{wardrobeId}` 연동 |
-| `RECO-005` | `home` tab `match` 라벨 | `HomeTab.tsx`, `MatchRecommendationByCategory.tsx`, `src/api/recommendations.ts` | [home-recommendation.md](../features/home-recommendation.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | BE recommendations API 연동. 추천 피드백 API와 별개로 동작 |
+| `RECO-005` | `home` tab `match` 라벨 | `HomeTab.tsx`, `MatchRecommendationByCategory.tsx`, `src/api/recommendations.ts` | [home-recommendation.md](../features/home-recommendation.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | BE recommendations API 연동. 기본 `limitPerCategory=50` (BE 허용 `1`~`50`). 추천 피드백 API와 별개로 동작 |
 | `RECO-013`~`RECO-014` | 추천 카드 액션 | `HomeTab.tsx`, `MatchRecommendationByCategory.tsx`, `RecommendProductDetailModal.tsx`, `OutfitDetailModal.tsx` | [home-recommendation.md](../features/home-recommendation.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | 싫어요/추천 제외와 일부 저장 액션은 피드백 API에 연결. 외부 상품 저장/AI MD 등 세부 액션의 피드백 기록 범위 확인 필요 |
-| `FEED-001` | `feed` tab | `App.tsx` 내부 feed section | [feature-index.md](../requirements/feature-index.md), [routing.md](routing.md) | static feed mock |
+| `FEED-001` | `lookfeed-profile` view | `App.tsx` 내부 lookfeed profile section | [feature-index.md](../requirements/feature-index.md), [routing.md](routing.md) | 2열 피드 목록 UI 틀만 있음. 게시/저장 피드 API 미연동 |
+| `FEED-008` | `feed` tab 상세 모달 팔로우 버튼 | `FeedPostDetailModal.tsx`, `src/types/feed.ts` | [frontend-api-usage.md](../api/frontend-api-usage.md), [domain-types.md](domain-types.md) | `FeedAuthor.followedByMe`가 BE 응답에 없으면 팔로우 버튼 미표시. BE PR #128 `FeedAuthorResponse`에 필드 추가 후 FE 타입 필수로 전환 필요 |
 
 ## FE 코드와 공식 기준 확인 필요
 
 ### 홈 추천 연동 상태
 
-현재 `HomeTab.tsx`는 OOTD, 취향 기반, 유사 상품, 어울리는 옷, AI MD 모든 라벨이 공통 API client를 통해 BE API를 호출합니다.
+현재 `HomeTab.tsx`는 OOTD를 상단 고정 섹션으로 분리하고, 취향 기반(`style`), 유사 상품(`similar`), 어울리는 옷(`match`), AI MD(`aimd`) 4개 탭으로 구성됩니다. `RecommendationLabel` 타입에서 `ootd`가 제거되었으며, OOTD 섹션은 탭과 독립적으로 컴포넌트 마운트 시 항상 로드됩니다.
 
 남은 gap:
 
 - AI MD 채팅(`RECO-007`): `/api/chat-gamyagi` mock 경로 사용 중. `/api/v1/users/{userId}/recommendations/ai-md/personas/{personaId}/chat` 계약으로 전환 필요
 - AI MD 상품/코디 저장, 외부 상품 저장처럼 추천과 연결되는 세부 액션이 `RECO-013`~`RECO-014` 피드백으로도 기록되어야 하는지 기준 확인 필요
 
-### `RECO-005` 추천 상세 — 구매 후 보유 옷장 등록
+### `RECO-005` 추천 상세 — 구매 후 보유 옷장 등록 피드백 범위
 
 `RecommendProductDetailModal` + `useRecommendWishlistToggle.addPurchasedToCloset` 흐름:
 
 1. 네이버쇼핑 구매 링크 새 탭 오픈
 2. 확인 모달(「옷이 마음에 드셨나요?」)에서 **샀어요** / **안 샀어요**
-3. **샀어요**: 필요 시 `POST /api/users/{userId}/wishlist-clothes` → `PATCH /api/clothes/{id}/convert-to-owned`
+3. **샀어요**: 필요 시 `POST /api/users/{userId}/wishlist-clothes/{clothesId}` → `PATCH /api/v1/clothes/{id}/convert-to-owned`
 4. **안 샀어요**: 모달만 닫음
 
-기준 문서: [home-recommendation.md](../features/home-recommendation.md) 「추천 상세 — 구매 후 보유 옷장 등록」. 이 흐름은 `RECO-013` 피드백 API와 별개이며, 추천 피드백 기록 범위 확인 gap과는 독립입니다.
+기준 문서: [home-recommendation.md](../features/home-recommendation.md) 「추천 상세 — 구매 후 보유 옷장 등록」. 보유 전환 경로는 공식 `/api/v1` 경로를 사용하며, 남은 gap은 이 흐름을 `RECO-013` 피드백 API로도 기록해야 하는지 여부입니다.
 
 현재 `HomeTab`, `MatchRecommendationByCategory`, `RecommendProductDetailModal`, `OutfitDetailModal`은 싫어요/추천 제외와 일부 저장 액션에서 `POST /api/v1/users/{userId}/recommendations/feedback`을 호출합니다.
 
@@ -156,23 +157,18 @@ BE API 계약이 확정되면 [frontend-api-usage.md](../api/frontend-api-usage.
 | --- | --- | --- |
 | `/api/chat-gamyagi` | AI MD 채팅 mock 성격 | BE AI MD API(`/api/v1/users/{userId}/recommendations/ai-md/**`)로 대체 필요 |
 
-### 약관 원문 제공 경로
+### 룩피드 프로필 피드 목록
 
-BE `docs/legal/`이 약관 원본입니다. 다만 현재 BE 애플리케이션에는 약관 markdown 원문을 내려주는 API 또는 정적 리소스 경로가 없습니다.
-
-현재 FE 구현:
-
-- `public/legal/terms.md`
-- `public/legal/privacy-policy.md`
-- `public/legal/marketing-consent.md`
-
-위 파일은 사용자가 약관을 모달로 확인할 수 있게 하기 위한 표시용 사본입니다. 최종 원본 기준은 BE `docs/legal/`이며, AWS 배포 이후 BE가 약관 제공 API 또는 정적 경로를 제공하면 FE는 `/legal/*.md` 정적 사본 대신 BE 제공 경로를 fetch해야 합니다.
+현재 룩피드 프로필 화면은 게시한 피드와 저장한 피드 탭, 2열 grid, 빈 상태 문구, 피드 등록 버튼의 기본 UI 틀만 제공합니다.
 
 남은 gap:
 
-- BE 약관 제공 API 또는 정적 경로 확정 필요
-- FE `LegalDocumentModal`의 `src`를 BE 제공 경로로 변경
-- FE `public/legal/*.md` 표시용 사본 제거
+- 게시한 피드/저장한 피드 목록을 실제 룩피드 API와 연결해야 합니다.
+- 피드가 1개 이상 존재하면 `피드가 아직 없습니다.` 문구를 숨기고, 최신 피드를 왼쪽 상단부터 2열 grid에 표시해야 합니다.
+- 피드가 없을 때는 2x2 영역을 유지하고, 해당 영역의 가로/세로 중앙에 `피드가 아직 없습니다.` 문구를 표시해야 합니다.
+- 현재 `피드 등록` 버튼은 준비 중 안내만 표시하므로, 추후 피드 작성 화면 또는 피드 등록 API와 연결해야 합니다.
+- 피드 API가 확정되면 [frontend-api-usage.md](../api/frontend-api-usage.md), [routing.md](routing.md), 관련 기능 문서를 함께 갱신해야 합니다.
+
 
 ### `ApiResponse<T>`와 에러 분기
 
@@ -208,6 +204,19 @@ BE API 계약 기준으로 `500`은 서버 내부 오류이고, `502`는 외부 
 - `OUTFIT-001`~`OUTFIT-006`: outfit create/update/delete, `items[]`
 
 위 타입은 실제 FE 연동 PR에서 API 호출부와 함께 추가하거나, 별도 타입 정리 PR에서 반영합니다. 코드 타입이 추가되면 [frontend-api-usage.md](../api/frontend-api-usage.md)와 이 문서를 함께 확인합니다.
+
+### 프로필 이미지 저장소 전환
+
+현재 FE는 `POST /api/v1/users/profile/image`에 파일을 업로드하고, BE가 반환한 `imageUrl`을 사용자 프로필 이미지로 저장하고 표시합니다.
+
+현재 BE 구현은 로컬 파일 저장소를 사용하므로 반환 URL은 `/api/v1/images/profile/{userId}/{filename}` 형태의 로컬 이미지 조회 endpoint입니다. 운영 기준은 AWS S3 저장과 이미지 URL 관리이므로, S3 전환 시 FE는 API 경로를 변경하기보다 BE가 반환하는 `imageUrl`을 그대로 사용하는 구조를 유지합니다.
+
+S3 또는 CDN URL로 전환되면 아래 항목을 확인합니다.
+
+- 프로필 이미지 표시 URL이 정상 렌더링되는지
+- 이미지 URL CORS, cache, 인증 필요 여부가 FE 화면과 맞는지
+- 기존 로컬 URL 데이터의 유지 또는 마이그레이션 기준이 필요한지
+- [frontend-api-usage.md](../api/frontend-api-usage.md), [mypage.md](../features/mypage.md), [system-architecture.md](../architecture/system-architecture.md), 이 문서의 기준이 함께 갱신되는지
 
 ### 공통 시스템 아키텍처 목표 구조와 현재 FE/CI 상태
 

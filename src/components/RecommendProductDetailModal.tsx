@@ -65,11 +65,9 @@ export default function RecommendProductDetailModal({
                                                         onPurchaseConfirm,
                                                         purchaseConfirmSubmitting = false,
                                                     }: RecommendProductDetailModalProps) {
-    // 모든 Hook은 early return 전에 선언
     const { showToast } = useToast()
     const [purchaseOpened, setPurchaseOpened] = useState(false)
 
-    // 모달이 닫히거나 item이 바뀌면 구매 확인 상태 초기화
     useEffect(() => {
         if (!open || !item) setPurchaseOpened(false)
     }, [open, item?.id])
@@ -78,12 +76,20 @@ export default function RecommendProductDetailModal({
 
     const categoryLabel = item.categoryLabel
         ?? ({ Top: '상의', Bottom: '하의', Outer: '아우터', Shoes: '신발' } as const)[item.category]
-    const styles = item.styles.length > 0 ? item.styles : item.style !== '-' ? [item.style] : []
+    const styles = item.styles.length > 0
+        ? item.styles
+        : item.style !== '-' && item.style !== '—'
+            ? [item.style]
+            : []
     const allColors: RecommendColorChip[] = [
-        { label: item.color, hex: item.colorHex },
+        ...(item.color !== '-' && item.color !== '—'
+            ? [{ label: item.color, hex: item.colorHex }]
+            : []),
         ...item.secondaryColors,
     ]
-    const canToggleWishlist = !item.isAnchor && item.clothesId != null && onWishlistToggle
+    const hasStyles = styles.length > 0
+    const hasColors = allColors.length > 0
+    const canToggleWishlist = !item.isAnchor && Boolean(onWishlistToggle)
 
     const handleFeedback = async (type: RecommendationFeedbackType) => {
         const uid = userId
@@ -137,8 +143,7 @@ export default function RecommendProductDetailModal({
             panelClassName="max-h-[92vh]"
         >
             <ModalHeader
-                eyebrow="추천 상품 상세"
-                title={item.title}
+                title="상품 상세"
                 titleId="recommend-product-detail-title"
                 className="[&_h3]:text-lg [&_h3]:font-black"
                 trailing={
@@ -176,17 +181,22 @@ export default function RecommendProductDetailModal({
                 </div>
 
                 <div className="px-5 py-2">
-                    <DetailRow label="브랜드">
-                        <BrandDisplay label={item.brandLabel} logoUrl={item.brandLogoUrl} size="large" />
-                    </DetailRow>
+                    <div className="mb-3">
+                        <h4 className="text-lg font-black text-slate-900 leading-tight">{item.title}</h4>
+                    </div>
+                    {item.brandLabel && (
+                        <DetailRow label="브랜드">
+                            <BrandDisplay label={item.brandLabel} logoUrl={item.brandLogoUrl ?? null} />
+                        </DetailRow>
+                    )}
                     <DetailRow label="카테고리">
                         <div className="space-y-1">
                             <p className="text-sm font-black text-slate-900">{categoryLabel}</p>
                             {item.itemTypeLabel ? <p className="text-xs font-bold text-slate-500">{item.itemTypeLabel}</p> : null}
                         </div>
                     </DetailRow>
-                    <DetailRow label="스타일">
-                        {styles.length > 0 ? (
+                    {hasStyles && (
+                        <DetailRow label="스타일">
                             <div className="flex flex-wrap gap-1.5">
                                 {styles.map((style) => (
                                     <span key={style} className="inline-flex rounded-full bg-[#F3E8FF] text-[#1E3A8A] px-2.5 py-1 text-xs font-black">
@@ -194,42 +204,21 @@ export default function RecommendProductDetailModal({
                   </span>
                                 ))}
                             </div>
-                        ) : (
-                            <p className="text-sm font-bold text-slate-400">-</p>
-                        )}
-                    </DetailRow>
-                    <DetailRow label="컬러">
-                        <div className="flex flex-wrap gap-1.5">
-                            {allColors.map((color, index) => (
-                                <ColorSwatch key={`${color.label}-${index}`} color={color} />
-                            ))}
-                        </div>
-                    </DetailRow>
+                        </DetailRow>
+                    )}
+                    {hasColors && (
+                        <DetailRow label="컬러">
+                            <div className="flex flex-wrap gap-1.5">
+                                {allColors.map((color, index) => (
+                                    <ColorSwatch key={`${color.label}-${index}`} color={color} />
+                                ))}
+                            </div>
+                        </DetailRow>
+                    )}
                 </div>
             </ModalBody>
 
             <ModalFooter className="px-5 py-4 space-y-2">
-                {/* SAVED + EXCLUDE 피드백 버튼 */}
-                <div className="grid grid-cols-2 gap-2">
-                    <button
-                        type="button"
-                        onClick={() => handleFeedback('SAVED')}
-                        disabled={wishlistSubmitting}
-                        className={`h-10 rounded-2xl bg-[#111827] text-white font-black text-sm hover:bg-slate-800 transition-colors ${wishlistSubmitting ? 'opacity-60 cursor-not-allowed' : ''}`}
-                    >
-                        {wishlistSubmitting ? '처리 중...' : wishlisted ? '저장됨' : '저장하기'}
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => handleFeedback('EXCLUDE')}
-                        disabled={dislikeSubmitting}
-                        className="h-10 rounded-2xl border border-slate-200 bg-white text-slate-600 font-black text-sm hover:bg-slate-50 transition-colors disabled:opacity-60"
-                    >
-                        추천 제외
-                    </button>
-                </div>
-
-                {/* 구매 링크 클릭 시마다 갱신되고 좋아요 버튼 노출 */}
                 {item.hasDirectPurchaseUrl && item.purchaseUrl && item.purchaseUrl !== '#' && (
                     <a
                         href={item.purchaseUrl}
@@ -242,7 +231,6 @@ export default function RecommendProductDetailModal({
                     </a>
                 )}
 
-                {/* 좋아요 버튼은 구매 링크 클릭 시 노출, 클릭 시 onPurchaseConfirm 호출 */}
                 {purchaseOpened && onPurchaseConfirm && (
                     <button
                         type="button"
@@ -254,7 +242,6 @@ export default function RecommendProductDetailModal({
                     </button>
                 )}
 
-                {/* 싫어요 버튼 (현재 핸들러) */}
                 {onDislike && (
                     <button
                         type="button"

@@ -12,6 +12,7 @@ import {
   isAllowedWearableCategory,
   isWearableClothesItem,
 } from '@/utils/wearableClothesFilter'
+import { resolveClothesGenderWithBrand } from '@/data/brandGender'
 import { matchesClothesGender, type UserGender } from '@/utils/genderClothesFilter'
 import {
   isDirectNaverProductUrl,
@@ -95,7 +96,11 @@ function mapRecommendedItemToCard(
   if (
     !isAllowedWearableCategory(categoryCode) ||
     !isWearableClothesItem(item) ||
-    !matchesClothesGender(item.gender, gender, item.name)
+    !matchesClothesGender(
+      resolveClothesGenderWithBrand(item.gender, item.brandName),
+      gender,
+      item.name,
+    )
   ) {
     return null
   }

@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react'
 import { Modal, ModalBody, ModalFooter, ModalHeader } from '@/components/common/Modal'
 import AuthenticatedImage from '@/components/common/AuthenticatedImage'
-import { createOutfit, updateOutfit, deleteOutfit } from '@/api/outfits'
+import { createOutfit, updateOutfit, deleteOutfit, fetchOutfits } from '@/api/outfits'
 import { postRecommendationFeedback } from '@/api/recommendations'
 import { useToast } from './Toast'
-import { Shirt, CloudRain, Sparkles, ThumbsDown, Trash2, Edit2, RefreshCw } from '@/components/icons'
+import { Shirt, CloudRain, Sparkles, ThumbsDown, Trash2, RefreshCw } from '@/components/icons'
 import ClothesSelectModal from './ClothesSelectModal'
 import { Garment } from '@/types'
 
-interface OutfitItem {
+export interface OutfitModalItem {
   clothesId?: number
   name?: string
   brand?: string
@@ -20,12 +20,13 @@ interface OutfitItem {
 interface OutfitDetailModalProps {
   open: boolean
   combination: {
-    top?: OutfitItem | null
-    bottom?: OutfitItem | null
-    outer?: OutfitItem | null
-    shoes?: OutfitItem | null
+    top?: OutfitModalItem | null
+    bottom?: OutfitModalItem | null
+    outer?: OutfitModalItem | null
+    shoes?: OutfitModalItem | null
     totalScore?: number
     weatherLabel?: string
+    favorite?: boolean
     outfitId?: number
     bookId?: number
     title?: string
@@ -48,7 +49,6 @@ export default function OutfitDetailModal({
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [disliking, setDisliking] = useState(false)
-  const [isEditMode, setIsEditMode] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   // 편집 상태
@@ -61,23 +61,147 @@ export default function OutfitDetailModal({
 
   const { showToast } = useToast()
 
+  const [favLoading, setFavLoading] = useState(false)
+  const [favorite, setFavorite] = useState<boolean | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    const loadFavorite = async () => {
+      if (!editCombo?.outfitId || !editCombo?.bookId) {
+        setFavorite(null)
+        return
+      }
+      // combination.favorite가 있으면 API 호출 불필요
+      if (editCombo.favorite !== undefined) {
+        setFavorite(Boolean(editCombo.favorite))
+        return
+      }
+      try {
+        const outfits = await fetchOutfits(editCombo.bookId)
+        if (cancelled) return
+        const found = outfits.find((o) => o.outfitId === editCombo.outfitId)
+        setFavorite(found ? Boolean(found.favorite) : null)
+      } catch (err) {
+        console.error('Failed to load outfit favorite:', err)
+        setFavorite(null)
+      }
+    }
+    if (open && editCombo) void loadFavorite()
+    return () => { cancelled = true }
+  }, [open, editCombo])
+
+  const toggleFavorite = async () => {
+    if (!editCombo?.outfitId || !editCombo?.bookId) return
+    const next = !favorite
+    setFavLoading(true)
+    setFavorite(next)
+    try {
+      // BE PATCH requires title, description, situation, season as @NotBlank
+      await updateOutfit(editCombo.bookId, editCombo.outfitId, {
+        favorite: next,
+        title: editCombo.title || [editCombo.top?.name, editCombo.bottom?.name].filter(Boolean).join(' + ') || '추천 코디',
+        description: editCombo.description || editCombo.weatherLabel || '추천 코디',
+        situation: editCombo.situation || '일상',
+        season: editCombo.season || 'ALL_SEASON'
+      })
+      showToast('success', next ? '좋아요가 되었습니다!' : '좋아요가 취소되었습니다!')
+    } catch (err) {
+      console.error('Failed to toggle outfit favorite', err)
+      setFavorite(!next)
+      showToast('error', '좋아요 처리에 실패했습니다.')
+    } finally {
+      setFavLoading(false)
+    }
+  }
+
+  const createAndFavorite = async () => {
+    if (!editCombo?.bookId) {
+      showToast('error', '코디북 정보를 불러오지 못했습니다.')
+      return
+    }
+
+    setFavLoading(true)
+    try {
+      // 중복 체크
+      const existingOutfits = await fetchOutfits(editCombo.bookId)
+      const currentItemIds = [
+        editCombo.top?.clothesId,
+        editCombo.bottom?.clothesId,
+        editCombo.outer?.clothesId,
+        editCombo.shoes?.clothesId
+      ].filter(Boolean).sort()
+
+      const isDuplicate = existingOutfits.some(outfit => {
+        const outfitItemIds = outfit.items.map(it => it.clothes.clothesId).filter(Boolean).sort()
+        if (currentItemIds.length !== outfitItemIds.length) return false
+        return currentItemIds.every((id, idx) => id === outfitItemIds[idx])
+      })
+
+      if (isDuplicate) {
+        showToast('info', '이미 코디북에 동일한 코디가 있습니다.')
+        setFavLoading(false)
+        return
+      }
+
+      const payload = {
+        title: editCombo.title || [editCombo.top?.name, editCombo.bottom?.name].filter(Boolean).join(' + ') || '추천 코디',
+        description: editCombo.description || editCombo.weatherLabel || '추천 코디',
+        thumbnailUrl: editCombo.top?.imageUrl || editCombo.top?.userImageUrl || editCombo.bottom?.imageUrl || editCombo.bottom?.userImageUrl || editCombo.outer?.imageUrl || editCombo.outer?.userImageUrl || '',
+        situation: '일상',
+        season: 'ALL_SEASON',
+        favorite: true,
+        items: [
+          { item: editCombo.top, itemRole: 'TOP', layerOrder: 1 },
+          { item: editCombo.bottom, itemRole: 'BOTTOM', layerOrder: 2 },
+          { item: editCombo.outer, itemRole: 'OUTER', layerOrder: 3 },
+          { item: editCombo.shoes, itemRole: 'SHOES', layerOrder: 4 },
+        ]
+          .filter(it => it.item != null && it.item?.clothesId != null)
+          .map(it => ({
+            clothesId: it.item!.clothesId as number,
+            itemRole: it.itemRole,
+            layerOrder: it.layerOrder,
+          })),
+      }
+
+      await createOutfit(editCombo.bookId, payload)
+      setFavorite(true)
+      showToast('success', '코디가 저장되고 좋아요가 되었습니다!')
+      onSaved?.()
+      onClose()
+    } catch (err) {
+      console.error('Failed to create+favorite outfit', err)
+      showToast('error', '코디 저장에 실패했습니다.')
+    } finally {
+      setFavLoading(false)
+    }
+  }
+
   useEffect(() => {
     if (open && combination) {
-      setEditCombo(combination)
-      setIsEditMode(!!combination.outfitId)
-    } else {
-      setIsEditMode(false)
+      const augmentItem = (item: any) => {
+        if (!item) return item
+        const clothesId = item.clothesId ?? item?.clothesId ?? null
+        if (!clothesId) return item
+        const matched = clothes.find((g) => Number(g.id) === Number(clothesId))
+        const ownershipStatus = matched ? (matched.isWishlist ? 'WISHLIST' : 'OWNED') : undefined
+        return {
+          ...item,
+          ownershipStatus,
+        }
+      }
+
+      setEditCombo({
+        ...combination,
+        top: augmentItem(combination.top),
+        bottom: augmentItem(combination.bottom),
+        outer: augmentItem(combination.outer),
+        shoes: augmentItem(combination.shoes),
+      })
     }
-  }, [open, combination])
+  }, [open, combination, clothes])
 
   if (!open || !combination || !editCombo) return null
-
-  const items: Array<{ key: string; item?: any | null; label: string }> = [
-    { key: 'TOP', item: editCombo.top, label: '상의' },
-    { key: 'BOTTOM', item: editCombo.bottom, label: '하의' },
-    { key: 'OUTER', item: editCombo.outer, label: '아우터' },
-    { key: 'SHOES', item: editCombo.shoes, label: '신발' },
-  ].filter(it => it.item != null)
 
   const handleSave = async () => {
     if (!editCombo.bookId) {
@@ -86,13 +210,36 @@ export default function OutfitDetailModal({
     }
     setSaving(true)
     try {
+      if (!editCombo.outfitId) {
+        // 새로 저장하는 경우 중복 체크
+        const existingOutfits = await fetchOutfits(editCombo.bookId)
+        const currentItemIds = [
+          editCombo.top?.clothesId,
+          editCombo.bottom?.clothesId,
+          editCombo.outer?.clothesId,
+          editCombo.shoes?.clothesId
+        ].filter(Boolean).sort()
+
+        const isDuplicate = existingOutfits.some(outfit => {
+          const outfitItemIds = outfit.items.map(it => it.clothes.clothesId).filter(Boolean).sort()
+          if (currentItemIds.length !== outfitItemIds.length) return false
+          return currentItemIds.every((id, idx) => id === outfitItemIds[idx])
+        })
+
+        if (isDuplicate) {
+          showToast('info', '이미 코디북에 동일한 코디가 있습니다.')
+          setSaving(false)
+          return
+        }
+      }
+
       const payload = {
         title: editCombo.title || [editCombo.top?.name, editCombo.bottom?.name].filter(Boolean).join(' + ') || '추천 코디',
         description: editCombo.description || editCombo.weatherLabel || '추천 코디',
         thumbnailUrl: editCombo.top?.imageUrl || editCombo.top?.userImageUrl || editCombo.bottom?.imageUrl || editCombo.bottom?.userImageUrl || editCombo.outer?.imageUrl || editCombo.outer?.userImageUrl || '',
         situation: '일상',
         season: 'ALL_SEASON',
-        favorite: false,
+        favorite: editCombo.outfitId ? (favorite ?? false) : false,
         items: [
           { item: editCombo.top, itemRole: 'TOP', layerOrder: 1 },
           { item: editCombo.bottom, itemRole: 'BOTTOM', layerOrder: 2 },
@@ -206,10 +353,22 @@ export default function OutfitDetailModal({
     <>
       <Modal open={open} onClose={onClose} titleId="outfit-detail-title" size="md" placement="center" zIndex={100} closeOnBackdrop>
         <ModalHeader
-        onClose={onClose}
-        title={editCombo.outfitId ? '코디 편집' : '코디 상세'}
-        titleId="outfit-detail-title"
-      />
+          title={editCombo.outfitId ? '코디 편집' : '코디 상세'}
+          titleId="outfit-detail-title"
+          trailing={(
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); if (editCombo.outfitId && editCombo.bookId) { toggleFavorite() } else if (editCombo.bookId) { createAndFavorite() } else { showToast('error', '코디북 정보를 불러오지 못했습니다.') } }}
+              disabled={favLoading}
+              className="shrink-0 p-1.5 rounded-full bg-white text-slate-500 hover:bg-slate-100 transition disabled:opacity-40 cursor-pointer"
+              aria-label="토글 좋아요"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`${favorite ? 'text-rose-500 fill-rose-500' : 'text-slate-400'} w-5 h-5`}>
+                <path d="M20.8 8.6c0 5.4-8.8 10.4-8.8 10.4S3.2 14 3.2 8.6A4.6 4.6 0 0 1 12 6.5a4.6 4.6 0 0 1 8.8 2.1Z" />
+              </svg>
+            </button>
+          )}
+        />
       <ModalBody className="p-5">
         <div className="space-y-6">
           {editCombo.outfitId && (
@@ -234,18 +393,28 @@ export default function OutfitDetailModal({
             ].map(({ role, label, item }) => (
               <div key={role} className="flex-none w-1/3 text-center">
                 <div className="relative group/item">
-                  <div className="aspect-[4/5] bg-slate-50 rounded-xl overflow-hidden mb-2 flex items-center justify-center border border-slate-100">
-                    {(() => {
-                      const img = item?.imageUrl || item?.userImageUrl
-                      return img ? (
-                        <AuthenticatedImage src={img} alt={item?.name ?? ''} className="w-full h-full object-contain" />
-                      ) : (
-                        <div className="flex flex-col items-center gap-1 text-slate-300">
-                          <Shirt className="w-8 h-8 opacity-40" />
-                          <span className="text-[10px] font-bold">비어있음</span>
-                        </div>
-                      )
-                    })()}
+                  <div className="relative">
+                    <div className="aspect-[4/5] bg-slate-50 rounded-xl overflow-hidden mb-2 flex items-center justify-center border border-slate-100">
+                      {(() => {
+                        const img = item?.imageUrl || item?.userImageUrl
+                        return img ? (
+                          <AuthenticatedImage src={img} alt={item?.name ?? ''} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="flex flex-col items-center gap-1 text-slate-300">
+                            <Shirt className="w-8 h-8 opacity-40" />
+                            <span className="text-[10px] font-bold">비어있음</span>
+                          </div>
+                        )
+                      })()}
+                    </div>
+
+                    {/* ownership badge */}
+                    {item?.ownershipStatus === 'OWNED' && (
+                      <span className="absolute left-2 top-2 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-black">보유</span>
+                    )}
+                    {item?.ownershipStatus === 'WISHLIST' && (
+                      <span className="absolute left-2 top-2 px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 text-[10px] font-black">미보유</span>
+                    )}
                   </div>
 
                   {/* 아이템 변경 버튼 */}

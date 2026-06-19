@@ -9,6 +9,7 @@ import {
 } from "@/api/wardrobe";
 import { getGarmentStyleLabel } from "@/data/garmentStyles";
 import type { WardrobeStatisticsResponse } from "@/types/be";
+import { clearAuthToken } from "@/utils/authToken";
 import axios from "axios";
 import ClosetGarmentDetail from "@/components/ClosetGarmentDetail";
 import ClosetWardrobeMascot from "@/components/ClosetWardrobeMascot";
@@ -101,11 +102,14 @@ export default function ClosetTab({
           axios.isAxiosError(err) &&
           (err.code === "ERR_NETWORK" || err.message === "Network Error");
 
+      if (axios.isAxiosError(err) && err.response?.status === 401) {
+        clearAuthToken();
+      }
 
       setError(
           isNetwork
               ? "백엔드에 연결할 수 없습니다. E:\\AIBE5_FinalProject_Team4_BE 에서 docker-compose up -d 후 .\\gradlew bootRun 으로 8080 포트를 띄운 뒤 다시 시도해 주세요."
-              : "옷장 데이터를 불러오지 못했습니다. BE(local:8080) 실행·local 프로필·mock-token을 확인해 주세요.",
+              : "옷장 데이터를 불러오지 못했습니다. 백엔드 서버와 로그인 상태를 확인해 주세요.",
       );
     } finally {
       setLoading(false);
@@ -580,7 +584,7 @@ export default function ClosetTab({
               id="btn-closet-register"
               type="button"
               onClick={onOpenRegister}
-              className="pointer-events-auto flex items-center gap-2 h-12 px-6 rounded-2xl bg-[#1E3A8A] hover:bg-[#1E3A8A]/90 text-[#BBF7D0] shadow-lg font-bold text-sm transition active:scale-95 cursor-pointer"
+              className="pointer-events-auto flex items-center gap-2 h-11 px-6 rounded-2xl bg-[#1E3A8A] hover:bg-[#1E3A8A]/90 text-[#BBF7D0] shadow-lg font-bold text-sm transition active:scale-95 cursor-pointer"
           >
             <Plus className="w-5 h-5 stroke-[3]" />
             <span>옷 등록</span>

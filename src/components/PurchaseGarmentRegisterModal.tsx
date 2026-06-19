@@ -953,12 +953,18 @@ export default function PurchaseGarmentRegisterModal({
                   disabled={step === 'saving'}
                   className="w-full h-11 bg-[#1E3A8A] text-[#BBF7D0] disabled:opacity-60 rounded-xl font-bold text-sm transition"
                 >
-                  {step === 'saving'
-                    ? '저장 중…'
-                    : hasMultipleItems && remainingPendingCount > 1
-                      ? '저장하고 다음 상품'
-                      : '옷장에 저장하기'}
+                  {step === 'saving' ? '저장 중…' : '옷장에 저장하기'}
                 </button>
+
+                {hasMultipleItems && remainingPendingCount > 1 && (
+                  <button
+                    type="submit"
+                    disabled={step === 'saving'}
+                    className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 h-12 px-8 bg-[#111827] text-[#BBF7D0] disabled:opacity-60 rounded-full font-black text-sm shadow-2xl shadow-black/30 transition hover:-translate-y-0.5 hover:shadow-black/40 active:scale-95 whitespace-nowrap"
+                  >
+                    저장하고 다음 상품 →
+                  </button>
+                )}
 
                 {hasMultipleItems ? (
                   <button
