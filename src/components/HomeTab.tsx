@@ -51,6 +51,124 @@ interface HomeTabProps {
   onLoginRequired?: () => void;
 }
 
+function OotdCanvas({ top, bottom, outer, shoes }: {
+  top?: string; bottom?: string; outer?: string; shoes?: string;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // 실제 컨테이너 크기 기준으로 Canvas 설정 (DPR 반영)
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
+
+    // 논리 좌표계 (CSS 픽셀 기준)
+    const W = rect.width;
+    const H = rect.height;
+
+    ctx.fillStyle = '#F8F8F8';
+    ctx.fillRect(0, 0, W, H);
+
+    const loadImage = (src: string): Promise<HTMLImageElement> =>
+        new Promise((resolve, reject) => {
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.onload = () => resolve(img);
+          img.onerror = reject;
+          img.src = src;
+        });
+
+    const cropTransparent = (img: HTMLImageElement) => {
+      const offscreen = document.createElement('canvas');
+      offscreen.width = img.width;
+      offscreen.height = img.height;
+      const offCtx = offscreen.getContext('2d')!;
+      offCtx.drawImage(img, 0, 0);
+      const data = offCtx.getImageData(0, 0, img.width, img.height).data;
+      let minX = img.width, minY = img.height, maxX = 0, maxY = 0;
+      for (let y = 0; y < img.height; y++) {
+        for (let x = 0; x < img.width; x++) {
+          const alpha = data[(y * img.width + x) * 4 + 3];
+          if (alpha > 10) {
+            minX = Math.min(minX, x);
+            minY = Math.min(minY, y);
+            maxX = Math.max(maxX, x);
+            maxY = Math.max(maxY, y);
+          }
+        }
+      }
+      if (maxX <= minX || maxY <= minY) return { x: 0, y: 0, w: img.width, h: img.height };
+      return { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
+    };
+
+    const drawCropped = (
+        img: HTMLImageElement,
+        slotX: number, slotY: number,
+        slotW: number, slotH: number,
+        scaleX = 0.85,
+        scaleY = 0.85
+    ) => {
+      const crop = cropTransparent(img);
+      const dw = slotW * scaleX;
+      const dh = slotH * scaleY;
+      const dx = slotX + (slotW - dw) / 2;
+      const dy = slotY + (slotH - dh) / 2;
+      ctx.drawImage(img, crop.x, crop.y, crop.w, crop.h, dx, dy, dw, dh);
+    };
+
+    (async () => {
+      try {
+        const hasShoes = !!shoes;
+        const topH = hasShoes ? H * 0.35 : H * 0.45;
+        const bottomH = hasShoes ? H * 0.40 : H * 0.55;
+        const shoesH = hasShoes ? H * 0.25 : 0;
+
+        if (outer) {
+          const outerImg = await loadImage(outer);
+          drawCropped(outerImg, 0, 0, W, topH, 0.9, 0.9);
+
+          if (top) {
+            const topImg = await loadImage(top);
+            const crop = cropTransparent(topImg);
+            const overlayW = W * 0.32;
+            const overlayH = topH * 0.5;
+            const scale = Math.min(overlayW / crop.w, overlayH / crop.h) * 0.9;
+            const dw = crop.w * scale;
+            const dh = crop.h * scale;
+            const dx = (W - dw) / 2;
+            const dy = topH - dh * 0.4;
+            ctx.drawImage(topImg, crop.x, crop.y, crop.w, crop.h, dx, dy, dw, dh);
+          }
+        } else if (top) {
+          const topImg = await loadImage(top);
+          drawCropped(topImg, 0, 0, W, topH, 0.77, 0.85);
+        }
+
+        if (bottom) {
+          const bottomImg = await loadImage(bottom);
+          drawCropped(bottomImg, 0, topH, W, bottomH, 0.5, 1.1);
+        }
+
+        if (shoes) {
+          const shoesImg = await loadImage(shoes);
+          drawCropped(shoesImg, 0, topH + bottomH, W, shoesH, 0.4, 0.45);
+        }
+
+      } catch (e) {
+        console.error('Canvas 합성 실패:', e);
+      }
+    })();
+  }, [top, bottom, outer, shoes]);
+
+  return <canvas ref={canvasRef} className="w-full h-full" style={{ display: 'block' }} />;
+}
 type RecommendationLabel = "ootd" | "style" | "similar" | "match" | "aimd";
 
 type RecommendItem = {
@@ -555,9 +673,9 @@ export default function HomeTab({
         )}
 
         {hasRecommendationData && activeLabel !== "match" && (activeLabel === 'ootd' ? ootdLoading : styleLoading) && (
-            <div className={`grid gap-4 ${activeLabel === "ootd" ? "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3" : "grid-cols-2 lg:grid-cols-3"} mb-6`}>
+            <div className={`grid gap-6 ${activeLabel === "ootd" ? "grid-cols-1" : "grid-cols-2 lg:grid-cols-3"} mb-6`}>
               {Array.from({ length: activeLabel === 'style' ? 20 : 6 }).map((_, idx) => (
-                  <div key={idx} className="h-44 sm:h-52 lg:h-72 rounded-[24px] bg-slate-100 animate-pulse" />
+                  <div key={idx} className={`${activeLabel === "ootd" ? "h-96 sm:h-[28rem] lg:h-[32rem]" : "h-72 sm:h-80 lg:h-96"} rounded-[24px] bg-slate-100 animate-pulse`} />
               ))}
             </div>
         )}
@@ -660,10 +778,10 @@ export default function HomeTab({
                 onWishlistAdded={onRefreshWardrobe}
             />
         ) : (
-            <div className={`grid gap-4 ${activeLabel === "ootd" ? "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3" : "grid-cols-2 lg:grid-cols-3"}`}>
+            <div className={`grid gap-6 ${activeLabel === "ootd" ? "grid-cols-1" : "grid-cols-2 lg:grid-cols-3"}`}>
               {(activeLabel === 'ootd' && ootdLoading) || (activeLabel === 'style' && styleLoading) ? (
                   Array.from({ length: activeLabel === 'style' ? 20 : 6 }).map((_, idx) => (
-                      <div key={idx} className="h-44 sm:h-52 lg:h-72 rounded-[24px] bg-slate-100 animate-pulse" />
+                      <div key={idx} className={`${activeLabel === "ootd" ? "h-96 sm:h-[28rem] lg:h-[32rem]" : "h-72 sm:h-80 lg:h-96"} rounded-[24px] bg-slate-100 animate-pulse`} />
                   ))
               ) : (activeLabel === 'ootd' && ootdError) || (activeLabel === 'style' && styleError) ? (
                   <div className="col-span-full rounded-2xl border border-red-100 bg-red-50 px-5 py-10 text-center">
@@ -705,38 +823,17 @@ export default function HomeTab({
                           className={`group rounded-[24px] border overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:rotate-[0.5deg] hover:shadow-xl active:scale-[0.99] cursor-pointer ${item.isAnchor ? "border-[#1E3A8A]/30 bg-indigo-50/40 ring-1 ring-[#1E3A8A]/20" : "border-slate-100 bg-slate-50"}`}
                       >
                         {activeLabel === 'ootd' ? (
-                            <div className="h-44 sm:h-52 lg:h-72 bg-slate-100 relative overflow-hidden">
+                            <div className="h-96 sm:h-[28rem] lg:h-[32rem] bg-[#F8F8F8] relative overflow-hidden">
                               {(() => {
                                 const combo = ootdCombinations.find(c => c.id === item.id);
-                                if (combo && !combo.outer && combo.top && combo.bottom) {
-                                  return (
-                                      <div className="w-full h-full flex flex-col">
-                                        <div className="flex-1 overflow-hidden border-b border-white/20">
-                                          <AuthenticatedImage src={combo.top.imageUrl ?? combo.top.userImageUrl ?? ''} alt="Top" className="w-full h-full object-cover object-top transition-transform duration-300 group-hover:scale-105" fallback={<div className="w-full h-full flex items-center justify-center bg-slate-200 text-slate-400 text-[10px] font-bold">상의 없음</div>} />
-                                        </div>
-                                        <div className="flex-1 overflow-hidden">
-                                          <AuthenticatedImage src={combo.bottom.imageUrl ?? combo.bottom.userImageUrl ?? ''} alt="Bottom" className="w-full h-full object-cover object-top transition-transform duration-300 group-hover:scale-105" fallback={<div className="w-full h-full flex items-center justify-center bg-slate-200 text-slate-400 text-[10px] font-bold">하의 없음</div>} />
-                                        </div>
-                                      </div>
-                                  );
-                                }
+                                if (!combo) return <AuthenticatedImage src={item.imageUrl} alt={item.title} className="w-full h-full object-cover object-top" fallback={<div className="w-full h-full bg-slate-100" />} />;
                                 return (
-                                    <>
-                                      <AuthenticatedImage src={item.imageUrl} alt={item.title} className="w-full h-full object-cover object-top transition-transform duration-300 group-hover:scale-105" fallback={<div className="w-full h-full flex items-center justify-center bg-slate-200 text-slate-400 text-xs font-bold">이미지 없음</div>} />
-                                      {combo && (() => {
-                                        const thumbs = [combo.bottom, combo.outer].filter(Boolean);
-                                        if (thumbs.length === 0) return null;
-                                        return (
-                                            <div className="absolute bottom-10 right-2 flex gap-1">
-                                              {thumbs.map((t: any, i: number) => (
-                                                  <div key={i} className="w-12 h-12 rounded-lg overflow-hidden border-2 border-white bg-slate-100 shadow-sm">
-                                                    <AuthenticatedImage src={t.imageUrl ?? t.userImageUrl ?? ''} alt={t.name ?? ''} className="w-full h-full object-cover" fallback={<div className="w-full h-full bg-slate-200" />} />
-                                                  </div>
-                                              ))}
-                                            </div>
-                                        );
-                                      })()}
-                                    </>
+                                  <OotdCanvas
+                                    top={combo.top?.imageUrl ?? combo.top?.userImageUrl}
+                                    bottom={combo.bottom?.imageUrl ?? combo.bottom?.userImageUrl}
+                                    outer={combo.outer?.imageUrl ?? combo.outer?.userImageUrl}
+                                    shoes={combo.shoes?.imageUrl ?? combo.shoes?.userImageUrl}
+                                  />
                                 );
                               })()}
                               <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/80 via-black/45 to-transparent text-white">
@@ -744,8 +841,8 @@ export default function HomeTab({
                               </div>
                             </div>
                         ) : (
-                            <div className="h-44 sm:h-52 lg:h-72 bg-slate-100 relative overflow-hidden">
-                              <AuthenticatedImage src={item.imageUrl} alt={item.title} className="w-full h-full object-cover object-top transition-transform duration-300 group-hover:scale-105" fallback={<div className="w-full h-full flex items-center justify-center bg-slate-200 text-slate-400 text-xs font-bold">이미지 없음</div>} />
+                            <div className="h-44 sm:h-52 lg:h-72 bg-white relative overflow-hidden">
+                              <AuthenticatedImage src={item.imageUrl} alt={item.title} className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105" fallback={<div className="w-full h-full flex items-center justify-center bg-slate-200 text-slate-400 text-xs font-bold">이미지 없음</div>} />
                               <div className="absolute left-0 bottom-0 p-3 bg-gradient-to-t from-black/80 via-black/40 to-transparent text-white flex flex-col items-start max-w-[66%]">
                                   {item.brand ? <div className="text-[11px] font-bold text-white/90 uppercase tracking-wide truncate">{item.brand}</div> : null}
                                   <h3 className="text-sm md:text-base font-black truncate mt-1 leading-tight">{item.title}</h3>
