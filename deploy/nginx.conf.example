@@ -9,13 +9,56 @@ server {
     root /var/www/closetnangam;
     index index.html;
 
-    # Vite 빌드 산출물 (gzip은 nginx gzip 모듈 또는 CloudFront에서 처리)
-    location / {
-        try_files $uri $uri/ /index.html;
+    # FE와 BE를 같은 origin으로 제공하는 경우, API/OAuth 경로만 Spring Boot로 프록시합니다.
+    # BE가 별도 도메인이라면 아래 프록시 location들을 제거하고 VITE_API_BASE_URL을 BE 도메인으로 빌드하세요.
+    location ^~ /api/ {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Port $server_port;
     }
 
-    # BE API는 이 서버가 아닌 APP_BASE_URL(ALB/BE EC2)로 프록시하지 않습니다.
-    # FE는 빌드 시 VITE_API_BASE_URL 로 BE를 직접 호출합니다.
+    location ^~ /oauth2/ {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Port $server_port;
+    }
+
+    location ^~ /login/oauth2/ {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Port $server_port;
+    }
+
+    location ^~ /actuator/health {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Port $server_port;
+    }
+
+    # Vite 빌드 산출물 (gzip은 nginx gzip 모듈 또는 CloudFront에서 처리)
+    location / {
+        try_files $uri /index.html;
+    }
 
     location ~* \.(js|css|png|jpg|jpeg|gif|svg|ico|woff2?)$ {
         expires 7d;
