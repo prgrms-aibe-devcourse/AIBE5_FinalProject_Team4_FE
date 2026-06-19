@@ -2,7 +2,7 @@
 doc_type: fe_api_usage
 source_of_truth: AIBE5_FinalProject_Team4_FE
 api_contract_source_of_truth: AIBE5_FinalProject_Team4_BE/docs/api/api-contract.md
-last_updated: 2026-06-17
+last_updated: 2026-06-19
 ---
 
 # API 사용 기준
@@ -301,7 +301,8 @@ AI MD 추천은 아래 기준을 함께 확인합니다.
 | 로그아웃 | POST | `/api/v1/auth/logout` | local token 제거, 세션 종료, 로그인 화면 이동 |
 | 회원 탈퇴 | DELETE | `/api/v1/users/me` | 탈퇴 확인 후 local 사용자 상태 정리, 로그인 전 화면 이동 |
 
-`refresh_token`은 HttpOnly 쿠키 기준이므로 FE에서 값을 직접 읽지 않습니다. 인증 유지 흐름은 공통 API client의 401 처리와 로그아웃/회원탈퇴 화면 상태 정리를 함께 확인합니다.
+`src/api/index.ts` 응답 인터셉터에서 구현 완료. 401 수신 시 자동으로 refresh를 호출하고 원래 요청을 재시도합니다. `refresh_token`은 HttpOnly 쿠키 기준이므로 FE에서 값을 직접 읽지 않습니다.
+
 
 ## 구매내역 복수 상품 등록 (`REG-002`)
 
