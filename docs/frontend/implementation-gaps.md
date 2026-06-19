@@ -1,7 +1,7 @@
 ---
 doc_type: fe_implementation_gaps
 source_of_truth: AIBE5_FinalProject_Team4_FE
-last_updated: 2026-06-15
+last_updated: 2026-06-19
 ---
 
 # FE 구현 정합성 현황
@@ -30,7 +30,6 @@ last_updated: 2026-06-15
 
 | 영역 | 현재 코드에 남아 있는 형태 | 목표 기준 | 관련 문서 |
 | --- | --- | --- | --- |
-| 인증 유지 | `POST /api/v1/auth/refresh`, `POST /api/v1/auth/logout` 미사용. access token은 `localStorage.token` 중심으로 복구 | `AUTH-005` refresh token 기반 로그인 상태 유지 | [frontend-api-usage.md](../api/frontend-api-usage.md) |
 | 홈 추천 API | AI MD chat은 `/api/chat-gamyagi` 직접 `fetch` | AI chat을 BE API 계약 경로 및 공통 API client로 전환 | [home-recommendation.md](../features/home-recommendation.md), [mock-policy.md](mock-policy.md) |
 | 추천 피드백 | 싫어요/추천 제외와 일부 저장 액션은 `feedback` API에 연결되어 있으나, 외부 상품 저장/AI MD 등 일부 액션은 피드백 기록 범위 확인 필요 | `RECO-013`~`RECO-014` 피드백 API 호출 범위 명확화 | [frontend-api-usage.md](../api/frontend-api-usage.md) |
 | 옷 대상 성별 UI | 사진/구매내역 등록, 옷 수정 화면에서 `gender`를 표시하고 직접 수정 | `CLOTHES.gender`는 사용자 화면 비노출, 내부 분류/추천 및 저장 요청용 code | [garment-registration.md](../features/garment-registration.md), [domain-types.md](domain-types.md) |
@@ -48,7 +47,6 @@ last_updated: 2026-06-15
 
 | F-ID | 화면/Route/Tab | 현재 주요 코드 | 기준 문서 | 현재 구현 상태 |
 | --- | --- | --- | --- | --- |
-| `AUTH-005` | 로그인 상태 유지 | `src/api/index.ts`, `App.tsx` | [frontend-api-usage.md](../api/frontend-api-usage.md) | refresh/logout API 미연동. 401 처리와 access token 재발급 흐름 확정 필요 |
 | `ONBOARD-001`~`ONBOARD-010`, `STYLE-001` | 온보딩, 마이페이지 | `OnboardingPage.tsx`, `ProfileEditTab.tsx`, `App.tsx` | [feature-index.md](../requirements/feature-index.md), [catalog.md](../domain/catalog.md) | local state와 일부 하드코딩 스타일 값 사용. 공식 style code 및 사용자 스타일 API 연동 확인 필요 |
 | `WARDROBE-002` | `closet` tab 요약 | `ClosetTab.tsx` | [feature-index.md](../requirements/feature-index.md), [wardrobe.md](../features/wardrobe.md) | 옷장 전체 요약 기준과 현재 BE 통계 API 범위가 다르게 읽힐 수 있음 |
 | `WARDROBE-011`~`WARDROBE-030`, 옷 수정 | 옷 등록/수정 modal | `PhotoGarmentRegisterModal.tsx`, `PurchaseGarmentRegisterModal.tsx`, `GarmentEditModal.tsx` | [garment-registration.md](../features/garment-registration.md), [domain-types.md](domain-types.md) | 등록/수정 API 연동 자체가 아니라, 옷 대상 성별 UI 노출과 `season` 수정 payload/검증 주석 확인 필요 |
@@ -59,22 +57,6 @@ last_updated: 2026-06-15
 | `FEED-001` | `feed` tab | `App.tsx` 내부 feed section | [feature-index.md](../requirements/feature-index.md), [routing.md](routing.md) | static feed mock |
 
 ## FE 코드와 공식 기준 확인 필요
-
-### `AUTH-005` 로그인 상태 유지 API
-
-BE develop 기준으로 refresh token 기반 인증 유지 API가 반영되어 있습니다. FE에서는 아직 해당 API를 사용하지 않습니다.
-
-기준 확인 대상:
-
-- `POST /api/v1/auth/refresh`: access token 재발급
-- `POST /api/v1/auth/logout`: refresh token 삭제 및 로그아웃
-- `refresh_token`: HttpOnly cookie, FE에서 직접 읽지 않음
-
-남은 gap:
-
-- FE API client의 401 처리와 refresh 호출 정책 확정 필요
-- 기존 `localStorage.token` 저장/복구 흐름과 access token 재발급 흐름의 역할 분리 필요
-- 로그아웃 시 local token 제거, 서버 logout 호출, 화면 이동 순서 확정 필요
 
 ### 홈 추천 연동 상태
 
@@ -224,7 +206,6 @@ BE API 계약 기준으로 `500`은 서버 내부 오류이고, `502`는 외부 
 - `RECO-002`: `RecommendResponse`
 - `RECO-013`~`RECO-014`: `RecommendationFeedbackRequest`, `feedbackType`
 - `OUTFIT-001`~`OUTFIT-006`: outfit create/update/delete, `items[]`
-- `AUTH-005`: refresh/logout 응답 및 쿠키 기반 인증 유지 흐름
 
 위 타입은 실제 FE 연동 PR에서 API 호출부와 함께 추가하거나, 별도 타입 정리 PR에서 반영합니다. 코드 타입이 추가되면 [frontend-api-usage.md](../api/frontend-api-usage.md)와 이 문서를 함께 확인합니다.
 
@@ -247,17 +228,16 @@ FE 배포 또는 CD workflow가 구현되면 [system-architecture.md](../archite
 
 | 우선순위 | 대상 | 이유 |
 | --- | --- | --- |
-| 1 | `AUTH-005` refresh/logout 연동 | 로그인 상태 유지와 세션 만료 처리에 직접 영향 |
-| 2 | 옷 대상 성별(`gender`) UI 비노출 전환 | 공통 문서 기준과 현재 등록/수정 UI가 다르게 동작 |
-| 3 | 옷 계절(`season`) 수정 payload/검증 주석 정리 | ERD v2.3 기준과 등록/수정 화면 payload 해석에 영향 |
-| 4 | AI MD 채팅 mock API 전환 | 사용자가 보는 AI MD 채팅의 실제 데이터 연동 여부에 영향 |
-| 5 | 추천 피드백 기록 범위 확정 | 저장/싫어요/추천 제외 정책과 사용자 스타일 점수에 영향 |
-| 6 | `ApiResponse<T>` 타입과 500/502 에러 분기 | 모든 API parsing과 공통 error handling에 영향 |
-| 7 | BE 신규 API 타입 정리 | 추천/OOTD/코디/인증 유지 API 연동 시 타입 안정성에 영향 |
-| 8 | `WARDROBE-002` 옷장 통계 범위 | 옷장 전체 요약과 보유 옷 통계 해석에 영향 |
-| 9 | 온보딩/스타일/피드 local·static 데이터 경계 | 실제 사용자 데이터와 mock/local 데이터 구분에 영향 |
-| 10 | 약관 원문 제공 경로 전환 | AWS 배포 이후 BE 제공 경로와 FE 표시용 사본 정리에 영향 |
-| 11 | 배포/인프라 목표 구조와 현재 FE/CI 상태 | AWS 배포 및 CD 구현 시 공통 시스템 문서와 실제 FE 레포 설정 정합성에 영향 |
+| 1 | 옷 대상 성별(`gender`) UI 비노출 전환 | 공통 문서 기준과 현재 등록/수정 UI가 다르게 동작 |
+| 2 | 옷 계절(`season`) 수정 payload/검증 주석 정리 | ERD v2.3 기준과 등록/수정 화면 payload 해석에 영향 |
+| 3 | AI MD 채팅 mock API 전환 | 사용자가 보는 AI MD 채팅의 실제 데이터 연동 여부에 영향 |
+| 4 | 추천 피드백 기록 범위 확정 | 저장/싫어요/추천 제외 정책과 사용자 스타일 점수에 영향 |
+| 5 | `ApiResponse<T>` 타입과 500/502 에러 분기 | 모든 API parsing과 공통 error handling에 영향 |
+| 6 | BE 신규 API 타입 정리 | 추천/OOTD/코디 API 연동 시 타입 안정성에 영향 |
+| 7 | `WARDROBE-002` 옷장 통계 범위 | 옷장 전체 요약과 보유 옷 통계 해석에 영향 |
+| 8 | 온보딩/스타일/피드 local·static 데이터 경계 | 실제 사용자 데이터와 mock/local 데이터 구분에 영향 |
+| 9 | 약관 원문 제공 경로 전환 | AWS 배포 이후 BE 제공 경로와 FE 표시용 사본 정리에 영향 |
+| 10 | 배포/인프라 목표 구조와 현재 FE/CI 상태 | AWS 배포 및 CD 구현 시 공통 시스템 문서와 실제 FE 레포 설정 정합성에 영향 |
 
 ## 문서 변경 기준
 

@@ -2,7 +2,7 @@
 doc_type: fe_api_usage
 source_of_truth: AIBE5_FinalProject_Team4_FE
 api_contract_source_of_truth: AIBE5_FinalProject_Team4_BE/docs/api/api-contract.md
-last_updated: 2026-06-15
+last_updated: 2026-06-19
 ---
 
 # API 사용 기준
@@ -47,7 +47,7 @@ src/api/index.ts
 역할:
 
 - `VITE_API_BASE_URL`을 base URL로 사용합니다.
-- `localStorage.token`이 있으면 `Authorization: Bearer {token}` 헤더를 추가합니다.
+- `withCredentials: true` 쿠키 자동 전송
 - 500 서버 내부 오류는 `/error/server`로 이동합니다.
 - 502 외부 서비스 오류는 외부 서비스 오류 안내로 처리합니다.
 - 네트워크 오류는 `/error/network`로 이동합니다.
@@ -55,13 +55,8 @@ src/api/index.ts
 ## 인증 (현재 `LoginPage` + `App.tsx`)
 
 | 환경 | 로그인 시작 | 토큰 | `{userId}` |
-| --- | --- | --- | --- |
-| 개발(`DEV`) | `LoginPage` provider 버튼 → `App.handleSocialLogin` → `ensureDevToken` → `GET /api/v1/auth/mock-token?userId=1` | `localStorage.token` | JWT `sub` → `authUserId` |
-| 운영 | 동일 버튼 → `redirectToOAuthLogin(provider)` → `GET {VITE_API_BASE_URL}/oauth2/authorization/{provider}` | OAuth 콜백 `?token=` → `captureOAuthTokenFromUrl()` | 동일 |
-
-옷장·보유/미보유 API path의 `{userId}`는 하드코딩 `1`이 아니라 **JWT `sub`** 를 사용합니다. dev의 `userId=1`은 mock-token 발급 파라미터에만 쓰입니다.
-
-`DEV`이어도 `.env.local` 파일에 `VITE_USE_REAL_AUTH`가 `true`라면 실제 OAuth 경로를 타게 됩니다.
+|---|---|---|---|
+| 개발/운영 공통 | `LoginPage` provider 버튼 → `redirectToOAuthLogin(provider)` → `GET {VITE_API_BASE_URL}/oauth2/authorization/{provider}` | HttpOnly 쿠키 (`access_token`) — BE가 자동 발급 | `GET /api/v1/users/profile` 응답의 `userId` → `authUserId` |
 
 ## 경로 작성 기준
 
@@ -248,8 +243,7 @@ AI MD 추천은 아래 기준을 함께 확인합니다.
 | access token 재발급 | POST | `/api/v1/auth/refresh` | 401 처리, access token 갱신, 쿠키 전달 |
 | 로그아웃 | POST | `/api/v1/auth/logout` | local token 제거, 세션 종료, 로그인 화면 이동 |
 
-`refresh_token`은 HttpOnly 쿠키 기준이므로 FE에서 값을 직접 읽지 않습니다. 실제 FE 구현 반영 전까지는 [implementation-gaps.md](../frontend/implementation-gaps.md)에 미연동 항목으로 둡니다.
-
+`src/api/index.ts` 응답 인터셉터에서 구현 완료. 401 수신 시 자동으로 refresh를 호출하고 원래 요청을 재시도합니다.
 ## 구매내역 복수 상품 등록 (`REG-002`)
 
 analyze/draft 응답(`PurchaseCaptureDraftResponse`)과 save 응답(`PurchaseCaptureRegistrationResponse`)은 아래 필드를 공통으로 사용합니다.

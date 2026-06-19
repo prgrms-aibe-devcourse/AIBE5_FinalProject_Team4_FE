@@ -30,11 +30,6 @@ import OnboardingPage from "@/pages/OnboardingPage";
 import { useChat } from "@/hooks/useChat";
 import { useCloset } from "@/hooks/useCloset";
 import { useWardrobeLoader } from "@/hooks/useWardrobeLoader";
-import {
-    clearUserProfile,
-    loadUserProfile,
-    saveUserProfile,
-} from "@/utils/userProfileStorage";
 import { updateMarketingConsent } from "@/api/marketingConsent";
 import { resolveGarmentStyleCode } from "@/data/garmentStyles";
 import MarketingConsentSetting from "@/components/legal/MarketingConsentSetting";
@@ -52,7 +47,10 @@ export default function App() {
     // 비로그인 상태면 모달을 열고 false를 반환, 로그인 상태면 true를 반환
     const requireLogin = (destination?: "closet" | "profile"): boolean => {
         if(!isLoggedIn){
-            if(destination) setPendingTab(destination);
+            if(destination){
+                setPendingTab(destination);
+                sessionStorage.setItem("pendingTab", destination);
+            }
             setIsLoginModalOpen(true);
             return false;
         }
@@ -62,24 +60,16 @@ export default function App() {
     const [authReady, setAuthReady] = useState(false);
 
     // User Profile Setup State
-    const [profile, setProfile] = useState<UserProfile>(() => {
-        const stored = loadUserProfile();
-        return (
-            stored ?? {
-                nickname: "",
-                gender: "None",
-                styles: [],
-                onboarded: false,
-                birthday: "",
-            }
-        );
+    const [profile, setProfile] = useState<UserProfile>({
+        nickname: "",
+        gender: "None",
+        styles: [],
+        onboarded: false,
+        birthday: "",
     });
 
     const persistProfile = (next: UserProfile) => {
         setProfile(next);
-        if (next.onboarded) {
-            saveUserProfile(next);
-        }
     };
 
     const { gamyagiChatOpen, setGamyagiChatOpen, chatMessages, pendingMsg, setPendingMsg, chatSending, handleSendChatToMD } = useChat();
@@ -117,19 +107,29 @@ export default function App() {
                     const userId = res.data.data.userId;
                     const nickname = res.data.data.nickname;
                     const onboarded = res.data.data.onboarded;
-                    const regionName = res.data.data.regionName  // BE label (e.g. '서울특별시')
-                    const resolvedRegionCode = regionName ? (REGIONS.find(r => r.label === regionName)?.code) : undefined;
+                    const regionCode = res.data.data.regionCode;
+                    const genderRaw = res.data.data.gender;
+                    const gender: "Male" | "Female" | "None" =
+                        genderRaw === "MALE" ? "Male" :
+                            genderRaw === "FEMALE" ? "Female" : "None";
+                    const birthday = res.data.data.birthDate ?? "";
+                    const styles = res.data.data.styleCodes ?? [];
 
-                    if(onboarded){
-                        // 온보딩 완료 유저: nickname + onboarded: true
-                        setProfile(prev => ({ ...prev, nickname, onboarded: true, region: resolvedRegionCode }));
-                    } else if(nickname){
-                        // 온보딩 미완료지만 OAuth 닉네임 존재: 기본값으로만 활용
-                        setProfile(prev => ({ ...prev, nickname, onboarded: false, region: resolvedRegionCode }));
-                    }
+                    setProfile(prev => ({
+                        ...prev, nickname, onboarded, region: regionCode || undefined,
+                        gender, birthday, styles,
+                    }));
+
                 setAuthUserId(userId);
                 setIsLoggedIn(true);
                 setAuthReady(true);
+
+                const pending = sessionStorage.getItem("pendingTab") as "closet" | "profile" | null;
+
+                if(pending){
+                    setCurrentTab(pending);
+                    sessionStorage.removeItem("pendingTab");
+                }
             })
             .catch(() => {
                 setIsLoggedIn(false);
@@ -160,7 +160,6 @@ export default function App() {
     const resetAuthState = () => {
         setIsLoggedIn(false);
         setAuthUserId(null);
-        clearUserProfile();
         setProfile({ nickname: "", gender: "None", styles: [], onboarded: false, birthday: "" });
         setCurrentTab("home");
         setAuthReady(false);
@@ -179,7 +178,17 @@ export default function App() {
             {/* ========================================================= */}
             {/* 1. AUTH / LOGIN FLOW MODAL VIEW */}
             {/* ========================================================= */}
-            {isLoginModalOpen && (<LoginPage isModal onClose={() => setIsLoginModalOpen(false)} onSocialLogin={handleSocialLogin} />)}
+            {isLoginModalOpen && (
+                <LoginPage
+                    isModal
+                    onClose={() => {
+                        setIsLoginModalOpen(false);
+                        setPendingTab(null);
+                        sessionStorage.removeItem("pendingTab");
+                    }}
+                    onSocialLogin={handleSocialLogin}
+                />
+            )}
 
             {/* 2. ONBOARDING PROFILE FLOWS */}
             {/* ========================================================= */}
