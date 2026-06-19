@@ -108,7 +108,7 @@ function OotdCanvas({ top, bottom, outer, shoes }: {
         const hasShoes = !!shoes;
         const topH = hasShoes ? H * 0.35 : H * 0.42;
         const bottomH = hasShoes ? H * 0.5 : H * 0.7;
-        const shoesH = hasShoes ? H * 0.1 : 0.1;
+        const shoesH = hasShoes ? H * 0.14 : 0.14;
 
         if (outer) {
           const outerImg = await loadImage(outer);
@@ -726,13 +726,13 @@ export default function HomeTab({
             <h2 className="text-xl md:text-2xl font-black text-slate-950 mt-1">{activeConfig.title}</h2>
             {activeConfig.subtitle ? <p className="text-xs text-slate-400 font-bold mt-1">{activeConfig.subtitle}</p> : null}
           </div>
-          {styleError && <p className="text-[10px] text-rose-500 font-bold max-w-[150px] text-right leading-tight">{styleError}</p>}
-          {activeLabel !== "match" && !styleError && (
+          {activeLabel === 'style' && styleError && <p className="text-[10px] text-rose-500 font-bold max-w-[150px] text-right leading-tight">{styleError}</p>}
+          {activeLabel === 'style' && !styleError && (
               <span className="text-xs font-black text-slate-400 shrink-0">{`${selectedRecommendations.length}개`}</span>
           )}
         </div>
 
-        {!hasRecommendationData && activeLabel !== "match" && (
+        {!hasRecommendationData && activeLabel === 'style' && (
             <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center mb-6">
               <span className="text-4xl block mb-3">👗</span>
               <p className="text-sm font-bold text-slate-700">아직 등록된 옷이 없어요</p>
@@ -742,7 +742,7 @@ export default function HomeTab({
             </div>
         )}
 
-        {hasRecommendationData && activeLabel !== "match" && styleLoading && (
+        {hasRecommendationData && activeLabel === 'style' && styleLoading && (
             <div className="grid gap-4 grid-cols-2 lg:grid-cols-3 mb-6">
               {Array.from({ length: 20 }).map((_, idx) => (
                   <div key={idx} className="h-44 sm:h-52 lg:h-72 rounded-[24px] bg-slate-100 animate-pulse" />
