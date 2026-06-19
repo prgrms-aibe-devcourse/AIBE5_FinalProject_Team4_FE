@@ -28,6 +28,17 @@ FE는 RDS·S3(DB/이미지)에 직접 연결하지 않습니다. BE `deploy/.env
 | `VITE_API_BASE_URL` | `APP_BASE_URL` (BE API 공개 URL) |
 | (브라우저 접속 origin) | `FE_BASE_URL`, `CORS_ALLOWED_ORIGINS` |
 
+### 운영 URL 조합
+
+| 배포 형태 | FE `VITE_API_BASE_URL` | BE `APP_BASE_URL` | BE `FE_BASE_URL` / `CORS_ALLOWED_ORIGINS` |
+| --- | --- | --- | --- |
+| 같은 origin EC2 + Nginx | FE 접속 origin. 예: `https://www.closetnangam.site` | 같은 origin | 같은 origin |
+| FE/BE 별도 도메인 | BE 공개 origin. 예: `https://api.closetnangam.site` | BE 공개 origin | FE 접속 origin |
+
+`VITE_API_BASE_URL`은 빌드 시 필수입니다. 같은 origin 배포에서도 비워두지 말고 FE 접속 origin을 넣습니다.
+`nginx.conf.example`은 같은 origin 배포 기준으로 `/api/`, `/oauth2/`, `/login/oauth2/`, `/actuator/health`만 BE로 프록시합니다.
+`/login`은 FE SPA 경로이므로 BE로 프록시하지 않습니다.
+
 상세 AWS 리소스 생성 순서: [BE docs/deploy/aws-setup.md](https://github.com/prgrms-aibe-devcourse/AIBE5_FinalProject_Team4_BE/blob/develop/docs/deploy/aws-setup.md)
 
 ## 파일

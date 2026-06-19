@@ -277,7 +277,7 @@ import Button from '@/components/common/Button';
   <tbody>
     <tr>
       <td><code>VITE_API_BASE_URL</code></td>
-      <td>백엔드 API 주소</td>
+      <td>API/OAuth 공개 origin. 로컬은 BE 주소, 운영 같은 origin 배포는 FE 접속 origin, 별도 도메인 배포는 BE 공개 주소</td>
       <td><code>http://localhost:8080</code></td>
     </tr>
   </tbody>
