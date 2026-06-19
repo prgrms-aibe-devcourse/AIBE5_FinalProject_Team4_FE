@@ -260,7 +260,7 @@ BE 추천 API 중 현재 FE에서 실제 호출하는 API와 아직 mock/static 
 
 | 세부기능 ID | BE API | 현재 FE 상태 |
 | --- | --- | --- |
-| `RECO-001` | `GET /api/v1/ootd/{wardrobeId}?currentTemp={temp}` | `HomeTab` `ootd` 라벨 연동 |
+| `RECO-001` | `GET /api/v1/ootd/{wardrobeId}?currentTemp={temp}` | `HomeTab` 상단 고정 OOTD 섹션. `RecommendationLabel`에서 분리되어 탭과 독립적으로 항상 로드 |
 | `RECO-002` | `GET /api/v1/recommendations/{wardrobeId}?currentTemp={temp}` | `HomeTab` `style` 라벨 연동 |
 | `RECO-003` | `GET /api/v1/users/{userId}/clothes/{clothesId}/similar-products` | `HomeTab` `similar` 라벨 연동. 기준 옷은 `OWNED`와 `WISHLIST` 모두 노출, 결과 안내는 최대 50개 기준 |
 | `RECO-005` | `GET /api/v1/users/{userId}/clothes/{clothesId}/recommendations?limitPerCategory={n}` | `HomeTab` `match` 라벨 연동. FE 기본 `n=50` (BE 허용 `1`~`50`) |

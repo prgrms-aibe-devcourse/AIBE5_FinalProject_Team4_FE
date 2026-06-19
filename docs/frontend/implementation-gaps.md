@@ -49,7 +49,7 @@ last_updated: 2026-06-17
 | --- | --- | --- | --- | --- |
 | `WARDROBE-002` | `closet` tab 요약 | `ClosetTab.tsx` | [feature-index.md](../requirements/feature-index.md), [wardrobe.md](../features/wardrobe.md) | 옷장 전체 요약 기준과 현재 BE 통계 API 범위가 다르게 읽힐 수 있음 |
 | `WARDROBE-011`~`WARDROBE-030`, 옷 수정 | 옷 등록/수정 modal | `PhotoGarmentRegisterModal.tsx`, `PurchaseGarmentRegisterModal.tsx`, `GarmentEditModal.tsx` | [garment-registration.md](../features/garment-registration.md), [domain-types.md](domain-types.md) | 등록/수정 API 연동 자체가 아니라, 옷 대상 성별 UI 노출과 `season` 수정 payload/검증 주석 확인 필요 |
-| `RECO-001` | `home` tab `ootd` 라벨 | `HomeTab.tsx` | [home-recommendation.md](../features/home-recommendation.md) | BE `GET /api/v1/ootd/{wardrobeId}` 연동 |
+| `RECO-001` | `home` tab 상단 고정 OOTD 섹션 | `HomeTab.tsx` | [home-recommendation.md](../features/home-recommendation.md) | BE `GET /api/v1/ootd/{wardrobeId}` 연동. `RecommendationLabel`에서 `ootd` 라벨 제거 후 탭과 별개로 항상 로드 |
 | `RECO-002` | `home` tab `style` 라벨 | `HomeTab.tsx` | [home-recommendation.md](../features/home-recommendation.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | BE `GET /api/v1/recommendations/{wardrobeId}` 연동 |
 | `RECO-005` | `home` tab `match` 라벨 | `HomeTab.tsx`, `MatchRecommendationByCategory.tsx`, `src/api/recommendations.ts` | [home-recommendation.md](../features/home-recommendation.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | BE recommendations API 연동. 기본 `limitPerCategory=50` (BE 허용 `1`~`50`). 추천 피드백 API와 별개로 동작 |
 | `RECO-013`~`RECO-014` | 추천 카드 액션 | `HomeTab.tsx`, `MatchRecommendationByCategory.tsx`, `RecommendProductDetailModal.tsx`, `OutfitDetailModal.tsx` | [home-recommendation.md](../features/home-recommendation.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | 싫어요/추천 제외와 일부 저장 액션은 피드백 API에 연결. 외부 상품 저장/AI MD 등 세부 액션의 피드백 기록 범위 확인 필요 |
@@ -60,7 +60,7 @@ last_updated: 2026-06-17
 
 ### 홈 추천 연동 상태
 
-현재 `HomeTab.tsx`는 OOTD, 취향 기반, 유사 상품, 어울리는 옷, AI MD 모든 라벨이 공통 API client를 통해 BE API를 호출합니다.
+현재 `HomeTab.tsx`는 OOTD를 상단 고정 섹션으로 분리하고, 취향 기반(`style`), 유사 상품(`similar`), 어울리는 옷(`match`), AI MD(`aimd`) 4개 탭으로 구성됩니다. `RecommendationLabel` 타입에서 `ootd`가 제거되었으며, OOTD 섹션은 탭과 독립적으로 컴포넌트 마운트 시 항상 로드됩니다.
 
 남은 gap:
 

@@ -302,10 +302,6 @@ export default function HomeTab({
               clothesId: mainItem.clothesId ?? null,
               outfitId: item.outfitId ?? null,
               bookId: currentBookId || null,
-              top: item.top,
-              bottom: item.bottom,
-              outer: item.outer,
-              shoes: item.shoes,
             } as RecommendItem;
           });
           setOotdCombinations(combos);
@@ -538,11 +534,12 @@ export default function HomeTab({
 
           {hasRecommendationData && !ootdLoading && !ootdError && ootdRecommendations.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-              {ootdRecommendations.map((item, itemIdx) => (
+              {ootdRecommendations.map((item) => {
+                const combo = ootdCombinations.find(c => c.id === item.id) ?? null;
+                return (
                 <article
                   key={item.id}
                   onClick={() => {
-                    const combo = ootdCombinations[itemIdx] ?? null;
                     setSelectedCombo(combo);
                     setSelectedItem(null);
                   }}
@@ -550,7 +547,6 @@ export default function HomeTab({
                 >
                   <div className="h-44 sm:h-52 lg:h-72 bg-slate-100 relative overflow-hidden">
                     {(() => {
-                      const combo = ootdCombinations[itemIdx];
                       if (combo && !combo.outer && combo.top && combo.bottom) {
                         return (
                           <div className="w-full h-full flex flex-col">
@@ -587,7 +583,8 @@ export default function HomeTab({
                     </div>
                   </div>
                 </article>
-              ))}
+              );
+              })}
             </div>
           )}
         </section>
