@@ -36,6 +36,7 @@ import {
   fetchMarketingConsent,
   updateMarketingConsent,
 } from "@/api/marketingConsent";
+import { updateGuideTour } from "@/api/guideTour";
 import { uploadProfileImage } from "@/api/profileImage";
 import { checkNicknameAvailability } from "@/api/users";
 import { getGarmentStyleLabel } from "@/data/garmentStyles";
@@ -44,6 +45,7 @@ import LegalDocumentModal from "@/components/legal/LegalDocumentModal";
 import { formatNicknameInput, getNicknameValidationError, NICKNAME_RULE_MESSAGE } from "@/utils/nickname";
 // 기존 상수 data ( TRIGGER_PRODUCTS 는 사용을 하지않아 우선 주석처리함 )
 // import { TRIGGER_PRODUCTS } from "@/data/triggerProducts";
+
 
 type MyProfilePayload = {
   userId: number;
@@ -63,6 +65,10 @@ type MyProfilePayload = {
     provider?: string | null;
     providerEmail?: string | null;
   }[] | null;
+  guideTourCompletedHome?: boolean | null;
+  guideTourCompletedWardrobe?: boolean | null;
+  guideTourCompletedFeed?: boolean | null;
+  guideTourCompletedMypage?: boolean | null;
 };
 
 type AppDialog =
@@ -137,6 +143,10 @@ const EMPTY_PROFILE: UserProfile = {
   externalLinkUrl: "",
   socialProviders: [],
   socialAccounts: [],
+  guideTourCompletedHome: undefined,
+  guideTourCompletedWardrobe: undefined,
+  guideTourCompletedFeed: undefined,
+  guideTourCompletedMypage: undefined,
 };
 
 const getProfileStyleItems = (styles: string[], catalogStyles: CatalogStyle[]): CatalogStyle[] => {
@@ -439,6 +449,10 @@ export default function App() {
           .filter((account) => account.provider || account.providerEmail)
           ?? prev.socialAccounts
           ?? [],
+        guideTourCompletedHome: data.guideTourCompletedHome ?? prev.guideTourCompletedHome,
+        guideTourCompletedFeed: data.guideTourCompletedFeed ?? prev.guideTourCompletedFeed,
+        guideTourCompletedWardrobe: data.guideTourCompletedWardrobe ?? prev.guideTourCompletedWardrobe,
+        guideTourCompletedMypage: data.guideTourCompletedMypage ?? prev.guideTourCompletedMypage,
       };
       return nextProfile;
     });
@@ -540,6 +554,17 @@ export default function App() {
     setProfileMarketingAgreed(null);
     setCurrentTab("home");
     setAuthReady(false);
+  };
+
+  const handleGuideTourComplete = async (page: "home" | "wardrobe" | "feed" | "mypage") => {
+    await updateGuideTour({ [page]: true });
+    setProfile(prev => ({
+      ...prev,
+      ...(page === "home" && { guideTourCompletedHome: true }),
+      ...(page === "wardrobe" && { guideTourCompletedWardrobe: true }),
+      ...(page === "feed" && { guideTourCompletedFeed: true }),
+      ...(page === "mypage" && { guideTourCompletedMypage: true }),
+    }));
   };
 
   const handleLogout = () => {
@@ -1424,7 +1449,6 @@ export default function App() {
                 <Home className="w-5 h-5" />
                 <span className="text-[9px] font-extrabold mt-1">추천</span>
               </button>
-
               <button
                 id="nav-closet"
                 onClick={() => {
