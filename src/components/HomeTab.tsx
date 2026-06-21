@@ -719,7 +719,7 @@ export default function HomeTab({
                   >
                     <span className="text-xl block mb-2">{config.icon}</span>
                     <strong className="text-xs font-black block leading-tight">{config.title}</strong>
-                    {config.subtitle ? <span className={`text-[10px] font-bold block mt-1 ${isActive ? "text-white/75" : "text-slate-400"}`}>{config.subtitle}</span> : null}
+
                   </button>
               );
             })}
@@ -732,12 +732,8 @@ export default function HomeTab({
           <div>
             <span className="text-[11px] font-black text-[#111827] uppercase tracking-wider">{activeConfig.icon} Recommendation</span>
             <h2 className="text-xl md:text-2xl font-black text-slate-950 mt-1">{activeConfig.title}</h2>
-            {activeConfig.subtitle ? <p className="text-xs text-slate-400 font-bold mt-1">{activeConfig.subtitle}</p> : null}
           </div>
           {activeLabel === 'style' && styleError && <p className="text-[10px] text-rose-500 font-bold max-w-[150px] text-right leading-tight">{styleError}</p>}
-          {activeLabel === 'style' && !styleError && (
-              <span className="text-xs font-black text-slate-400 shrink-0">{`${selectedRecommendations.length}개`}</span>
-          )}
         </div>
 
         {!hasRecommendationData && activeLabel === 'style' && (
