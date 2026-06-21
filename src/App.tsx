@@ -556,7 +556,7 @@ export default function App() {
     try{
       await updateGuideTour({ [page]: true });
     } catch {
-
+      // API 실패 시 무시 — finally에서 로컬 state 업데이트
     }
     finally {
       setProfile(prev => ({
