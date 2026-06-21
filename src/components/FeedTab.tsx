@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { fetchFeedPosts, toggleFeedLike, toggleFeedSave } from '@/api/feed'
 import Spinner from '@/components/common/Spinner'
 import FeedEmptyState from '@/components/feed/FeedEmptyState'
@@ -9,12 +9,15 @@ import { Plus } from '@/components/icons'
 import { useToast } from '@/components/Toast'
 import type { FeedPost } from '@/types/feed'
 import { extractApiErrorMessage } from '@/utils/apiError'
+import GuideTour from '@/components/common/GuideTour'
 
 interface FeedTabProps {
   userId: number
+  guideTourCompleted: boolean
+  onGuideTourComplete: () => void
 }
 
-export default function FeedTab({ userId }: FeedTabProps) {
+export default function FeedTab({ userId, guideTourCompleted, onGuideTourComplete }: FeedTabProps) {
   const { showToast } = useToast()
   const [posts, setPosts] = useState<FeedPost[]>([])
   const [loading, setLoading] = useState(true)
@@ -26,6 +29,10 @@ export default function FeedTab({ userId }: FeedTabProps) {
   const [detailPostId, setDetailPostId] = useState<number | null>(null)
   const [submittingPostId, setSubmittingPostId] = useState<number | null>(null)
   const [submittingAction, setSubmittingAction] = useState<'like' | 'save' | null>(null)
+  const [tourOpen, setTourOpen] = useState(!guideTourCompleted)
+  const feedHeaderRef = useRef<HTMLDivElement>(null)
+  const postListRef = useRef<HTMLDivElement>(null)
+  const writeButtonRef = useRef<HTMLDivElement>(null)
 
   const loadPosts = useCallback(async (nextPage: number, append: boolean) => {
     if (append) {
@@ -119,7 +126,7 @@ export default function FeedTab({ userId }: FeedTabProps) {
 
   return (
     <div className="relative -mx-5 pb-24 animate-fade-in text-left">
-      <div className="sticky top-0 z-10 border-b border-slate-100 bg-white/95 px-5 py-3 backdrop-blur-sm">
+      <div ref={feedHeaderRef} className="sticky top-0 z-10 border-b border-slate-100 bg-white/95 px-5 py-3 backdrop-blur-sm">
         <h3 className="text-center text-base font-semibold text-slate-900">룩피드</h3>
       </div>
 
@@ -143,7 +150,7 @@ export default function FeedTab({ userId }: FeedTabProps) {
           <FeedEmptyState onWriteClick={() => setWriteOpen(true)} />
         </div>
       ) : (
-        <div className="flex flex-col">
+        <div ref={postListRef} className="flex flex-col">
           {posts.map((post) => (
             <FeedPostCard
               key={post.feedPostId}
@@ -194,7 +201,7 @@ export default function FeedTab({ userId }: FeedTabProps) {
       />
 
       {!writeOpen ? (
-        <div className="fixed bottom-20 left-0 right-0 z-20 flex justify-center px-5 pointer-events-none">
+        <div ref={writeButtonRef} className="fixed bottom-20 left-0 right-0 z-20 flex justify-center px-5 pointer-events-none">
           <button
             type="button"
             onClick={() => setWriteOpen(true)}
@@ -205,6 +212,26 @@ export default function FeedTab({ userId }: FeedTabProps) {
           </button>
         </div>
       ) : null}
+      {tourOpen && (
+        <GuideTour
+          steps={[
+            { targetRef: feedHeaderRef, message: "다른 사람들의 실제 코디에서 스타일 힌트를 얻어보세요" },
+            { targetRef: postListRef, message: "좋아요·저장으로 마음에 드는 코디를 바로 기록할 수 있어요" },
+            { targetRef: writeButtonRef, message: "내 코디를 업로드하면 팔로워와 공유할 수 있어요" },
+          ]}
+          onComplete={() => {
+            setTourOpen(false)
+            onGuideTourComplete()
+          }}
+        />
+      )}
+      {!tourOpen && !writeOpen && (
+          <button
+              type="button"
+              className="fixed right-5 bottom-20 z-40 w-11 h-11 rounded-full bg-white border border-slate-200 text-[#1E3A8A] shadow-lg flex items-center justify-center transition active:scale-90"
+              onClick={() => setTourOpen(true)}
+          >?</button>
+      )}
     </div>
   )
 }

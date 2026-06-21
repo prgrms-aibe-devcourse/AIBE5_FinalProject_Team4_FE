@@ -43,6 +43,11 @@ export interface UserProfile {
     provider: string;
     providerEmail: string;
   }[];
+  guideTourCompletedHome?: boolean;
+  guideTourCompletedWardrobe?: boolean;
+  guideTourCompletedFeed?: boolean;
+  guideTourCompletedMypage?: boolean;
+  guideTourCompletedOutfitBook?: boolean;
 }
 
 export interface Recommendation {
