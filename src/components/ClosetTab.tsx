@@ -611,6 +611,14 @@ export default function ClosetTab({
                 }}
             />
         )}
+
+        {!tourOpen && (
+            <button
+                type="button"
+                className="fixed right-5 bottom-20 z-40 w-11 h-11 rounded-full bg-white border border-slate-200 text-[#1E3A8A] shadow-lg flex items-center justify-center transition active:scale-90"
+                onClick={() => setTourOpen(true)}
+            >?</button>
+        )}
       </div>
   );
 }

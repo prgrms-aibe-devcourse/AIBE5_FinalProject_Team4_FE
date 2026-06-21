@@ -1,7 +1,7 @@
 ---
 doc_type: shared
 source_of_truth: AIBE5_FinalProject_Team4_BE
-last_updated: 2026-06-15
+last_updated: 2026-06-21
 ---
 
 # 기능 인덱스
@@ -47,6 +47,7 @@ last_updated: 2026-06-15
 | `SYSTEM-010` | 공통 시스템 | 마케팅 정보 수신 동의 | 선택 동의로 관리하며 온보딩/마이페이지에서 조회 및 변경 | `GET /api/v1/users/{userId}/marketing-consent`, `PATCH /api/v1/users/{userId}/marketing-consent`, `GET /api/v1/legal/marketing-consent`, `USERS.marketing_agreed`, `USERS.marketing_agreed_at`, `BE docs/legal/marketing-consent.md` | 온보딩, 마이페이지 |
 | `DATA-001` | 데이터 관리 | 초기 상품 데이터 | 추천 기능 시연을 위한 DB/API 초기 데이터 준비 | 샘플 상품 데이터 | 추천 |
 | `FEED-001`~`FEED-009` | 룩피드 | 피드/반응/빈 상태 | 코디 공유, 상세, 좋아요, 저장, 댓글, 대댓글, 팔로우, 빈 상태 | `FEED_POSTS`, `FEED_POST_IMAGES`, `FEED_LIKES`, `FEED_COMMENTS`, `FEED_POST_SAVES`, `USER_FOLLOWS` | 룩피드 |
+| `SYSTEM-011` | 공통 시스템 | 가이드 투어 | 최초 로그인 사용자에게 홈·옷장·룩피드·마이페이지 주요 기능을 순차 안내하고 완료 상태를 서버에 저장. 완료 후 `?` 버튼으로 재진입 가능 | `PATCH /api/v1/users/guide-tour`, `USERS.guide_tour_completed_home`, `guide_tour_completed_wardrobe`, `guide_tour_completed_feed`, `guide_tour_completed_mypage` | 홈, 옷장, 룩피드, 마이페이지 |
 
 ## ID 운영 규칙
 
