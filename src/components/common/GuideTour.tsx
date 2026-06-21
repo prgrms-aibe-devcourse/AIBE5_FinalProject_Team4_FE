@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
 
 interface GuideTourStep {
-    targetRef: React.RefObject<HTMLElement>
+    targetRef: RefObject<HTMLElement>
     message: string
 }
 
@@ -20,7 +20,7 @@ export default function GuideTour({ steps, onComplete }: GuideTourProps) {
         if (el) {
             setTargetRect(el.getBoundingClientRect())
         }
-    }, [currentStep])
+    }, [currentStep, steps])
 
     return createPortal(
         <div className="fixed inset-0 z-[150]">

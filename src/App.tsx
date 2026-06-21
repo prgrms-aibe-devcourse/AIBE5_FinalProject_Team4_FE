@@ -365,10 +365,6 @@ export default function App() {
   const [catalogStylesLoading, setCatalogStylesLoading] = useState(true);
   const [catalogStylesError, setCatalogStylesError] = useState(false);
 
-  const persistProfile = (next: UserProfile) => {
-    setProfile(next);
-  };
-
   const { gamyagiChatOpen, setGamyagiChatOpen, chatMessages, pendingMsg, setPendingMsg, chatSending, handleSendChatToMD } = useChat();
 
   // 옷장
@@ -557,14 +553,20 @@ export default function App() {
   };
 
   const handleGuideTourComplete = async (page: "home" | "wardrobe" | "feed" | "mypage") => {
-    await updateGuideTour({ [page]: true });
-    setProfile(prev => ({
-      ...prev,
-      ...(page === "home" && { guideTourCompletedHome: true }),
-      ...(page === "wardrobe" && { guideTourCompletedWardrobe: true }),
-      ...(page === "feed" && { guideTourCompletedFeed: true }),
-      ...(page === "mypage" && { guideTourCompletedMypage: true }),
-    }));
+    try{
+      await updateGuideTour({ [page]: true });
+    } catch {
+
+    }
+    finally {
+      setProfile(prev => ({
+        ...prev,
+        ...(page === "home" && { guideTourCompletedHome: true }),
+        ...(page === "wardrobe" && { guideTourCompletedWardrobe: true }),
+        ...(page === "feed" && { guideTourCompletedFeed: true }),
+        ...(page === "mypage" && { guideTourCompletedMypage: true }),
+      }));
+    }
   };
 
   const handleLogout = () => {

@@ -23,6 +23,7 @@ import {
   Plus,
 } from "./icons";
 import { Garment } from "@/types/index";
+import GuideTour from "@/components/common/GuideTour"
 
 type ClosetTabView = "owned" | "wishlist" | "favorites";
 
@@ -34,6 +35,8 @@ interface ClosetTabProps {
   /** JWT sub와 일치하는 인증 사용자 ID (App에서 전달) */
   userId: number;
   onOpenRegister: () => void;
+  guideTourCompleted: boolean;
+  onGuideTourComplete: () => void;
 }
 
 export default function ClosetTab({
@@ -43,6 +46,8 @@ export default function ClosetTab({
                                     setSelectedGarment,
                                     userId,
                                     onOpenRegister,
+                                    guideTourCompleted,
+                                    onGuideTourComplete,
                                   }: ClosetTabProps) {
   const [closetTab, setClosetTab] = useState<ClosetTabView>("owned");
   const [closetFilter, setClosetFilter] = useState<string>("All");
@@ -51,6 +56,9 @@ export default function ClosetTab({
   const [error, setError] = useState<string | null>(null);
   const [wardrobeStats, setWardrobeStats] = useState<WardrobeStatisticsResponse | null>(null);
   const selectedRef = useRef<Garment | null>(null);
+  const tabRef = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const [tourOpen, setTourOpen] = useState(!guideTourCompleted);
 
   useEffect(() => {
     selectedRef.current = selectedGarment;
@@ -329,7 +337,7 @@ export default function ClosetTab({
           {/* Left: 탭 · 필터 · 컬렉션 */}
           <div className="lg:col-span-3 space-y-4 text-left order-2 lg:order-1">
             {/* TAB + 즐겨찾기 (한 줄) */}
-            <div className="grid grid-cols-3 gap-2 bg-slate-100 p-1.5 rounded-2xl select-none w-full">
+            <div ref={tabRef} className="grid grid-cols-3 gap-2 bg-slate-100 p-1.5 rounded-2xl select-none w-full">
               <button
                   onClick={() => {
                     setClosetTab("owned");
@@ -422,7 +430,7 @@ export default function ClosetTab({
               </h2>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div ref={gridRef} className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {filteredClothes.map((item) => {
                 const isSelected = selectedGarment?.id === item.id;
 
@@ -591,6 +599,18 @@ export default function ClosetTab({
           </button>
         </div>
 
+        {tourOpen && (
+            <GuideTour
+                steps={[
+                  { targetRef: tabRef, message: "보유 의상, 위시리스트, 즐겨찾기로 옷을 분류해서 볼 수 있어요" },
+                  { targetRef: gridRef, message: "등록된 옷을 클릭하면 상세 정보를 확인할 수 있어요" },
+                ]}
+                onComplete={() => {
+                  setTourOpen(false)
+                  onGuideTourComplete()
+                }}
+            />
+        )}
       </div>
   );
 }
