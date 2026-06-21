@@ -14,48 +14,85 @@ interface GuideTourProps {
 export default function GuideTour({ steps, onComplete }: GuideTourProps) {
     const [currentStep, setCurrentStep] = useState(0)
     const [targetRect, setTargetRect] = useState<DOMRect | null>(null)
+    const [visible, setVisible] = useState(false)
 
+    // 스텝 변경 시 해당 요소로 스크롤 후 rect 캡처
     useEffect(() => {
         const el = steps[currentStep].targetRef.current
-        if (el) {
+        if (!el) return
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+        const id = setTimeout(() => {
             setTargetRect(el.getBoundingClientRect())
-        }
+        }, 120)
+        return () => clearTimeout(id)
     }, [currentStep, steps])
 
+    // 마운트 후 fade-in
+    useEffect(() => {
+        const id = requestAnimationFrame(() => setVisible(true))
+        return () => cancelAnimationFrame(id)
+    }, [])
+
     return createPortal(
-        <div className="fixed inset-0 z-[150]">
-            {/* Layer 2: spotlight */}
+        <div
+            className="fixed inset-0 z-[150]"
+            style={{
+                opacity: visible ? 1 : 0,
+                transition: 'opacity 0.3s ease',
+            }}
+        >
+            {/* 스포트라이트 */}
             {targetRect && (
                 <div
                     style={{
                         position: 'fixed',
-                        top: targetRect.top - 4,
-                        left: targetRect.left - 4,
-                        width: targetRect.width + 8,
-                        height: targetRect.height + 8,
-                        borderRadius: '8px',
-                        boxShadow: '0 0 0 9999px rgba(0,0,0,0.6)',
+                        top: targetRect.top - 6,
+                        left: targetRect.left - 6,
+                        width: targetRect.width + 12,
+                        height: targetRect.height + 12,
+                        borderRadius: '14px',
+                        boxShadow: '0 0 0 9999px rgba(0,0,0,0.62)',
+                        outline: '2px solid rgba(255,255,255,0.2)',
+                        outlineOffset: '2px',
                         zIndex: 151,
+                        transition:
+                            'top 0.38s cubic-bezier(0.4,0,0.2,1),' +
+                            'left 0.38s cubic-bezier(0.4,0,0.2,1),' +
+                            'width 0.38s cubic-bezier(0.4,0,0.2,1),' +
+                            'height 0.38s cubic-bezier(0.4,0,0.2,1)',
                     }}
                 />
             )}
 
-            {/* Layer 3: 말풍선 + 버튼 */}
+            {/* 말풍선 카드 */}
             {targetRect && (
                 <div
                     style={{
                         position: 'fixed',
-                        top: Math.min(targetRect.bottom + 12, window.innerHeight - 140),
-                        left: Math.max(16, Math.min(targetRect.left, window.innerWidth - 296)),
-                        maxWidth: '280px',
+                        top: Math.min(targetRect.bottom + 18, window.innerHeight - 155),
+                        left: Math.max(16, Math.min(targetRect.left, window.innerWidth - 300)),
+                        maxWidth: '284px',
                         zIndex: 152,
+                        transition:
+                            'top 0.38s cubic-bezier(0.4,0,0.2,1),' +
+                            'left 0.38s cubic-bezier(0.4,0,0.2,1)',
                     }}
-                    className="rounded-2xl bg-white p-4 shadow-xl"
+                    className="rounded-2xl bg-white p-4 shadow-2xl"
                 >
-                    {/* 스텝 표시 */}
-                    <p className="text-[10px] font-bold text-slate-400 mb-2">
-                        {currentStep + 1} / {steps.length}
-                    </p>
+                    {/* 스텝 도트 인디케이터 */}
+                    <div className="flex items-center gap-1.5 mb-3">
+                        {steps.map((_, i) => (
+                            <span
+                                key={i}
+                                className="block h-1.5 rounded-full"
+                                style={{
+                                    width: i === currentStep ? '20px' : '6px',
+                                    backgroundColor: i === currentStep ? '#1E3A8A' : '#CBD5E1',
+                                    transition: 'width 0.3s ease, background-color 0.3s ease',
+                                }}
+                            />
+                        ))}
+                    </div>
 
                     {/* 메시지 */}
                     <p className="text-sm font-bold text-slate-800 mb-4 leading-relaxed">

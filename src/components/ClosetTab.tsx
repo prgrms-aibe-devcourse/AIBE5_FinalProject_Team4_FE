@@ -57,6 +57,7 @@ export default function ClosetTab({
   const [wardrobeStats, setWardrobeStats] = useState<WardrobeStatisticsResponse | null>(null);
   const selectedRef = useRef<Garment | null>(null);
   const tabRef = useRef<HTMLDivElement>(null);
+  const filterRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   const [tourOpen, setTourOpen] = useState(!guideTourCompleted);
 
@@ -385,7 +386,7 @@ export default function ClosetTab({
               </button>
             </div>
 
-            <div className="grid grid-cols-5 gap-2 w-full select-none text-left">
+            <div ref={filterRef} className="grid grid-cols-5 gap-2 w-full select-none text-left">
               {["All", "Top", "Bottom", "Outer", "Shoes"].map((cat) => {
                 const isSelected = closetFilter === cat;
                 return (
@@ -602,8 +603,9 @@ export default function ClosetTab({
         {tourOpen && (
             <GuideTour
                 steps={[
-                  { targetRef: tabRef, message: "보유 의상, 위시리스트, 즐겨찾기로 옷을 분류해서 볼 수 있어요" },
-                  { targetRef: gridRef, message: "등록된 옷을 클릭하면 상세 정보를 확인할 수 있어요" },
+                  { targetRef: tabRef, message: "보유·미보유·즐겨찾기로 내 옷을 분류해서 볼 수 있어요" },
+                  { targetRef: filterRef, message: "카테고리 필터로 원하는 종류의 옷만 빠르게 찾을 수 있어요" },
+                  { targetRef: gridRef, message: "옷을 즐겨찾기하면 AI 코디 매칭에 우선 반영돼요" },
                 ]}
                 onComplete={() => {
                   setTourOpen(false)

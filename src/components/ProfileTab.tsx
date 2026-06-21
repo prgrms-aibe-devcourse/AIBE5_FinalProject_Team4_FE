@@ -124,6 +124,8 @@ export default function ProfileTab({
   const [tourOpen, setTourOpen] = useState(!guideTourCompleted)
 
   const profileSectionRef = useRef<HTMLElement>(null)
+  const accountSectionRef = useRef<HTMLElement>(null)
+  const basicInfoSectionRef = useRef<HTMLElement>(null)
   const stylesSectionRef = useRef<HTMLElement>(null)
 
   // guideTourCompleted prop이 바뀌면 tourOpen 동기화
@@ -161,7 +163,7 @@ export default function ProfileTab({
         </section>
 
         {/* 계정 정보 */}
-        <section className="border-t border-slate-100 px-5 py-5">
+        <section ref={accountSectionRef} className="border-t border-slate-100 px-5 py-5">
           <h3 className="text-sm font-black text-slate-900">계정 정보</h3>
           <div className="mt-3 divide-y divide-slate-100">
             <div className="flex gap-4 py-3">
@@ -192,7 +194,7 @@ export default function ProfileTab({
         </section>
 
         {/* 기본 정보 */}
-        <section className="border-t border-slate-100 px-5 py-5">
+        <section ref={basicInfoSectionRef} className="border-t border-slate-100 px-5 py-5">
           <button
             type="button"
             onClick={() => { void onOpenProfileEdit("basic") }}
@@ -280,6 +282,8 @@ export default function ProfileTab({
         <GuideTour
           steps={[
             { targetRef: profileSectionRef, message: "프로필 이미지와 닉네임을 수정할 수 있어요" },
+            { targetRef: accountSectionRef, message: "연결된 소셜 계정과 이메일 정보를 확인할 수 있어요" },
+            { targetRef: basicInfoSectionRef, message: "생년월일·성별·지역을 입력하면 날씨 기반 추천이 더 정확해져요" },
             { targetRef: stylesSectionRef, message: "선호 스타일을 수정하면 추천이 더 정확해져요" },
           ]}
           onComplete={() => {

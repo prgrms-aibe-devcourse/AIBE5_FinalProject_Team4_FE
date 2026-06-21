@@ -5,6 +5,7 @@ type GuideTourPayload = {
     wardrobe?: boolean;
     feed?: boolean;
     mypage?: boolean;
+    outfitBook?: boolean;
 };
 
 export async function updateGuideTour(payload: GuideTourPayload): Promise<void> {

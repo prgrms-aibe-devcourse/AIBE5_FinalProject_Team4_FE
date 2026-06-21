@@ -47,6 +47,7 @@ export interface UserProfile {
   guideTourCompletedWardrobe?: boolean;
   guideTourCompletedFeed?: boolean;
   guideTourCompletedMypage?: boolean;
+  guideTourCompletedOutfitBook?: boolean;
 }
 
 export interface Recommendation {

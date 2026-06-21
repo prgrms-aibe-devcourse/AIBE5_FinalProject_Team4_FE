@@ -70,6 +70,7 @@ type MyProfilePayload = {
   guideTourCompletedWardrobe?: boolean | null;
   guideTourCompletedFeed?: boolean | null;
   guideTourCompletedMypage?: boolean | null;
+  guideTourCompletedOutfitBook?: boolean | null;
 };
 
 type AppDialog =
@@ -148,6 +149,7 @@ const EMPTY_PROFILE: UserProfile = {
   guideTourCompletedWardrobe: undefined,
   guideTourCompletedFeed: undefined,
   guideTourCompletedMypage: undefined,
+  guideTourCompletedOutfitBook: undefined,
 };
 
 const normalizeCatalogStyles = (payload?: CategoryCatalogPayload | null): CatalogStyle[] => {
@@ -369,6 +371,7 @@ export default function App() {
         guideTourCompletedFeed: data.guideTourCompletedFeed ?? prev.guideTourCompletedFeed,
         guideTourCompletedWardrobe: data.guideTourCompletedWardrobe ?? prev.guideTourCompletedWardrobe,
         guideTourCompletedMypage: data.guideTourCompletedMypage ?? prev.guideTourCompletedMypage,
+        guideTourCompletedOutfitBook: data.guideTourCompletedOutfitBook ?? prev.guideTourCompletedOutfitBook,
       };
       return nextProfile;
     });
@@ -472,7 +475,7 @@ export default function App() {
     setAuthReady(false);
   };
 
-  const handleGuideTourComplete = async (page: "home" | "wardrobe" | "feed" | "mypage") => {
+  const handleGuideTourComplete = async (page: "home" | "wardrobe" | "feed" | "mypage" | "outfit-book") => {
     try{
       await updateGuideTour({ [page]: true });
     } catch {
@@ -485,6 +488,7 @@ export default function App() {
         ...(page === "wardrobe" && { guideTourCompletedWardrobe: true }),
         ...(page === "feed" && { guideTourCompletedFeed: true }),
         ...(page === "mypage" && { guideTourCompletedMypage: true }),
+        ...(page === "outfit-book" && { guideTourCompletedOutfitBook: true }),
       }));
     }
   };
@@ -1037,10 +1041,12 @@ export default function App() {
               {/* TAB 1.5: OUTFIT BOOK (My saved outfits) */}
               {/* ========================================================= */}
               {currentTab === "outfit-book" && authUserId != null && (
-                <OutfitBookTab
-                  userId={authUserId}
-                  clothes={clothes}
-                />
+                  <OutfitBookTab
+                      userId={authUserId}
+                      clothes={clothes}
+                      guideTourCompleted={authReady ? (profile.guideTourCompletedOutfitBook ?? false) : true}
+                      onGuideTourComplete={() => { void handleGuideTourComplete("outfit-book") }}
+                  />
               )}
 
               {/* ========================================================= */}

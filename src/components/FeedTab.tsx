@@ -31,6 +31,7 @@ export default function FeedTab({ userId, guideTourCompleted, onGuideTourComplet
   const [submittingAction, setSubmittingAction] = useState<'like' | 'save' | null>(null)
   const [tourOpen, setTourOpen] = useState(!guideTourCompleted)
   const feedHeaderRef = useRef<HTMLDivElement>(null)
+  const postListRef = useRef<HTMLDivElement>(null)
   const writeButtonRef = useRef<HTMLDivElement>(null)
 
   const loadPosts = useCallback(async (nextPage: number, append: boolean) => {
@@ -149,7 +150,7 @@ export default function FeedTab({ userId, guideTourCompleted, onGuideTourComplet
           <FeedEmptyState onWriteClick={() => setWriteOpen(true)} />
         </div>
       ) : (
-        <div className="flex flex-col">
+        <div ref={postListRef} className="flex flex-col">
           {posts.map((post) => (
             <FeedPostCard
               key={post.feedPostId}
@@ -214,8 +215,9 @@ export default function FeedTab({ userId, guideTourCompleted, onGuideTourComplet
       {tourOpen && (
         <GuideTour
           steps={[
-            { targetRef: feedHeaderRef, message: "다른 사람들의 코디를 구경해보세요" },
-            { targetRef: writeButtonRef, message: "내 코디를 피드에 업로드해보세요" },
+            { targetRef: feedHeaderRef, message: "다른 사람들의 실제 코디에서 스타일 힌트를 얻어보세요" },
+            { targetRef: postListRef, message: "좋아요·저장으로 마음에 드는 코디를 바로 기록할 수 있어요" },
+            { targetRef: writeButtonRef, message: "내 코디를 업로드하면 팔로워와 공유할 수 있어요" },
           ]}
           onComplete={() => {
             setTourOpen(false)

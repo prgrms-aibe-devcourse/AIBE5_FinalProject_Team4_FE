@@ -271,6 +271,7 @@ export default function HomeTab({
   const [tourOpen, setTourOpen] = useState(!guideTourCompleted);
 
   const labelSectionRef = useRef<HTMLElement | null>(null);
+  const recommendationListRef = useRef<HTMLElement>(null);
 
   const [refreshSignal, setRefreshSignal] = useState(0);
 
@@ -732,7 +733,7 @@ export default function HomeTab({
         </section>
 
 
-      <section id="recommendation-list" className="bg-white border border-slate-100 rounded-[28px] p-4 md:p-5 shadow-sm text-left scroll-mt-28">
+      <section ref={recommendationListRef} id="recommendation-list" className="bg-white border border-slate-100 rounded-[28px] p-4 md:p-5 shadow-sm text-left scroll-mt-28">
         <div className="flex items-end justify-between gap-3 mb-4">
           <div>
             <span className="text-[11px] font-black text-[#111827] uppercase tracking-wider">{activeConfig.icon} Recommendation</span>
@@ -1022,8 +1023,9 @@ export default function HomeTab({
         {tourOpen && (
             <GuideTour
                 steps={[
-                  { targetRef: ootdRef, message: "오늘 날씨에 맞는 코디를 추천해드려요" },
-                  { targetRef: labelSectionRef, message: "스타일·매칭·AI MD 추천을 탭해서 골라보세요" },
+                  { targetRef: ootdRef, message: "오늘 날씨와 내 옷장을 분석해 코디를 추천해드려요" },
+                  { targetRef: labelSectionRef, message: "AI MD에게 내 스타일을 직접 물어볼 수도 있어요" },
+                  { targetRef: recommendationListRef, message: "추천 카드를 클릭해 상세 정보와 유사 상품을 확인할 수 있어요" },
                 ]}
                 onComplete={() => {
                   setTourOpen(false)

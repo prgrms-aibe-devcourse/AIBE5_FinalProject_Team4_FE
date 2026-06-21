@@ -2,7 +2,7 @@
 doc_type: fe_domain_types
 source_of_truth: AIBE5_FinalProject_Team4_FE
 be_domain_source_of_truth: AIBE5_FinalProject_Team4_BE/docs/domain
-last_updated: 2026-06-21
+last_updated: 2026-06-22
 ---
 
 # FE 도메인 타입 기준
@@ -188,6 +188,7 @@ type MyProfileResponse = {
   guideTourCompletedWardrobe?: boolean | null;
   guideTourCompletedFeed?: boolean | null;
   guideTourCompletedMypage?: boolean | null;
+  guideTourCompletedOutfitBook?: boolean | null;
 };
 
 // 룩피드 타입 — src/types/feed.ts 기준

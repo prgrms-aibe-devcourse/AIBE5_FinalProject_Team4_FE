@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from "react";
+import React, { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import Spinner from "@/components/common/Spinner";
 import AuthenticatedImage from "@/components/common/AuthenticatedImage";
 import {
@@ -12,6 +12,7 @@ import { fetchMyOutfitBook, updateOutfit, type OutfitResponse } from "@/api/outf
 import type { ClothesResponse } from "@/types/be";
 import OutfitDetailModal, { type OutfitModalItem } from "./OutfitDetailModal";
 import { useToast } from './Toast'
+import GuideTour from "@/components/common/GuideTour"
 
 function toOutfitModalItem(clothes: ClothesResponse | undefined): OutfitModalItem | undefined {
   if (!clothes) return undefined
@@ -28,11 +29,15 @@ function toOutfitModalItem(clothes: ClothesResponse | undefined): OutfitModalIte
 interface OutfitBookTabProps {
   userId: number;
   clothes: Garment[];
+  guideTourCompleted: boolean;
+  onGuideTourComplete: () => void;
 }
 
 export default function OutfitBookTab({
                                         userId,
                                         clothes,
+                                        guideTourCompleted,
+                                        onGuideTourComplete,
                                       }: OutfitBookTabProps) {
   const [outfits, setOutfits] = useState<OutfitResponse[]>([]);
   const [outfitBookId, setOutfitBookId] = useState<number | null>(null);
@@ -40,7 +45,16 @@ export default function OutfitBookTab({
   const [selectedOutfit, setSelectedOutfit] = useState<OutfitResponse | null>(null);
   const [outfitSearchTerm, setOutfitSearchTerm] = useState<string>("");
   const [activeTab, setActiveTab] = useState<'all' | 'favorite'>('all');
+  const [tourOpen, setTourOpen] = useState(!guideTourCompleted);
   const { showToast } = useToast()
+
+  const tabRef = useRef<HTMLDivElement>(null)
+  const searchRef = useRef<HTMLDivElement>(null)
+  const gridRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    setTourOpen(!guideTourCompleted)
+  }, [guideTourCompleted])
 
   const loadOutfits = useCallback(async () => {
     setOutfitLoading(true);
@@ -92,7 +106,7 @@ export default function OutfitBookTab({
   return (
       <div className="space-y-6 animate-fade-in text-left">
         {/* 탭 */}
-        <div className="flex items-center gap-2">
+        <div ref={tabRef} className="flex items-center gap-2">
           <button
               onClick={() => { setActiveTab('all'); setOutfitSearchTerm('') }}
               className={`px-3 py-2 rounded-full text-sm font-black ${activeTab === 'all' ? 'bg-[#1E3A8A] text-white' : 'bg-slate-50 text-slate-600'}`}>
@@ -110,7 +124,7 @@ export default function OutfitBookTab({
         </div>
 
         {/* 검색 바 */}
-        <div className="relative">
+        <div ref={searchRef} className="relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
               type="text"
@@ -122,7 +136,7 @@ export default function OutfitBookTab({
         </div>
 
         {/* 코디 목록 그리드 */}
-        <div className="grid grid-cols-2 gap-4">
+        <div ref={gridRef} className="grid grid-cols-2 gap-4">
           {filteredOutfits.length > 0 ? (
               filteredOutfits.map((outfit) => {
                 const top = outfit.items.find((it) => it.itemRole === "TOP")?.clothes;
@@ -262,6 +276,30 @@ export default function OutfitBookTab({
                 onSaved={loadOutfits}
                 clothes={clothes}
             />
+        )}
+
+        {/* 가이드 투어 */}
+        {tourOpen && (
+          <GuideTour
+            steps={[
+              { targetRef: tabRef, message: "저장한 코디를 모아보고 즐겨찾기로 관리할 수 있어요" },
+              { targetRef: searchRef, message: "코디 제목으로 검색해서 원하는 코디를 빠르게 찾을 수 있어요" },
+              { targetRef: gridRef, message: "코디를 클릭하면 구성 아이템을 확인하고 수정할 수 있어요" },
+            ]}
+            onComplete={() => {
+              setTourOpen(false)
+              onGuideTourComplete()
+            }}
+          />
+        )}
+
+        {/* 투어 재진입 버튼 */}
+        {!tourOpen && (
+          <button
+            type="button"
+            className="fixed right-5 bottom-20 z-40 w-11 h-11 rounded-full bg-white border border-slate-200 text-[#1E3A8A] shadow-lg flex items-center justify-center transition active:scale-90"
+            onClick={() => setTourOpen(true)}
+          >?</button>
         )}
       </div>
   );
