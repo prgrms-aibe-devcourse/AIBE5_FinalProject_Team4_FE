@@ -29,6 +29,7 @@ import RecommendProductDetailModal from '@/components/RecommendProductDetailModa
 import OutfitDetailModal from '@/components/OutfitDetailModal';
 import {fetchMyOutfitBook} from "@/api/outfits.ts";
 import { getGarmentColorLabel, getGarmentColor } from '@/data/garmentColors';
+import GuideTour from "@/components/common/GuideTour"
 
 function OotdCanvas({ top, bottom, outer, shoes }: {
   top?: string; bottom?: string; outer?: string; shoes?: string;
@@ -180,6 +181,8 @@ interface HomeTabProps {
   onGoToCloset?: () => void;
   region?: string;
   onLoginRequired?: () => void;
+  guideTourCompleted: boolean;
+  onGuideTourComplete: () => void;
 }
 
 type RecommendationLabel = "style" | "similar" | "match" | "aimd";
@@ -244,6 +247,8 @@ export default function HomeTab({
                                   onGoToCloset,
                                   region = '서울',
                                   onLoginRequired,
+    guideTourCompleted,
+    onGuideTourComplete,
                                 }: HomeTabProps) {
   const [activeLabel, setActiveLabel] = useState<RecommendationLabel>("style");
   const [showStickyLabels, setShowStickyLabels] = useState(false);
@@ -263,6 +268,7 @@ export default function HomeTab({
   const [bookId, setBookId] = useState<number | null>(null);
   const [selectedItem, setSelectedItem] = useState<RecommendItem | null>(null);
   const [selectedCombo, setSelectedCombo] = useState<any | null>(null);
+  const [tourOpen, setTourOpen] = useState(!guideTourCompleted);
 
   const labelSectionRef = useRef<HTMLElement | null>(null);
 
@@ -615,9 +621,11 @@ export default function HomeTab({
     };
   };
 
+  const ootdRef = useRef<HTMLElement>(null);
+
   return (
       <div className="space-y-6 animate-fade-in font-sans">
-        <section className="bg-white border border-slate-100 rounded-[28px] p-4 md:p-5 shadow-sm text-left">
+        <section ref={ootdRef} className="bg-white border border-slate-100 rounded-[28px] p-4 md:p-5 shadow-sm text-left">
           <div className="flex items-center gap-2 mb-4">
             <span className="text-xl">✨</span>
             <h2 className="text-xl md:text-2xl font-black text-slate-950">오늘의 OOTD 추천</h2>
@@ -1009,6 +1017,19 @@ export default function HomeTab({
           onSaved={handleRefreshAll}
           userId={userId}
       />
+
+        {tourOpen && (
+            <GuideTour
+                steps={[
+                  { targetRef: ootdRef, message: "오늘 날씨에 맞는 코디를 추천해드려요" },
+                  { targetRef: labelSectionRef, message: "스타일·매칭·AI MD 추천을 탭해서 골라보세요" },
+                ]}
+                onComplete={() => {
+                  setTourOpen(false)
+                  onGuideTourComplete()
+                }}
+            />
+        )}
       </div>
   );
 }

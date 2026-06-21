@@ -1106,6 +1106,8 @@ export default function App() {
                   onLoginRequired={() => setIsLoginModalOpen(true)}
                   authReady={authReady}
                   region={regionLabel}
+                  guideTourCompleted={profile.guideTourCompletedHome ?? false}
+                  onGuideTourComplete={() => { void handleGuideTourComplete("home")}}
                 />
               )}
 
@@ -1137,6 +1139,8 @@ export default function App() {
                           setSelectedGarment={setSelectedGarment}
                           userId={authUserId}
                           onOpenRegister={openGarmentRegister}
+                          guideTourCompleted={profile.guideTourCompletedWardrobe ?? false}
+                          onGuideTourComplete={() => {void handleGuideTourComplete("wardrobe")}}
                       />
                   )}
               {currentTab === "closet" &&
@@ -1158,7 +1162,11 @@ export default function App() {
               {currentTab === "feed" &&
                 authReady &&
                 authUserId != null && (
-                  <FeedTab userId={authUserId} />
+                  <FeedTab
+                      userId={authUserId}
+                      guideTourCompleted={profile.guideTourCompletedFeed ?? false}
+                      onGuideTourComplete={() => { void handleGuideTourComplete("feed")}}
+                  />
                 )}
               {currentTab === "feed" &&
                 authReady &&
