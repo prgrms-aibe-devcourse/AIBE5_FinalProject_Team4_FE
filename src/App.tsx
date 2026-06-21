@@ -476,8 +476,9 @@ export default function App() {
   };
 
   const handleGuideTourComplete = async (page: "home" | "wardrobe" | "feed" | "mypage" | "outfit-book") => {
+    const apiKey = page === "outfit-book" ? "outfitBook" : page;
     try{
-      await updateGuideTour({ [page]: true });
+      await updateGuideTour({ [apiKey]: true });
     } catch {
       // API 실패 시 무시 — finally에서 로컬 state 업데이트
     }
@@ -1032,7 +1033,7 @@ export default function App() {
                   onLoginRequired={() => setIsLoginModalOpen(true)}
                   authReady={authReady}
                   region={regionLabel}
-                  guideTourCompleted={authReady ? (profile.guideTourCompletedHome ?? false) : true}
+                  guideTourCompleted={authReady && authUserId != null ? (profile.guideTourCompletedHome ?? false) : true}
                   onGuideTourComplete={() => { void handleGuideTourComplete("home")}}
                 />
               )}
