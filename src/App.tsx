@@ -1108,7 +1108,7 @@ export default function App() {
                   onLoginRequired={() => setIsLoginModalOpen(true)}
                   authReady={authReady}
                   region={regionLabel}
-                  guideTourCompleted={profile.guideTourCompletedHome ?? false}
+                  guideTourCompleted={authReady ? (profile.guideTourCompletedHome ?? false) : true}
                   onGuideTourComplete={() => { void handleGuideTourComplete("home")}}
                 />
               )}

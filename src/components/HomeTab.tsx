@@ -623,6 +623,11 @@ export default function HomeTab({
 
   const ootdRef = useRef<HTMLElement>(null);
 
+  // guideTourCompleted가 바뀌면 tourOpen도 동기화
+  useEffect(() => {
+    setTourOpen(!guideTourCompleted)
+  }, [guideTourCompleted])
+
   return (
       <div className="space-y-6 animate-fade-in font-sans">
         <section ref={ootdRef} className="bg-white border border-slate-100 rounded-[28px] p-4 md:p-5 shadow-sm text-left">
