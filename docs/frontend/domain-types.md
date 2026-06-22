@@ -220,6 +220,28 @@ type FeedInteraction = {
   count: number;     // 좋아요/저장/팔로우 총 수
 };
 
+type FeedPage = {
+  content: FeedPost[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  hasNext: boolean;
+};
+
+type FeedUserProfile = {
+  userId: number;
+  nickname: string;
+  profileImageUrl: string | null;
+  profileBio: string | null;
+  externalLinkUrl: string | null;
+  postCount: number;
+  followerCount: number;
+  followingCount: number;
+  followedByMe: boolean;   // 타인 프로필에서 현재 사용자의 팔로우 여부
+  mine: boolean;           // true이면 조회 대상이 로그인 사용자 본인 — 팔로우 버튼 미표시, liked-posts 탭 허용
+};
+
 type UserProfileResponse = {
   userId: number;
   nickname: string;

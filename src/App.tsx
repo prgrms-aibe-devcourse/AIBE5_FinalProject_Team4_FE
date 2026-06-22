@@ -805,7 +805,10 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (currentTab !== "lookfeed-profile" || lookfeedTargetUserId != null || authUserId == null) return;
+    if (currentTab !== "lookfeed-profile" || authUserId == null) return;
+    const viewingOtherUser =
+      lookfeedTargetUserId != null && lookfeedTargetUserId !== authUserId;
+    if (viewingOtherUser) return;
     if (lookfeedProfileView === "liked") {
       void loadMyLookfeedLiked(authUserId);
     }
@@ -859,6 +862,11 @@ export default function App() {
   };
 
   const handleViewFeedProfile = (targetUserId: number) => {
+    if (authUserId != null && targetUserId === authUserId) {
+      openLookfeedProfile();
+      return;
+    }
+
     setLookfeedTargetUserId(targetUserId);
     setLookfeedTargetProfile(null);
     setLookfeedTargetPosts([]);
@@ -871,6 +879,15 @@ export default function App() {
       fetchUserFeedPosts(targetUserId, 0, 20),
     ])
       .then(([profileData, postsPage]) => {
+        if (authUserId != null && (profileData.mine || targetUserId === authUserId)) {
+          setLookfeedTargetUserId(null);
+          setLookfeedTargetProfile(null);
+          setLookfeedTargetPosts([]);
+          setLookfeedMyProfile(profileData);
+          setLookfeedMyPosts(postsPage.content);
+          setLookfeedProfileView("shared");
+          return;
+        }
         setLookfeedTargetProfile(profileData);
         setLookfeedTargetPosts(postsPage.content);
       })
@@ -884,7 +901,12 @@ export default function App() {
   };
 
   const handleToggleLookfeedFollow = async () => {
-    if (lookfeedTargetUserId == null || lookfeedFollowSubmitting) return;
+    if (
+      lookfeedTargetUserId == null
+      || lookfeedFollowSubmitting
+      || lookfeedTargetUserId === authUserId
+      || lookfeedTargetProfile?.mine
+    ) return;
     setLookfeedFollowSubmitting(true);
     try {
       const result = await toggleFollow(lookfeedTargetUserId);
@@ -1253,7 +1275,11 @@ export default function App() {
               {/* TAB 4: LOOKFEED PUBLIC PROFILE */}
               {/* ========================================================= */}
               {currentTab === "lookfeed-profile" && (() => {
-                const isOtherUser = lookfeedTargetUserId !== null;
+                const isOtherUser =
+                  lookfeedTargetUserId != null
+                  && authUserId != null
+                  && lookfeedTargetUserId !== authUserId
+                  && lookfeedTargetProfile?.mine !== true;
                 const displayNickname = isOtherUser
                   ? (lookfeedTargetProfile?.nickname || "룩피드 프로필")
                   : (profile.nickname || "룩피드 프로필");
