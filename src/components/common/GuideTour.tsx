@@ -20,11 +20,13 @@ export default function GuideTour({ steps, onComplete }: GuideTourProps) {
     useEffect(() => {
         const el = steps[currentStep].targetRef.current
         if (!el) return
-        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-        const id = setTimeout(() => {
+
+        el.scrollIntoView({ behavior: 'instant', block: 'center' })
+
+        const id = requestAnimationFrame(() => {
             setTargetRect(el.getBoundingClientRect())
-        }, 120)
-        return () => clearTimeout(id)
+        })
+        return () => cancelAnimationFrame(id)
     }, [currentStep, steps])
 
     // 마운트 후 fade-in
@@ -32,6 +34,13 @@ export default function GuideTour({ steps, onComplete }: GuideTourProps) {
         const id = requestAnimationFrame(() => setVisible(true))
         return () => cancelAnimationFrame(id)
     }, [])
+
+    const cardTop = targetRect
+        ? (window.innerHeight - targetRect.bottom >= 178
+            ? targetRect.bottom + 18
+            : Math.max(8, targetRect.top - 160 - 18))
+        : 0
+
 
     return createPortal(
         <div
@@ -69,7 +78,7 @@ export default function GuideTour({ steps, onComplete }: GuideTourProps) {
                 <div
                     style={{
                         position: 'fixed',
-                        top: Math.min(targetRect.bottom + 18, window.innerHeight - 155),
+                        top: cardTop,
                         left: Math.max(16, Math.min(targetRect.left, window.innerWidth - 300)),
                         maxWidth: '284px',
                         zIndex: 152,
