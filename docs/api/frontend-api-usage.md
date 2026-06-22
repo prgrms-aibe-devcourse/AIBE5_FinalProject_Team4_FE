@@ -82,7 +82,7 @@ fetch('/api/chat-gamyagi') // mock 경로 — 공통 api client·BE 계약 경�
 api.get('api/v1/categories')
 ```
 
-홈 추천은 라벨별로 다릅니다. OOTD(`RECO-001`), 취향 기반 추천(`RECO-002`), 유사 상품(`RECO-003`), AI MD(`RECO-006`), 어울리는 옷(`RECO-005`) 모두 실제 BE API를 호출합니다. 유사 상품(`RECO-003`)은 `src/api/similarProducts.ts`, AI MD(`RECO-006`)는 `src/api/aiMd.ts`, 나머지는 `src/api/recommendations.ts`를 통해 연동됩니다. `RECO-003`의 기준 옷은 `GET /api/v1/users/{userId}/clothes`에서 반환된 `OWNED`와 `WISHLIST` 옷을 모두 허용하며, 유사 상품 결과는 최대 50개 표시를 기준으로 합니다. `RECO-005`는 `limitPerCategory=50`을 기본값으로 사용합니다. BE 계약: `limitPerCategory` 기본 `5`, 허용 `1`~`50`. ([implementation-gaps.md](../frontend/implementation-gaps.md), [home-recommendation.md](../features/home-recommendation.md))
+홈 추천은 라벨별로 다릅니다. OOTD(`RECO-001`), 취향 기반 추천(`RECO-002`), 유사 상품(`RECO-003`), 어울리는 옷(`RECO-004`), AI MD(`RECO-005`) 모두 실제 BE API를 호출합니다. 유사 상품(`RECO-003`)은 `src/api/similarProducts.ts`, AI MD(`RECO-005`)는 `src/api/aiMd.ts`, 나머지는 `src/api/recommendations.ts`를 통해 연동됩니다. `RECO-003`의 기준 옷은 `GET /api/v1/users/{userId}/clothes`에서 반환된 `OWNED`와 `WISHLIST` 옷을 모두 허용하며, 유사 상품 결과는 최대 50개 표시를 기준으로 합니다. `RECO-004`는 `limitPerCategory=50`을 기본값으로 사용합니다. BE 계약: `limitPerCategory` 기본 `5`, 허용 `1`~`50`. ([implementation-gaps.md](../frontend/implementation-gaps.md), [home-recommendation.md](../features/home-recommendation.md))
 
 직접 `fetch`를 사용하는 경우에도 인증, 에러 처리, base URL 기준이 동일하게 적용되어야 하므로 공통 API 클라이언트로 옮기는 것을 우선합니다.
 
