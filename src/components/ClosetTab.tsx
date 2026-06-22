@@ -439,7 +439,6 @@ export default function ClosetTab({
                         ? "스마트 위시 보드"
                         : "즐겨찾기 컬렉션"}
               </span>
-                <span className="text-slate-400 font-normal text-xs">({filteredClothes.length}개 발견됨)</span>
               </h2>
             </div>
 
