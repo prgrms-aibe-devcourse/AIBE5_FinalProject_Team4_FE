@@ -47,6 +47,15 @@ export async function fetchFeedUserProfile(userId: number): Promise<FeedUserProf
   )
 }
 
+/** GET /api/v1/feed/users/{userId}/liked-posts — 본인이 좋아요한 피드 목록 */
+export async function fetchUserLikedFeedPosts(userId: number, page = 0, size = 20): Promise<FeedPage> {
+  return unwrap(
+    api.get<BeApiResponse<FeedPage>>(`${FEED_BASE}/users/${userId}/liked-posts`, {
+      params: { page, size },
+    }),
+  )
+}
+
 /** GET /api/v1/feed/posts/{postId} — FEED-003 */
 export async function fetchFeedPost(postId: number): Promise<FeedPost> {
   return unwrap(api.get<BeApiResponse<FeedPost>>(`${FEED_BASE}/posts/${postId}`))

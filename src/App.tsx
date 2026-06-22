@@ -4,7 +4,7 @@
  */
 
 import api from "@/api/index";
-import { useState, useEffect, type ChangeEvent } from "react";
+import { useState, useEffect, useCallback, type ChangeEvent } from "react";
 import {
   Home,
   X,
@@ -39,8 +39,11 @@ import {
 } from "@/api/marketingConsent";
 import { updateGuideTour } from "@/api/guideTour";
 import { uploadProfileImage } from "@/api/profileImage";
-import { fetchFeedUserProfile, fetchUserFeedPosts, toggleFollow } from "@/api/feed";
+import { fetchFeedUserProfile, fetchUserFeedPosts, fetchUserLikedFeedPosts, toggleFollow } from "@/api/feed";
 import type { FeedPost, FeedUserProfile } from "@/types/feed";
+import FeedWriteModal from "./components/feed/FeedWriteModal";
+import FeedPostDetailModal from "./components/feed/FeedPostDetailModal";
+import AuthenticatedImage from "@/components/common/AuthenticatedImage";
 import { checkNicknameAvailability } from "@/api/users";
 import { getGarmentStyleLabel } from "@/data/garmentStyles";
 import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/common/Modal";
@@ -314,13 +317,19 @@ export default function App() {
 
   // Navigation state: 'home' | 'closet' | 'outfit-book' | 'feed' | 'profile' | 'lookfeed-profile'
   const [currentTab, setCurrentTab] = useState<"home" | "closet" | "outfit-book" | "feed" | "profile" | "lookfeed-profile">("home");
-  const [lookfeedProfileView, setLookfeedProfileView] = useState<"shared" | "saved">("shared");
+  const [lookfeedProfileView, setLookfeedProfileView] = useState<"shared" | "liked">("shared");
   // null = 내 프로필, number = 타인 프로필
   const [lookfeedTargetUserId, setLookfeedTargetUserId] = useState<number | null>(null);
   const [lookfeedTargetProfile, setLookfeedTargetProfile] = useState<FeedUserProfile | null>(null);
   const [lookfeedTargetPosts, setLookfeedTargetPosts] = useState<FeedPost[]>([]);
   const [lookfeedTargetLoading, setLookfeedTargetLoading] = useState(false);
   const [lookfeedFollowSubmitting, setLookfeedFollowSubmitting] = useState(false);
+  const [lookfeedMyProfile, setLookfeedMyProfile] = useState<FeedUserProfile | null>(null);
+  const [lookfeedMyPosts, setLookfeedMyPosts] = useState<FeedPost[]>([]);
+  const [lookfeedMyLikedPosts, setLookfeedMyLikedPosts] = useState<FeedPost[]>([]);
+  const [lookfeedMyLoading, setLookfeedMyLoading] = useState(false);
+  const [isLookfeedWriteOpen, setIsLookfeedWriteOpen] = useState(false);
+  const [lookfeedDetailPostId, setLookfeedDetailPostId] = useState<number | null>(null);
   const [homeResetSignal, setHomeResetSignal] = useState<number>(0);
   const [isPhotoRegisterOpen, setIsPhotoRegisterOpen] = useState(false);
   const [isPurchaseRegisterOpen, setIsPurchaseRegisterOpen] = useState(false);
@@ -783,12 +792,87 @@ export default function App() {
     setIsProfileMenuOpen(true);
   };
 
+  const loadMyLookfeedShared = useCallback(async (userId: number) => {
+    setLookfeedMyLoading(true);
+    try {
+      const [profileData, postsPage] = await Promise.all([
+        fetchFeedUserProfile(userId),
+        fetchUserFeedPosts(userId, 0, 20),
+      ]);
+      setLookfeedMyProfile(profileData);
+      setLookfeedMyPosts(postsPage.content);
+    } catch {
+      setLookfeedMyProfile(null);
+      setLookfeedMyPosts([]);
+    } finally {
+      setLookfeedMyLoading(false);
+    }
+  }, []);
+
+  const loadMyLookfeedLiked = useCallback(async (userId: number) => {
+    setLookfeedMyLoading(true);
+    try {
+      const postsPage = await fetchUserLikedFeedPosts(userId, 0, 20);
+      setLookfeedMyLikedPosts(postsPage.content);
+    } catch {
+      setLookfeedMyLikedPosts([]);
+    } finally {
+      setLookfeedMyLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (currentTab !== "lookfeed-profile" || lookfeedTargetUserId != null || authUserId == null) return;
+    if (lookfeedProfileView === "liked") {
+      void loadMyLookfeedLiked(authUserId);
+    }
+  }, [currentTab, lookfeedProfileView, lookfeedTargetUserId, authUserId, loadMyLookfeedLiked]);
+
+  const handleLookfeedPostCreated = (created: FeedPost) => {
+    setLookfeedMyPosts((prev) => [created, ...prev]);
+    setLookfeedMyProfile((prev) =>
+      prev ? { ...prev, postCount: prev.postCount + 1 } : prev,
+    );
+    setLookfeedProfileView("shared");
+  };
+
+  const handleLookfeedPostUpdated = (updated: FeedPost) => {
+    const merge = (prev: FeedPost[]) =>
+      prev.map((post) => (post.feedPostId === updated.feedPostId ? updated : post));
+    setLookfeedMyPosts(merge);
+    setLookfeedMyLikedPosts((prev) => {
+      const merged = merge(prev);
+      if (!updated.likedByMe) {
+        return merged.filter((post) => post.feedPostId !== updated.feedPostId);
+      }
+      if (!prev.some((post) => post.feedPostId === updated.feedPostId) && updated.likedByMe) {
+        return [updated, ...prev];
+      }
+      return merged;
+    });
+    setLookfeedTargetPosts(merge);
+  };
+
+  const handleLookfeedPostDeleted = (postId: number) => {
+    setLookfeedMyPosts((prev) => prev.filter((post) => post.feedPostId !== postId));
+    setLookfeedMyLikedPosts((prev) => prev.filter((post) => post.feedPostId !== postId));
+    setLookfeedTargetPosts((prev) => prev.filter((post) => post.feedPostId !== postId));
+    setLookfeedMyProfile((prev) =>
+      prev ? { ...prev, postCount: Math.max(0, prev.postCount - 1) } : prev,
+    );
+    setLookfeedDetailPostId(null);
+  };
+
   const openLookfeedProfile = () => {
     setIsProfileMenuOpen(false);
     setLookfeedTargetUserId(null);
     setLookfeedTargetProfile(null);
+    setLookfeedProfileView("shared");
     setCurrentTab("lookfeed-profile");
     window.setTimeout(scrollAppToTop, 0);
+    if (authUserId != null) {
+      void loadMyLookfeedShared(authUserId);
+    }
   };
 
   const handleViewFeedProfile = (targetUserId: number) => {
@@ -1176,13 +1260,61 @@ export default function App() {
                   : profile.profileImageUrl ?? null;
                 const postCount = isOtherUser
                   ? (lookfeedTargetProfile?.postCount ?? 0)
-                  : 0;
+                  : (lookfeedMyProfile?.postCount ?? 0);
                 const followerCount = isOtherUser
                   ? (lookfeedTargetProfile?.followerCount ?? 0)
-                  : 0;
+                  : (lookfeedMyProfile?.followerCount ?? 0);
                 const followingCount = isOtherUser
                   ? (lookfeedTargetProfile?.followingCount ?? 0)
-                  : 0;
+                  : (lookfeedMyProfile?.followingCount ?? 0);
+                const activePosts = isOtherUser
+                  ? lookfeedTargetPosts
+                  : lookfeedProfileView === "shared"
+                    ? lookfeedMyPosts
+                    : lookfeedMyLikedPosts;
+                const activeLoading = isOtherUser ? lookfeedTargetLoading : lookfeedMyLoading;
+                const emptyMessage = isOtherUser || lookfeedProfileView === "shared"
+                  ? "게시한 피드가 없습니다."
+                  : "좋아요한 피드가 없습니다.";
+
+                const renderPostsGrid = () => {
+                  if (activeLoading) {
+                    return (
+                      <div className="flex items-center justify-center py-16">
+                        <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-300 border-t-slate-700" />
+                      </div>
+                    );
+                  }
+                  if (activePosts.length === 0) {
+                    return (
+                      <div className="flex items-center justify-center py-16">
+                        <p className="text-sm font-bold text-slate-400">{emptyMessage}</p>
+                      </div>
+                    );
+                  }
+                  return (
+                    <div className="grid grid-cols-2 gap-px bg-slate-200">
+                      {activePosts.map((fp) => (
+                        <button
+                          key={fp.feedPostId}
+                          type="button"
+                          onClick={() => setLookfeedDetailPostId(fp.feedPostId)}
+                          className="aspect-square bg-slate-50 overflow-hidden cursor-pointer"
+                        >
+                          {fp.images[0] ? (
+                            <AuthenticatedImage
+                              src={fp.images[0].imageUrl}
+                              alt={fp.caption ?? "피드"}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <div className="h-full w-full bg-slate-100" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  );
+                };
 
                 return (
                   <div className="-mx-5 -mt-4 animate-fade-in bg-white text-left">
@@ -1296,7 +1428,7 @@ export default function App() {
                         <div className="grid grid-cols-2 border-y border-slate-200 text-center">
                           {[
                             { id: "shared" as const, label: "게시한 피드" },
-                            { id: "saved" as const, label: "저장한 피드" },
+                            { id: "liked" as const, label: "좋아요한 피드" },
                           ].map((item) => {
                             const selected = lookfeedProfileView === item.id;
                             return (
@@ -1318,53 +1450,18 @@ export default function App() {
                         </div>
                       )}
 
-                      {isOtherUser ? (
-                        lookfeedTargetLoading ? (
-                          <div className="flex items-center justify-center py-16">
-                            <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-300 border-t-slate-700" />
-                          </div>
-                        ) : lookfeedTargetPosts.length === 0 ? (
-                          <div className="flex items-center justify-center py-16">
-                            <p className="text-sm font-bold text-slate-400">게시한 피드가 없습니다.</p>
-                          </div>
-                        ) : (
-                          <div className="grid grid-cols-2 gap-px bg-slate-200">
-                            {lookfeedTargetPosts.map((fp) => (
-                              <div key={fp.feedPostId} className="aspect-square bg-slate-50 overflow-hidden">
-                                {fp.images[0] ? (
-                                  <img
-                                    src={fp.images[0].imageUrl}
-                                    alt={fp.caption ?? "피드"}
-                                    className="h-full w-full object-cover"
-                                  />
-                                ) : (
-                                  <div className="h-full w-full bg-slate-100" />
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        )
-                      ) : (
-                        <div className="relative grid grid-cols-2 gap-px border-y border-slate-200 bg-slate-200">
-                          {Array.from({ length: 4 }).map((_, index) => (
-                            <div key={index} className="aspect-square bg-slate-50" />
-                          ))}
-                          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                            <p className="text-sm font-bold text-slate-500">피드가 아직 없습니다.</p>
-                          </div>
-                        </div>
-                      )}
+                      {renderPostsGrid()}
                     </section>
 
-                    {!isOtherUser && (
+                    {!isOtherUser && !isLookfeedWriteOpen && (
                       <div className="pointer-events-none fixed bottom-20 left-0 right-0 z-20 flex justify-center px-5">
                         <button
                           type="button"
-                          onClick={() => showMessage("준비 중", "피드 등록 기능은 추후 제공될 예정입니다.")}
-                          className="pointer-events-auto flex h-11 items-center gap-2 rounded-2xl bg-[#1E3A8A] px-6 text-sm font-bold text-[#BBF7D0] shadow-lg transition hover:bg-[#1E3A8A]/90 active:scale-95"
+                          onClick={() => setIsLookfeedWriteOpen(true)}
+                          className="pointer-events-auto flex items-center gap-2 h-12 px-6 rounded-2xl bg-[#1E3A8A] hover:bg-[#1E3A8A]/90 text-[#BBF7D0] shadow-lg font-bold text-sm transition active:scale-95 cursor-pointer"
                         >
-                          <Plus className="h-5 w-5 stroke-[3]" />
-                          <span>피드 등록</span>
+                          <Plus className="w-5 h-5 stroke-[3]" />
+                          <span>코디 업로드</span>
                         </button>
                       </div>
                     )}
@@ -1625,6 +1722,26 @@ export default function App() {
               </svg>
             </button>
             </div>
+          </>
+        )}
+
+        {authUserId != null && (
+          <>
+            <FeedWriteModal
+              open={isLookfeedWriteOpen}
+              userId={authUserId}
+              onClose={() => setIsLookfeedWriteOpen(false)}
+              onCreated={handleLookfeedPostCreated}
+            />
+            <FeedPostDetailModal
+              open={lookfeedDetailPostId != null}
+              postId={lookfeedDetailPostId}
+              userId={authUserId}
+              onClose={() => setLookfeedDetailPostId(null)}
+              onPostUpdated={handleLookfeedPostUpdated}
+              onPostDeleted={handleLookfeedPostDeleted}
+              onViewProfile={handleViewFeedProfile}
+            />
           </>
         )}
 
