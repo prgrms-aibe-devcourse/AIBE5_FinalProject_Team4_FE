@@ -131,7 +131,7 @@ export default function FeedTab({ userId, guideTourCompleted, onGuideTourComplet
 
   return (
     <div className="relative -mx-5 pb-24 animate-fade-in text-left">
-      <div ref={feedHeaderRef} className="sticky top-0 z-10 border-b border-slate-100 bg-white/95 px-5 py-3 backdrop-blur-sm">
+      <div ref={feedHeaderRef} className="border-b border-slate-100 bg-white px-5 py-3">
         <h3 className="text-center text-base font-semibold text-slate-900">룩피드</h3>
       </div>
 
