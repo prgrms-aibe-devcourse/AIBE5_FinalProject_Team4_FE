@@ -33,6 +33,13 @@ export default function GuideTour({ steps, onComplete }: GuideTourProps) {
         return () => cancelAnimationFrame(id)
     }, [])
 
+    const cardTop = targetRect
+        ? (window.innerHeight - targetRect.bottom >= 178
+            ? targetRect.bottom + 18
+            : Math.max(8, targetRect.top - 160 - 18))
+        : 0
+
+
     return createPortal(
         <div
             className="fixed inset-0 z-[150]"
@@ -69,7 +76,7 @@ export default function GuideTour({ steps, onComplete }: GuideTourProps) {
                 <div
                     style={{
                         position: 'fixed',
-                        top: Math.min(targetRect.bottom + 18, window.innerHeight - 155),
+                        top: cardTop,
                         left: Math.max(16, Math.min(targetRect.left, window.innerWidth - 300)),
                         maxWidth: '284px',
                         zIndex: 152,

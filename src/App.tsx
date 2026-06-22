@@ -1257,7 +1257,7 @@ export default function App() {
                           onOpenRegister={openGarmentRegister}
                           guideTourCompleted={profile.guideTourCompletedWardrobe ?? false}
                           onGuideTourComplete={() => {void handleGuideTourComplete("wardrobe")}}
-                          isRegisterOpen={isMethodSelectOpen}
+                          isRegisterOpen={isMethodSelectOpen || isPhotoRegisterOpen || isPurchaseRegisterOpen }
                       />
                   )}
               {currentTab === "closet" &&
