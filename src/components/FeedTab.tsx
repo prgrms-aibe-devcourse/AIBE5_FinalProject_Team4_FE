@@ -53,7 +53,7 @@ export default function FeedTab({
   const [tourOpen, setTourOpen] = useState(!guideTourCompleted)
   const feedHeaderRef = useRef<HTMLDivElement>(null)
   const postListRef = useRef<HTMLDivElement>(null)
-  const writeButtonRef = useRef<HTMLDivElement>(null)
+  const writeButtonRef = useRef<HTMLButtonElement>(null)
 
   const loadPosts = useCallback(async (nextPage: number, append: boolean) => {
     if (append) {
