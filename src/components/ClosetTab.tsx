@@ -37,6 +37,7 @@ interface ClosetTabProps {
   onOpenRegister: () => void;
   guideTourCompleted: boolean;
   onGuideTourComplete: () => void;
+  isRegisterOpen: boolean;
 }
 
 export default function ClosetTab({
@@ -48,6 +49,7 @@ export default function ClosetTab({
                                     onOpenRegister,
                                     guideTourCompleted,
                                     onGuideTourComplete,
+                                    isRegisterOpen,
                                   }: ClosetTabProps) {
   const [closetTab, setClosetTab] = useState<ClosetTabView>("owned");
   const [closetFilter, setClosetFilter] = useState<string>("All");
@@ -59,11 +61,13 @@ export default function ClosetTab({
   const tabRef = useRef<HTMLDivElement>(null);
   const filterRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
-  const [tourOpen, setTourOpen] = useState(!guideTourCompleted);
+  const [tourOpen, setTourOpen] = useState(!guideTourCompleted && !isRegisterOpen);
 
   useEffect(() => {
-    selectedRef.current = selectedGarment;
-  }, [selectedGarment]);
+    if(!isRegisterOpen && !guideTourCompleted) {
+      setTourOpen(true);
+    }
+  }, [isRegisterOpen, guideTourCompleted]);
 
   const triggerToast = useCallback((msg: string) => {
     setToastMessage(msg);
