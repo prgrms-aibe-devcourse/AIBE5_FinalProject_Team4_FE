@@ -1,7 +1,7 @@
 ---
 doc_type: fe_routing
 source_of_truth: AIBE5_FinalProject_Team4_FE
-last_updated: 2026-06-03
+last_updated: 2026-06-22
 ---
 
 # FE 라우팅 기준
@@ -48,6 +48,19 @@ last_updated: 2026-06-03
 | 존재하지 않는 URL | `*` -> `NotFoundPage` |
 
 에러 페이지는 사용자가 다시 시도하거나 홈으로 돌아갈 수 있는 행동을 제공해야 합니다.
+
+## 신규 사용자 진입 흐름
+
+최초 로그인 사용자는 온보딩 전에 서비스 소개 인트로 화면을 먼저 봅니다.
+
+흐름:
+
+1. OAuth 로그인 성공 → `profile.onboarded === false` 감지
+2. 인트로 화면(`IntroPage`) 표시 — 핵심 기능 소개 및 온보딩 시작 유도 (SYSTEM-006)
+3. "내 스타일 설정하러 가기" 클릭 → 온보딩(`OnboardingPage`) 진입
+4. 온보딩 완료 → 메인 앱 홈 진입 및 각 탭 가이드 투어 활성화
+
+인트로와 온보딩은 별도 라우트가 아니라 `App.tsx`의 `isOnboardingActive`, `showIntro` 상태로 관리합니다. `profile.onboarded === true`인 기존 사용자는 인트로를 건너뜁니다. 로그아웃 시 `showIntro`는 초기값(`true`)으로 리셋됩니다.
 
 ## 온보딩
 

@@ -69,6 +69,11 @@ export default function ClosetTab({
     }
   }, [isRegisterOpen, guideTourCompleted]);
 
+  // selectedRef 동기화 — loadWardrobe/upsertGarment에서 현재 선택 의상 보존에 사용
+  useEffect(() => {
+    selectedRef.current = selectedGarment;
+  }, [selectedGarment]);
+
   const triggerToast = useCallback((msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3000);
