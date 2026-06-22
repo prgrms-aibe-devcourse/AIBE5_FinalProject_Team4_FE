@@ -16,94 +16,10 @@ import { Modal, ModalBody, ModalFooter, ModalHeader } from '@/components/common/
 import Spinner from '@/components/common/Spinner'
 import { Heart, MessageSquare, User, X } from '@/components/icons'
 import { useToast } from '@/components/Toast'
-import type { ClothesResponse } from '@/types/be'
-import { updateClothesFavorite } from '@/api/wardrobe'
 import type { FeedComment, FeedPost } from '@/types/feed'
 import { extractApiErrorMessage } from '@/utils/apiError'
 
 
-function ClothesDetailSheet({
-  clothes,
-  isMine,
-  onClose,
-}: {
-  clothes: ClothesResponse
-  isMine: boolean
-  onClose: () => void
-}) {
-  const imageUrl = clothes.userImageUrl ?? clothes.imageUrl
-  const canFavorite = !isMine && clothes.wardrobeClothesId != null
-  const [favorite, setFavorite] = useState(clothes.isFavorite ?? false)
-  const [favoriteSubmitting, setFavoriteSubmitting] = useState(false)
-
-  const handleToggleFavorite = async () => {
-    if (!canFavorite || favoriteSubmitting) return
-    setFavoriteSubmitting(true)
-    try {
-      await updateClothesFavorite(clothes.clothesId, !favorite)
-      setFavorite((prev) => !prev)
-    } finally {
-      setFavoriteSubmitting(false)
-    }
-  }
-
-  return (
-    <div
-      className="fixed inset-0 z-[120] flex items-end justify-center bg-slate-900/50 backdrop-blur-xs animate-fade-in"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-md rounded-t-3xl bg-white shadow-2xl animate-slide-up"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* 헤더 */}
-        <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-slate-100">
-          <p className="text-xs font-black text-[#1E3A8A] uppercase tracking-wide">옷 상세</p>
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => void handleToggleFavorite()}
-              disabled={!canFavorite || favoriteSubmitting}
-              className="p-1.5 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <Heart className={`w-4 h-4 ${favorite ? 'fill-rose-500 text-rose-500' : ''}`} />
-            </button>
-            <button type="button" onClick={onClose} className="p-1.5 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 cursor-pointer">
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-
-        {/* 이미지 */}
-        <div className="mx-5 mt-4 aspect-square w-[calc(100%-2.5rem)] rounded-2xl border border-slate-200 bg-slate-50 overflow-hidden">
-          {imageUrl ? (
-            <AuthenticatedImage src={imageUrl} alt={clothes.name} className="w-full h-full object-contain p-4" />
-          ) : null}
-        </div>
-
-        {/* 정보 */}
-        <div className="px-5 py-4 space-y-1 pb-8">
-          <p className="text-base font-black text-slate-900 leading-snug">{clothes.name}</p>
-          {clothes.brandName ? (
-            <p className="text-sm font-bold text-slate-500">{clothes.brandName}</p>
-          ) : null}
-          {clothes.externalProductUrl ? (
-            <div className="pt-3">
-              <a
-                href={clothes.externalProductUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex h-11 w-full items-center justify-center rounded-2xl bg-[#03C75A] text-white text-sm font-black hover:bg-[#02b351] transition-colors cursor-pointer"
-              >
-                쇼핑몰 바로가기
-              </a>
-            </div>
-          ) : null}
-        </div>
-      </div>
-    </div>
-  )
-}
 
 function formatFeedDate(value: string): string {
   const date = new Date(value)
@@ -347,7 +263,7 @@ export default function FeedPostDetailModal({
   onPostUpdated,
   onPostDeleted,
 }: FeedPostDetailModalProps) {
-  const { showToast } = useToast()
+  const { showToast, showConfirm } = useToast()
   const [post, setPost] = useState<FeedPost | null>(null)
   const [comments, setComments] = useState<FeedComment[]>([])
   const [loading, setLoading] = useState(false)
@@ -362,7 +278,6 @@ export default function FeedPostDetailModal({
   const [editingCaption, setEditingCaption] = useState(false)
   const [captionDraft, setCaptionDraft] = useState('')
   const [captionSubmitting, setCaptionSubmitting] = useState(false)
-  const [selectedClothes, setSelectedClothes] = useState<ClothesResponse | null>(null)
 
   const loadDetail = useCallback(async (id: number) => {
     setLoading(true)
@@ -514,19 +429,21 @@ export default function FeedPostDetailModal({
     }
   }
 
-  const handleDeleteComment = async (commentId: number) => {
+  const handleDeleteComment = (commentId: number) => {
     if (!post) return
-    if (!confirm('댓글을 삭제할까요?')) return
-    try {
-      await deleteFeedComment(post.feedPostId, commentId)
-      await loadComments(post.feedPostId)
-      syncPost({
-        ...post,
-        commentCount: Math.max(0, post.commentCount - 1),
-      })
-    } catch (deleteError) {
-      setError(extractApiErrorMessage(deleteError, '댓글 삭제에 실패했습니다.'))
-    }
+    showConfirm('삭제할까요?', async () => {
+      try {
+        await deleteFeedComment(post.feedPostId, commentId)
+        await loadComments(post.feedPostId)
+        syncPost({
+          ...post,
+          commentCount: Math.max(0, post.commentCount - 1),
+        })
+        showToast('success', '댓글이 삭제되었습니다.')
+      } catch (deleteError) {
+        showToast('error', extractApiErrorMessage(deleteError, '댓글 삭제에 실패했습니다.'))
+      }
+    })
   }
 
   const handleStartEditCaption = () => {
@@ -548,20 +465,20 @@ export default function FeedPostDetailModal({
     }
   }
 
-  const handleDeletePost = async () => {
+  const handleDeletePost = () => {
     if (!post || deleteSubmitting) return
-    if (!confirm('이 피드를 삭제할까요?')) return
-
-    setDeleteSubmitting(true)
-    try {
-      await deleteFeedPost(post.feedPostId)
-      onPostDeleted(post.feedPostId)
-      onClose()
-    } catch (deleteError) {
-      setError(extractApiErrorMessage(deleteError, '피드 삭제에 실패했습니다.'))
-    } finally {
-      setDeleteSubmitting(false)
-    }
+    showConfirm('삭제할까요?', async () => {
+      setDeleteSubmitting(true)
+      try {
+        await deleteFeedPost(post.feedPostId)
+        onPostDeleted(post.feedPostId)
+        onClose()
+      } catch (deleteError) {
+        showToast('error', extractApiErrorMessage(deleteError, '피드 삭제에 실패했습니다.'))
+      } finally {
+        setDeleteSubmitting(false)
+      }
+    })
   }
 
   const handleClose = () => {
@@ -601,7 +518,7 @@ export default function FeedPostDetailModal({
             </button>
             <button
               type="button"
-              onClick={() => void handleDeletePost()}
+              onClick={handleDeletePost}
               disabled={deleteSubmitting}
               className="rounded-full border border-red-200 bg-white px-3 py-1.5 text-[10px] font-black text-red-500 hover:bg-red-50 transition-colors cursor-pointer disabled:opacity-60"
             >
@@ -686,42 +603,6 @@ export default function FeedPostDetailModal({
                 </p>
               ) : null}
 
-              {post.outfit ? (
-                <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 space-y-3">
-                  <div>
-                    <p className="text-[10px] font-black text-slate-400">연결 코디</p>
-                    <p className="text-sm font-black text-[#1E3A8A]">{post.outfit.title}</p>
-                    {post.outfit.description ? (
-                      <p className="mt-1 text-xs font-bold text-slate-600">
-                        {post.outfit.description}
-                      </p>
-                    ) : null}
-                  </div>
-                  {post.outfit.items.length > 0 ? (
-                    <div className="flex gap-2 overflow-x-auto pb-1">
-                      {post.outfit.items.map((item) => (
-                        <button
-                          key={item.outfitItemId}
-                          type="button"
-                          onClick={() => setSelectedClothes(item.clothes)}
-                          className="shrink-0 w-16 space-y-1 text-center cursor-pointer group"
-                        >
-                          <div className="aspect-square overflow-hidden rounded-xl border border-slate-200 bg-white group-hover:border-[#1E3A8A]/40 transition-colors">
-                            <AuthenticatedImage
-                              src={item.clothes.userImageUrl ?? item.clothes.imageUrl}
-                              alt={item.clothes.name}
-                              className="h-full w-full object-contain p-1"
-                            />
-                          </div>
-                          <p className="line-clamp-2 text-[9px] font-bold text-slate-600 group-hover:text-[#1E3A8A] transition-colors">
-                            {item.clothes.name}
-                          </p>
-                        </button>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-              ) : null}
 
               <div className="flex items-center gap-2">
                 {!post.mine ? (
@@ -770,7 +651,7 @@ export default function FeedPostDetailModal({
                       <CommentItem
                         key={comment.feedCommentId}
                         comment={comment}
-                        onDelete={(commentId) => void handleDeleteComment(commentId)}
+                        onDelete={handleDeleteComment}
                         onSave={handleSaveComment}
                         onSubmitReply={handleSubmitReply}
                       />
@@ -821,9 +702,6 @@ export default function FeedPostDetailModal({
       </ModalFooter>
     </Modal>
 
-    {selectedClothes ? (
-      <ClothesDetailSheet clothes={selectedClothes} isMine={post?.mine ?? false} onClose={() => setSelectedClothes(null)} />
-    ) : null}
     </>
   )
 }
