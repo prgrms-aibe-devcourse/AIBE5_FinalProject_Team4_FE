@@ -14,8 +14,7 @@ last_updated: 2026-06-22
 
 | Path | 화면 | 설명 |
 | --- | --- | --- |
-| `/` | `App` | 메인 앱 화면 |
-| `/onboarding` | `OnboardingPage` | 온보딩 화면 |
+| `/` | `App` | 메인 앱 화면. 인트로·온보딩·메인 탭을 모두 포함하며 `App.tsx` 내부 상태로 화면을 전환합니다. |
 | `/error/server` | `ServerErrorPage` | 서버 오류 화면 |
 | `/error/network` | `NetworkErrorPage` | 네트워크 오류 화면 |
 | `*` | `NotFoundPage` | 존재하지 않는 경로 |
