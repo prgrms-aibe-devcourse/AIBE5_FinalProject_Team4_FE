@@ -15,9 +15,10 @@ interface FeedTabProps {
   userId: number
   guideTourCompleted: boolean
   onGuideTourComplete: () => void
+  onViewProfile?: (userId: number) => void
 }
 
-export default function FeedTab({ userId, guideTourCompleted, onGuideTourComplete }: FeedTabProps) {
+export default function FeedTab({ userId, guideTourCompleted, onGuideTourComplete, onViewProfile }: FeedTabProps) {
   const { showToast } = useToast()
 
   const handleShare = async (postId: number) => {
@@ -178,6 +179,7 @@ export default function FeedTab({ userId, guideTourCompleted, onGuideTourComplet
               onToggleSave={() => void handleToggleSave(post)}
               onShare={() => void handleShare(post.feedPostId)}
               onCommentAdded={() => updatePostInList({ ...post, commentCount: post.commentCount + 1 })}
+              onViewProfile={onViewProfile}
               likeSubmitting={
                 submittingPostId === post.feedPostId && submittingAction === 'like'
               }
@@ -218,6 +220,7 @@ export default function FeedTab({ userId, guideTourCompleted, onGuideTourComplet
         onClose={() => setDetailPostId(null)}
         onPostUpdated={updatePostInList}
         onPostDeleted={handleDeleted}
+        onViewProfile={onViewProfile}
       />
 
       {!writeOpen ? (

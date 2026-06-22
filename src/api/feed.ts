@@ -8,6 +8,7 @@ import type {
   FeedInteraction,
   FeedPage,
   FeedPost,
+  FeedUserProfile,
 } from '@/types/feed'
 
 const FEED_BASE = '/api/v1/feed'
@@ -27,6 +28,22 @@ export async function fetchFeedPosts(page = 0, size = 20): Promise<FeedPage> {
     api.get<BeApiResponse<FeedPage>>(`${FEED_BASE}/posts`, {
       params: { page, size },
     }),
+  )
+}
+
+/** GET /api/v1/feed/users/{userId}/posts — 특정 유저의 피드 게시물 목록 */
+export async function fetchUserFeedPosts(userId: number, page = 0, size = 20): Promise<FeedPage> {
+  return unwrap(
+    api.get<BeApiResponse<FeedPage>>(`${FEED_BASE}/users/${userId}/posts`, {
+      params: { page, size },
+    }),
+  )
+}
+
+/** GET /api/v1/feed/users/{userId}/profile — 룩피드 공개 프로필 */
+export async function fetchFeedUserProfile(userId: number): Promise<FeedUserProfile> {
+  return unwrap(
+    api.get<BeApiResponse<FeedUserProfile>>(`${FEED_BASE}/users/${userId}/profile`),
   )
 }
 

@@ -89,3 +89,16 @@ export interface FeedCommentPayload {
   parentCommentId?: number | null
   content: string
 }
+
+export interface FeedUserProfile {
+  userId: number
+  nickname: string
+  profileImageUrl: string | null
+  profileBio: string | null
+  externalLinkUrl: string | null
+  postCount: number
+  followerCount: number
+  followingCount: number
+  followedByMe: boolean
+  mine: boolean
+}

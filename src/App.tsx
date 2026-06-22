@@ -8,6 +8,7 @@ import { useState, useEffect, type ChangeEvent } from "react";
 import {
   Home,
   X,
+  ChevronLeft,
   ChevronRight,
   Plus,
   Activity,
@@ -38,6 +39,8 @@ import {
 } from "@/api/marketingConsent";
 import { updateGuideTour } from "@/api/guideTour";
 import { uploadProfileImage } from "@/api/profileImage";
+import { fetchFeedUserProfile, fetchUserFeedPosts, toggleFollow } from "@/api/feed";
+import type { FeedPost, FeedUserProfile } from "@/types/feed";
 import { checkNicknameAvailability } from "@/api/users";
 import { getGarmentStyleLabel } from "@/data/garmentStyles";
 import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/common/Modal";
@@ -312,6 +315,12 @@ export default function App() {
   // Navigation state: 'home' | 'closet' | 'outfit-book' | 'feed' | 'profile' | 'lookfeed-profile'
   const [currentTab, setCurrentTab] = useState<"home" | "closet" | "outfit-book" | "feed" | "profile" | "lookfeed-profile">("home");
   const [lookfeedProfileView, setLookfeedProfileView] = useState<"shared" | "saved">("shared");
+  // null = 내 프로필, number = 타인 프로필
+  const [lookfeedTargetUserId, setLookfeedTargetUserId] = useState<number | null>(null);
+  const [lookfeedTargetProfile, setLookfeedTargetProfile] = useState<FeedUserProfile | null>(null);
+  const [lookfeedTargetPosts, setLookfeedTargetPosts] = useState<FeedPost[]>([]);
+  const [lookfeedTargetLoading, setLookfeedTargetLoading] = useState(false);
+  const [lookfeedFollowSubmitting, setLookfeedFollowSubmitting] = useState(false);
   const [homeResetSignal, setHomeResetSignal] = useState<number>(0);
   const [isPhotoRegisterOpen, setIsPhotoRegisterOpen] = useState(false);
   const [isPurchaseRegisterOpen, setIsPurchaseRegisterOpen] = useState(false);
@@ -776,8 +785,56 @@ export default function App() {
 
   const openLookfeedProfile = () => {
     setIsProfileMenuOpen(false);
+    setLookfeedTargetUserId(null);
+    setLookfeedTargetProfile(null);
     setCurrentTab("lookfeed-profile");
     window.setTimeout(scrollAppToTop, 0);
+  };
+
+  const handleViewFeedProfile = (targetUserId: number) => {
+    setLookfeedTargetUserId(targetUserId);
+    setLookfeedTargetProfile(null);
+    setLookfeedTargetPosts([]);
+    setCurrentTab("lookfeed-profile");
+    window.setTimeout(scrollAppToTop, 0);
+
+    setLookfeedTargetLoading(true);
+    Promise.all([
+      fetchFeedUserProfile(targetUserId),
+      fetchUserFeedPosts(targetUserId, 0, 20),
+    ])
+      .then(([profileData, postsPage]) => {
+        setLookfeedTargetProfile(profileData);
+        setLookfeedTargetPosts(postsPage.content);
+      })
+      .catch(() => {
+        setLookfeedTargetProfile(null);
+        setLookfeedTargetPosts([]);
+      })
+      .finally(() => {
+        setLookfeedTargetLoading(false);
+      });
+  };
+
+  const handleToggleLookfeedFollow = async () => {
+    if (lookfeedTargetUserId == null || lookfeedFollowSubmitting) return;
+    setLookfeedFollowSubmitting(true);
+    try {
+      const result = await toggleFollow(lookfeedTargetUserId);
+      setLookfeedTargetProfile((prev) =>
+        prev
+          ? {
+              ...prev,
+              followedByMe: result.active,
+              followerCount: result.active
+                ? prev.followerCount + 1
+                : Math.max(0, prev.followerCount - 1),
+            }
+          : prev,
+      );
+    } finally {
+      setLookfeedFollowSubmitting(false);
+    }
   };
 
   const openMyInfo = () => {
@@ -1095,6 +1152,7 @@ export default function App() {
                       userId={authUserId}
                       guideTourCompleted={profile.guideTourCompletedFeed ?? false}
                       onGuideTourComplete={() => { void handleGuideTourComplete("feed")}}
+                      onViewProfile={handleViewFeedProfile}
                   />
                 )}
               {currentTab === "feed" &&
@@ -1108,113 +1166,211 @@ export default function App() {
               {/* ========================================================= */}
               {/* TAB 4: LOOKFEED PUBLIC PROFILE */}
               {/* ========================================================= */}
-              {currentTab === "lookfeed-profile" && (
-                <div className="-mx-5 -mt-4 animate-fade-in bg-white text-left">
-                  <header className="border-b border-slate-100/80 px-5 py-5 text-center">
-                    <h2 className="truncate text-2xl font-black text-slate-900">
-                      {profile.nickname || "룩피드 프로필"}
-                    </h2>
-                  </header>
+              {currentTab === "lookfeed-profile" && (() => {
+                const isOtherUser = lookfeedTargetUserId !== null;
+                const displayNickname = isOtherUser
+                  ? (lookfeedTargetProfile?.nickname || "룩피드 프로필")
+                  : (profile.nickname || "룩피드 프로필");
+                const displayImageUrl = isOtherUser
+                  ? lookfeedTargetProfile?.profileImageUrl ?? null
+                  : profile.profileImageUrl ?? null;
+                const postCount = isOtherUser
+                  ? (lookfeedTargetProfile?.postCount ?? 0)
+                  : 0;
+                const followerCount = isOtherUser
+                  ? (lookfeedTargetProfile?.followerCount ?? 0)
+                  : 0;
+                const followingCount = isOtherUser
+                  ? (lookfeedTargetProfile?.followingCount ?? 0)
+                  : 0;
 
-                  <section className="px-5 pb-4 pt-5">
-                    <div className="flex items-center gap-5">
-                      <div className="h-24 w-24 shrink-0 overflow-hidden rounded-full bg-slate-100 ring-1 ring-slate-200">
-                        {profile.profileImageUrl ? (
-                          <img src={profile.profileImageUrl} alt="" className="h-full w-full object-cover" />
-                        ) : (
-                          <DefaultProfileAvatar />
-                        )}
-                      </div>
-                      <div className="grid flex-1 grid-cols-3 gap-2 text-center">
-                        {[
-                          { label: "게시물", value: 0 },
-                          { label: "팔로워", value: 0 },
-                          { label: "팔로잉", value: 0 },
-                        ].map((item) => (
-                          <div key={item.label} className="space-y-0.5">
-                            <p className="text-lg font-black text-slate-900">{item.value}</p>
-                            <p className="text-[11px] font-bold text-slate-500">{item.label}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="mt-4 space-y-1">
-                      <p className="text-sm font-medium leading-relaxed text-slate-900">
-                        {profile.profileBio || "아직 소개가 등록되지 않았습니다."}
-                      </p>
-                      {profile.externalLinkUrl && (
-                        <a
-                          href={profile.externalLinkUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="block break-all text-sm font-semibold text-[#00376B] hover:underline"
+                return (
+                  <div className="-mx-5 -mt-4 animate-fade-in bg-white text-left">
+                    <header className="relative border-b border-slate-100/80 px-5 py-5 flex items-center justify-center gap-3">
+                      {isOtherUser && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCurrentTab("feed");
+                            setLookfeedTargetUserId(null);
+                            setLookfeedTargetProfile(null);
+                          }}
+                          className="absolute left-4 flex h-9 w-9 items-center justify-center rounded-full hover:bg-slate-100 transition cursor-pointer"
+                          aria-label="뒤로 가기"
                         >
-                          {profile.externalLinkUrl}
-                        </a>
+                          <ChevronLeft className="h-5 w-5 text-slate-700" />
+                        </button>
                       )}
-                    </div>
+                      <h2 className="truncate text-xl font-black text-slate-900">
+                        {displayNickname}
+                      </h2>
+                    </header>
 
-                    <div className="mt-4">
-                      <button
-                        type="button"
-                        onClick={openLookfeedProfileEdit}
-                        className="h-10 w-full rounded-lg bg-slate-100 text-sm font-black text-slate-900 transition hover:bg-slate-200 active:scale-[0.99]"
-                      >
-                        프로필 수정
-                      </button>
-                    </div>
-                  </section>
-
-                  <section>
-                    <div className="grid grid-cols-2 border-y border-slate-200 text-center">
-                      {[
-                        { id: "shared" as const, label: "게시한 피드" },
-                        { id: "saved" as const, label: "저장한 피드" },
-                      ].map((item) => {
-                        const selected = lookfeedProfileView === item.id;
-                        return (
-                          <button
-                            key={item.id}
-                            type="button"
-                            onClick={() => setLookfeedProfileView(item.id)}
-                            className={`relative h-12 text-xs font-black transition ${
-                              selected ? "text-slate-950" : "text-slate-400"
-                            }`}
-                          >
-                            {item.label}
-                            {selected && (
-                              <span className="absolute inset-x-5 bottom-0 h-0.5 rounded-full bg-slate-950" />
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    <div className="relative grid grid-cols-2 gap-px border-y border-slate-200 bg-slate-200">
-                      {Array.from({ length: 4 }).map((_, index) => (
-                        <div
-                          key={index}
-                          className="aspect-square bg-slate-50"
-                        />
-                      ))}
-                      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                        <p className="text-sm font-bold text-slate-500">피드가 아직 없습니다.</p>
+                    <section className="px-5 pb-4 pt-5">
+                      <div className="flex items-center gap-5">
+                        <div className="h-24 w-24 shrink-0 overflow-hidden rounded-full bg-slate-100 ring-1 ring-slate-200">
+                          {displayImageUrl ? (
+                            <img src={displayImageUrl} alt={displayNickname} className="h-full w-full object-cover" />
+                          ) : (
+                            <DefaultProfileAvatar />
+                          )}
+                        </div>
+                        <div className="grid flex-1 grid-cols-3 gap-2 text-center">
+                          {[
+                            { label: "게시물", value: postCount },
+                            { label: "팔로워", value: followerCount },
+                            { label: "팔로잉", value: followingCount },
+                          ].map((item) => (
+                            <div key={item.label} className="space-y-0.5">
+                              <p className="text-lg font-black text-slate-900">{item.value}</p>
+                              <p className="text-[11px] font-bold text-slate-500">{item.label}</p>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  </section>
 
-                  <div className="pointer-events-none fixed bottom-20 left-0 right-0 z-20 flex justify-center px-5">
-                    <button
-                      type="button"
-                      onClick={() => showMessage("준비 중", "피드 등록 기능은 추후 제공될 예정입니다.")}
-                      className="pointer-events-auto flex h-11 items-center gap-2 rounded-2xl bg-[#1E3A8A] px-6 text-sm font-bold text-[#BBF7D0] shadow-lg transition hover:bg-[#1E3A8A]/90 active:scale-95"
-                    >
-                      <Plus className="h-5 w-5 stroke-[3]" />
-                      <span>피드 등록</span>
-                    </button>
+                      {isOtherUser ? (
+                        <>
+                          <div className="mt-4 space-y-1">
+                            <p className="text-sm font-medium leading-relaxed text-slate-900">
+                              {lookfeedTargetProfile?.profileBio || "아직 소개가 등록되지 않았습니다."}
+                            </p>
+                            {lookfeedTargetProfile?.externalLinkUrl ? (
+                              <a
+                                href={lookfeedTargetProfile.externalLinkUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="block break-all text-sm font-semibold text-[#00376B] hover:underline"
+                              >
+                                {lookfeedTargetProfile.externalLinkUrl}
+                              </a>
+                            ) : null}
+                          </div>
+                          <div className="mt-4">
+                            <button
+                              type="button"
+                              onClick={() => { void handleToggleLookfeedFollow(); }}
+                              disabled={lookfeedFollowSubmitting || lookfeedTargetLoading}
+                              className={`h-10 w-full rounded-lg text-sm font-black transition active:scale-[0.99] disabled:opacity-60 ${
+                                lookfeedTargetProfile?.followedByMe
+                                  ? "bg-slate-100 text-slate-900 hover:bg-slate-200"
+                                  : "bg-[#1E3A8A] text-[#BBF7D0] hover:bg-[#1E3A8A]/90"
+                              }`}
+                            >
+                              {lookfeedTargetProfile?.followedByMe ? "팔로잉" : "팔로우"}
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="mt-4 space-y-1">
+                            <p className="text-sm font-medium leading-relaxed text-slate-900">
+                              {profile.profileBio || "아직 소개가 등록되지 않았습니다."}
+                            </p>
+                            {profile.externalLinkUrl && (
+                              <a
+                                href={profile.externalLinkUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="block break-all text-sm font-semibold text-[#00376B] hover:underline"
+                              >
+                                {profile.externalLinkUrl}
+                              </a>
+                            )}
+                          </div>
+                          <div className="mt-4">
+                            <button
+                              type="button"
+                              onClick={openLookfeedProfileEdit}
+                              className="h-10 w-full rounded-lg bg-slate-100 text-sm font-black text-slate-900 transition hover:bg-slate-200 active:scale-[0.99]"
+                            >
+                              프로필 수정
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </section>
+
+                    <section>
+                      {!isOtherUser && (
+                        <div className="grid grid-cols-2 border-y border-slate-200 text-center">
+                          {[
+                            { id: "shared" as const, label: "게시한 피드" },
+                            { id: "saved" as const, label: "저장한 피드" },
+                          ].map((item) => {
+                            const selected = lookfeedProfileView === item.id;
+                            return (
+                              <button
+                                key={item.id}
+                                type="button"
+                                onClick={() => setLookfeedProfileView(item.id)}
+                                className={`relative h-12 text-xs font-black transition ${
+                                  selected ? "text-slate-950" : "text-slate-400"
+                                }`}
+                              >
+                                {item.label}
+                                {selected && (
+                                  <span className="absolute inset-x-5 bottom-0 h-0.5 rounded-full bg-slate-950" />
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {isOtherUser ? (
+                        lookfeedTargetLoading ? (
+                          <div className="flex items-center justify-center py-16">
+                            <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-300 border-t-slate-700" />
+                          </div>
+                        ) : lookfeedTargetPosts.length === 0 ? (
+                          <div className="flex items-center justify-center py-16">
+                            <p className="text-sm font-bold text-slate-400">게시한 피드가 없습니다.</p>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-2 gap-px bg-slate-200">
+                            {lookfeedTargetPosts.map((fp) => (
+                              <div key={fp.feedPostId} className="aspect-square bg-slate-50 overflow-hidden">
+                                {fp.images[0] ? (
+                                  <img
+                                    src={fp.images[0].imageUrl}
+                                    alt={fp.caption ?? "피드"}
+                                    className="h-full w-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="h-full w-full bg-slate-100" />
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )
+                      ) : (
+                        <div className="relative grid grid-cols-2 gap-px border-y border-slate-200 bg-slate-200">
+                          {Array.from({ length: 4 }).map((_, index) => (
+                            <div key={index} className="aspect-square bg-slate-50" />
+                          ))}
+                          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                            <p className="text-sm font-bold text-slate-500">피드가 아직 없습니다.</p>
+                          </div>
+                        </div>
+                      )}
+                    </section>
+
+                    {!isOtherUser && (
+                      <div className="pointer-events-none fixed bottom-20 left-0 right-0 z-20 flex justify-center px-5">
+                        <button
+                          type="button"
+                          onClick={() => showMessage("준비 중", "피드 등록 기능은 추후 제공될 예정입니다.")}
+                          className="pointer-events-auto flex h-11 items-center gap-2 rounded-2xl bg-[#1E3A8A] px-6 text-sm font-bold text-[#BBF7D0] shadow-lg transition hover:bg-[#1E3A8A]/90 active:scale-95"
+                        >
+                          <Plus className="h-5 w-5 stroke-[3]" />
+                          <span>피드 등록</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               {/* ========================================================= */}
               {/* TAB 5: MY INFO */}

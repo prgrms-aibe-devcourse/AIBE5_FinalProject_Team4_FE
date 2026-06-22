@@ -37,6 +37,7 @@ interface FeedPostCardProps {
   onToggleSave: () => void
   onShare: () => void
   onCommentAdded?: () => void
+  onViewProfile?: (userId: number) => void
   likeSubmitting?: boolean
   saveSubmitting?: boolean
 }
@@ -49,6 +50,7 @@ export default function FeedPostCard({
   onToggleSave,
   onShare,
   onCommentAdded,
+  onViewProfile,
   likeSubmitting = false,
   saveSubmitting = false,
 }: FeedPostCardProps) {
@@ -174,31 +176,31 @@ export default function FeedPostCard({
 
   return (
     <article className="border-b border-slate-100 bg-white">
-      {/* 헤더 — 클릭 시 모달 */}
-      <div
-        className="flex items-center gap-2 px-3 py-2.5 cursor-pointer"
-        onClick={onOpen}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => { if (e.key === 'Enter') onOpen() }}
-        aria-label={`${post.author.nickname} 피드 게시물 보기`}
-      >
-        <div className="rounded-full bg-gradient-to-tr from-[#f9ce34] via-[#ee2a7b] to-[#6228d7] p-[2px]">
-          <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-white">
-            {post.author.profileImageUrl ? (
-              <AuthenticatedImage
-                src={post.author.profileImageUrl}
-                alt={post.author.nickname}
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <span className="text-xs font-black text-[#1E3A8A]">
-                {(post.author.nickname || '?').slice(0, 1)}
-              </span>
-            )}
+      {/* 헤더 — 프로필 클릭 시 룩피드 프로필, 나머지 클릭 시 모달 */}
+      <div className="flex items-center gap-2 px-3 py-2.5">
+        <button
+          type="button"
+          className="flex items-center gap-2 min-w-0 flex-1 text-left cursor-pointer"
+          onClick={() => onViewProfile?.(post.author.userId)}
+          aria-label={`${post.author.nickname} 프로필 보기`}
+        >
+          <div className="rounded-full bg-gradient-to-tr from-[#f9ce34] via-[#ee2a7b] to-[#6228d7] p-[2px] shrink-0">
+            <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-white">
+              {post.author.profileImageUrl ? (
+                <AuthenticatedImage
+                  src={post.author.profileImageUrl}
+                  alt={post.author.nickname}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <span className="text-xs font-black text-[#1E3A8A]">
+                  {(post.author.nickname || '?').slice(0, 1)}
+                </span>
+              )}
+            </div>
           </div>
-        </div>
-        <p className="truncate text-sm font-semibold text-slate-900">{post.author.nickname}</p>
+          <p className="truncate text-sm font-semibold text-slate-900">{post.author.nickname}</p>
+        </button>
       </div>
 
       {/* 이미지 — 클릭 시 모달 */}

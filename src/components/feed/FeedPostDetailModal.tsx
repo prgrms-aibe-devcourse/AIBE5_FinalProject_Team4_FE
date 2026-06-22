@@ -377,6 +377,7 @@ interface FeedPostDetailModalProps {
   onClose: () => void
   onPostUpdated: (post: FeedPost) => void
   onPostDeleted: (postId: number) => void
+  onViewProfile?: (userId: number) => void
 }
 
 export default function FeedPostDetailModal({
@@ -386,6 +387,7 @@ export default function FeedPostDetailModal({
   onClose,
   onPostUpdated,
   onPostDeleted,
+  onViewProfile,
 }: FeedPostDetailModalProps) {
   const { showToast, showConfirm } = useToast()
   const [post, setPost] = useState<FeedPost | null>(null)
@@ -672,12 +674,21 @@ export default function FeedPostDetailModal({
 
             <div className="space-y-4 px-5 py-4">
               <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-black text-slate-900">{post.author.nickname}</p>
+                <button
+                  type="button"
+                  className="min-w-0 text-left cursor-pointer"
+                  onClick={() => {
+                    if (onViewProfile) {
+                      onClose()
+                      onViewProfile(post.author.userId)
+                    }
+                  }}
+                >
+                  <p className="text-sm font-black text-slate-900 hover:underline">{post.author.nickname}</p>
                   <p className="text-[10px] font-bold text-slate-400">
                     {formatFeedDate(post.createdAt)}
                   </p>
-                </div>
+                </button>
                 {!post.mine && following !== null ? (
                   <button
                     type="button"
