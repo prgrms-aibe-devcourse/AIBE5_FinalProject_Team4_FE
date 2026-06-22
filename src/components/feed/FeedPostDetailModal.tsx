@@ -16,10 +16,90 @@ import { Modal, ModalBody, ModalFooter, ModalHeader } from '@/components/common/
 import Spinner from '@/components/common/Spinner'
 import { Heart, MessageSquare, User, X } from '@/components/icons'
 import { useToast } from '@/components/Toast'
+import type { ClothesResponse } from '@/types/be'
+import { addExistingClothesToWishlist } from '@/api/wardrobe'
 import type { FeedComment, FeedPost } from '@/types/feed'
 import { extractApiErrorMessage } from '@/utils/apiError'
 
+function ClothesDetailSheet({
+  clothes,
+  isMine,
+  onClose,
+}: {
+  clothes: ClothesResponse
+  isMine: boolean
+  onClose: () => void
+}) {
+  const imageUrl = clothes.userImageUrl ?? clothes.imageUrl
+  const canFavorite = false // 타인 피드의 옷은 즐겨찾기 불가
+  const [favorite, setFavorite] = useState(clothes.isFavorite ?? false)
+  const [favoriteSubmitting, setFavoriteSubmitting] = useState(false)
 
+  const handleToggleFavorite = async () => {
+    if (!canFavorite || favoriteSubmitting) return
+    setFavoriteSubmitting(true)
+    try {
+      await updateClothesFavorite(clothes.clothesId, !favorite)
+      setFavorite((prev) => !prev)
+    } catch {
+      // 소유하지 않은 옷이거나 404 등 — 조용히 무시
+    } finally {
+      setFavoriteSubmitting(false)
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-[120] flex items-end justify-center bg-slate-900/50 backdrop-blur-xs animate-fade-in"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-md rounded-t-3xl bg-white shadow-2xl animate-slide-up"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-slate-100">
+          <p className="text-xs font-black text-[#1E3A8A] uppercase tracking-wide">옷 상세</p>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => void handleToggleFavorite()}
+              disabled={!canFavorite || favoriteSubmitting}
+              className="p-1.5 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <Heart className={`w-4 h-4 ${favorite ? 'fill-rose-500 text-rose-500' : ''}`} />
+            </button>
+            <button type="button" onClick={onClose} className="p-1.5 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 cursor-pointer">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+        <div className="mx-5 mt-4 aspect-square w-[calc(100%-2.5rem)] rounded-2xl border border-slate-200 bg-slate-50 overflow-hidden">
+          {imageUrl ? (
+            <AuthenticatedImage src={imageUrl} alt={clothes.name} className="w-full h-full object-contain p-4" />
+          ) : null}
+        </div>
+        <div className="px-5 py-4 space-y-1 pb-8">
+          <p className="text-base font-black text-slate-900 leading-snug">{clothes.name}</p>
+          {clothes.brandName ? (
+            <p className="text-sm font-bold text-slate-500">{clothes.brandName}</p>
+          ) : null}
+          {clothes.externalProductUrl ? (
+            <div className="pt-3">
+              <a
+                href={clothes.externalProductUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex h-11 w-full items-center justify-center rounded-2xl bg-[#03C75A] text-white text-sm font-black hover:bg-[#02b351] transition-colors cursor-pointer"
+              >
+                쇼핑몰 바로가기
+              </a>
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 function formatFeedDate(value: string): string {
   const date = new Date(value)
@@ -275,6 +355,7 @@ export default function FeedPostDetailModal({
   const [following, setFollowing] = useState<boolean | null>(null)
   const [followSubmitting, setFollowSubmitting] = useState(false)
   const [deleteSubmitting, setDeleteSubmitting] = useState(false)
+  const [selectedClothes, setSelectedClothes] = useState<ClothesResponse | null>(null)
   const [editingCaption, setEditingCaption] = useState(false)
   const [captionDraft, setCaptionDraft] = useState('')
   const [captionSubmitting, setCaptionSubmitting] = useState(false)
@@ -603,6 +684,29 @@ export default function FeedPostDetailModal({
                 </p>
               ) : null}
 
+              {post.outfit?.items && post.outfit.items.length > 0 ? (
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                  {post.outfit.items.map((item) => (
+                    <button
+                      key={item.outfitItemId}
+                      type="button"
+                      onClick={() => setSelectedClothes(item.clothes)}
+                      className="shrink-0 w-16 space-y-1 text-center cursor-pointer group"
+                    >
+                      <div className="aspect-square overflow-hidden rounded-xl border border-slate-200 bg-white group-hover:border-[#1E3A8A]/40 transition-colors">
+                        <AuthenticatedImage
+                          src={item.clothes.userImageUrl ?? item.clothes.imageUrl}
+                          alt={item.clothes.name}
+                          className="h-full w-full object-contain p-1"
+                        />
+                      </div>
+                      <p className="line-clamp-2 text-[9px] font-bold text-slate-500 group-hover:text-[#1E3A8A] transition-colors">
+                        {item.clothes.name}
+                      </p>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
 
               <div className="flex items-center gap-2">
                 {!post.mine ? (
@@ -702,6 +806,13 @@ export default function FeedPostDetailModal({
       </ModalFooter>
     </Modal>
 
+    {selectedClothes ? (
+      <ClothesDetailSheet
+        clothes={selectedClothes}
+        isMine={post?.mine ?? false}
+        onClose={() => setSelectedClothes(null)}
+      />
+    ) : null}
     </>
   )
 }

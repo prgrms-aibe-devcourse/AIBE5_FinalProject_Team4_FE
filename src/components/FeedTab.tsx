@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { fetchFeedPosts, toggleFeedLike, toggleFeedSave } from '@/api/feed'
+import { useToast } from '@/components/Toast'
 import Spinner from '@/components/common/Spinner'
 import FeedEmptyState from '@/components/feed/FeedEmptyState'
 import FeedPostCard from '@/components/feed/FeedPostCard'
 import FeedPostDetailModal from '@/components/feed/FeedPostDetailModal'
 import FeedWriteModal from '@/components/feed/FeedWriteModal'
 import { Plus } from '@/components/icons'
-import { useToast } from '@/components/Toast'
 import type { FeedPost } from '@/types/feed'
 import { extractApiErrorMessage } from '@/utils/apiError'
 import GuideTour from '@/components/common/GuideTour'
@@ -19,6 +19,16 @@ interface FeedTabProps {
 
 export default function FeedTab({ userId, guideTourCompleted, onGuideTourComplete }: FeedTabProps) {
   const { showToast } = useToast()
+
+  const handleShare = async (postId: number) => {
+    const url = `${window.location.origin}${window.location.pathname}?post=${postId}`
+    try {
+      await navigator.clipboard.writeText(url)
+      showToast('success', '링크가 복사되었습니다.')
+    } catch {
+      showToast('error', '링크 복사에 실패했습니다.')
+    }
+  }
   const [posts, setPosts] = useState<FeedPost[]>([])
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -162,9 +172,12 @@ export default function FeedTab({ userId, guideTourCompleted, onGuideTourComplet
             <FeedPostCard
               key={post.feedPostId}
               post={post}
+              userId={userId}
               onOpen={() => setDetailPostId(post.feedPostId)}
               onToggleLike={() => void handleToggleLike(post)}
               onToggleSave={() => void handleToggleSave(post)}
+              onShare={() => void handleShare(post.feedPostId)}
+              onCommentAdded={() => updatePostInList({ ...post, commentCount: post.commentCount + 1 })}
               likeSubmitting={
                 submittingPostId === post.feedPostId && submittingAction === 'like'
               }
