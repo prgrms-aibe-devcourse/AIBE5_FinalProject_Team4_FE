@@ -17,34 +17,75 @@ import Spinner from '@/components/common/Spinner'
 import { Heart, MessageSquare, User, X } from '@/components/icons'
 import { useToast } from '@/components/Toast'
 import type { ClothesResponse } from '@/types/be'
-import { addExistingClothesToWishlist } from '@/api/wardrobe'
+import { addExistingClothesToWishlist, createWishlistClothes } from '@/api/wardrobe'
+import { resolveGarmentColorCode } from '@/data/garmentColors'
+import { CATEGORY_ITEM_TYPES } from '@/data/categoryItemTypes'
 import type { FeedComment, FeedPost } from '@/types/feed'
 import { extractApiErrorMessage } from '@/utils/apiError'
 
 function ClothesDetailSheet({
   clothes,
   isMine,
+  userId,
   onClose,
 }: {
   clothes: ClothesResponse
   isMine: boolean
+  userId: number
   onClose: () => void
 }) {
+  const { showToast } = useToast()
   const imageUrl = clothes.userImageUrl ?? clothes.imageUrl
-  const canFavorite = false // 타인 피드의 옷은 즐겨찾기 불가
-  const [favorite, setFavorite] = useState(clothes.isFavorite ?? false)
-  const [favoriteSubmitting, setFavoriteSubmitting] = useState(false)
+  const [wishlisted, setWishlisted] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
 
-  const handleToggleFavorite = async () => {
-    if (!canFavorite || favoriteSubmitting) return
-    setFavoriteSubmitting(true)
+  const handleAddToWishlist = async () => {
+    if (isMine || wishlisted || submitting) return
+    const imageUrl = clothes.userImageUrl ?? clothes.imageUrl ?? ''
+    if (!imageUrl.startsWith('http')) {
+      showToast('error', '이미지 URL이 없어 추가할 수 없습니다.')
+      return
+    }
+    setSubmitting(true)
     try {
-      await updateClothesFavorite(clothes.clothesId, !favorite)
-      setFavorite((prev) => !prev)
-    } catch {
-      // 소유하지 않은 옷이거나 404 등 — 조용히 무시
+      // 1순위: EXTERNAL_SHOPPING 마스터 연결 시도
+      try {
+        await addExistingClothesToWishlist(userId, clothes.clothesId)
+      } catch {
+        // EXTERNAL_SHOPPING 이 아닌 옷(PHOTO/PURCHASE 등)은 새 위시리스트 항목 생성
+        const beCategory = clothes.category as 'TOP' | 'BOTTOM' | 'OUTER' | 'SHOES'
+        const uiCategory = beCategory === 'TOP' ? 'Top' : beCategory === 'BOTTOM' ? 'Bottom' : beCategory === 'OUTER' ? 'Outer' : 'Shoes'
+        const styleCodes = (clothes.styles ?? []).map((s) => s.code).filter(Boolean)
+        const itemType = clothes.itemType?.trim() || CATEGORY_ITEM_TYPES[uiCategory]?.[0]?.code || 'LONG_SLEEVE'
+        const rawUrl = clothes.externalProductUrl
+        const externalProductUrl =
+          rawUrl && rawUrl.startsWith('https://') && !rawUrl.includes('localhost') && !rawUrl.includes('127.0.0.1')
+            ? rawUrl
+            : `https://search.shopping.naver.com/search/all?query=${encodeURIComponent(clothes.name)}`
+
+        await createWishlistClothes(userId, {
+          name: clothes.name,
+          brandName: (clothes.brandName?.trim() || 'UNKNOWN').slice(0, 100),
+          productCode: `FEED-${clothes.clothesId}`,
+          imageUrl,
+          category: beCategory,
+          itemType,
+          gender: clothes.gender ?? 'UNISEX',
+          primaryColor: resolveGarmentColorCode(clothes.primaryColor),
+          secondaryColors: (clothes.secondaryColors ?? []).map((c) => c.code).filter(Boolean),
+          styles: styleCodes.length > 0 ? styleCodes : ['CASUAL'],
+          size: 'FREE',
+          externalSource: 'NAVER_SHOPPING',
+          externalProductId: String(clothes.clothesId),
+          externalProductUrl,
+        })
+      }
+      setWishlisted(true)
+      showToast('success', '미보유 옷에 추가했어요.')
+    } catch (err) {
+      showToast('error', extractApiErrorMessage(err, '미보유 옷 추가에 실패했습니다.'))
     } finally {
-      setFavoriteSubmitting(false)
+      setSubmitting(false)
     }
   }
 
@@ -60,14 +101,17 @@ function ClothesDetailSheet({
         <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-slate-100">
           <p className="text-xs font-black text-[#1E3A8A] uppercase tracking-wide">옷 상세</p>
           <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => void handleToggleFavorite()}
-              disabled={!canFavorite || favoriteSubmitting}
-              className="p-1.5 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <Heart className={`w-4 h-4 ${favorite ? 'fill-rose-500 text-rose-500' : ''}`} />
-            </button>
+            {!isMine ? (
+              <button
+                type="button"
+                onClick={() => void handleAddToWishlist()}
+                disabled={wishlisted || submitting}
+                title={wishlisted ? '미보유 옷에 추가됨' : '미보유 옷으로 추가'}
+                className="p-1.5 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <Heart className={`w-4 h-4 ${wishlisted ? 'fill-rose-500 text-rose-500' : ''}`} />
+              </button>
+            ) : null}
             <button type="button" onClick={onClose} className="p-1.5 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 cursor-pointer">
               <X className="w-4 h-4" />
             </button>
@@ -810,6 +854,7 @@ export default function FeedPostDetailModal({
       <ClothesDetailSheet
         clothes={selectedClothes}
         isMine={post?.mine ?? false}
+        userId={userId}
         onClose={() => setSelectedClothes(null)}
       />
     ) : null}
