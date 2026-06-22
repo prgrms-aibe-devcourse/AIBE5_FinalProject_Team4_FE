@@ -516,6 +516,7 @@ export default function FeedPostDetailModal({
 
   const handleDeleteComment = async (commentId: number) => {
     if (!post) return
+    if (!confirm('댓글을 삭제할까요?')) return
     try {
       await deleteFeedComment(post.feedPostId, commentId)
       await loadComments(post.feedPostId)
