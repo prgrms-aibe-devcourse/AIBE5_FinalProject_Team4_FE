@@ -20,11 +20,13 @@ export default function GuideTour({ steps, onComplete }: GuideTourProps) {
     useEffect(() => {
         const el = steps[currentStep].targetRef.current
         if (!el) return
-        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-        const id = setTimeout(() => {
+
+        el.scrollIntoView({ behavior: 'instant', block: 'center' })
+
+        const id = requestAnimationFrame(() => {
             setTargetRect(el.getBoundingClientRect())
-        }, 120)
-        return () => clearTimeout(id)
+        })
+        return () => cancelAnimationFrame(id)
     }, [currentStep, steps])
 
     // 마운트 후 fade-in

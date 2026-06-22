@@ -239,9 +239,10 @@ export default function FeedTab({
       />
 
       {!writeOpen ? (
-        <div ref={writeButtonRef} className="fixed bottom-20 left-0 right-0 z-20 flex justify-center px-5 pointer-events-none">
+        <div className="fixed bottom-20 left-0 right-0 z-20 flex justify-center px-5 pointer-events-none">
           <button
-            type="button"
+              ref={writeButtonRef}
+              type="button"
             onClick={() => setWriteOpen(true)}
             className="pointer-events-auto flex items-center gap-2 h-12 px-6 rounded-2xl bg-[#1E3A8A] hover:bg-[#1E3A8A]/90 text-[#BBF7D0] shadow-lg font-bold text-sm transition active:scale-95 cursor-pointer"
           >
