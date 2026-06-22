@@ -275,6 +275,26 @@ export default function HomeTab({
 
   const [refreshSignal, setRefreshSignal] = useState(0);
 
+  const resetRecommendationState = useCallback(() => {
+    setActiveLabel("style");
+    setShowStickyLabels(false);
+    setAnchorClothesId(null);
+    setMatchPickerOpen(false);
+    setMatchRecommendationGroups([]);
+    setMatchLoading(false);
+    setMatchError(null);
+    setOotdItems([]);
+    setStyleItems([]);
+    setOotdError(null);
+    setStyleError(null);
+    setOotdLoading(false);
+    setStyleLoading(false);
+    setOotdCombinations([]);
+    setBookId(null);
+    setSelectedItem(null);
+    setSelectedCombo(null);
+  }, []);
+
   const handleRefreshAll = useCallback(() => {
     onRefreshWardrobe?.();
     setOotdItems([]);
@@ -579,11 +599,14 @@ export default function HomeTab({
   }, []);
 
   useEffect(() => {
-    setActiveLabel("style");
-    setShowStickyLabels(false);
-    setOotdItems([]);
-    setStyleItems([]);
-  }, [resetSignal]);
+    resetRecommendationState();
+  }, [resetRecommendationState, resetSignal]);
+
+  useEffect(() => {
+    if (userId == null || !authReady) {
+      resetRecommendationState();
+    }
+  }, [authReady, resetRecommendationState, userId]);
 
   const selectLabel = (label: RecommendationLabel, scrollToList = false) => {
     setActiveLabel(label);

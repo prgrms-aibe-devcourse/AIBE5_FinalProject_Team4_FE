@@ -473,6 +473,7 @@ export default function App() {
     setProfileMarketingAgreed(null);
     setCurrentTab("home");
     setAuthReady(false);
+    setHomeResetSignal((signal) => signal + 1);
   };
 
   const handleGuideTourComplete = async (page: "home" | "wardrobe" | "feed" | "mypage" | "outfit-book") => {
