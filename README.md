@@ -1,4 +1,4 @@
-<h1 align="center"> 옷장..난감! FE </h1>
+<h1 align="center"> 옷장..난감! </h1>
 
 <p align="center">
   <strong>"개인 디지털 옷장 기반 의류 및 코디 추천 서비스"</strong>
