@@ -901,9 +901,7 @@ export default function HomeTab({
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation()
-                              if (!isWishlisted(item.clothesId)) {
-                                toggleWishlist(toCardItem(item))
-                              }
+                              toggleWishlist(toCardItem(item))
                             }}
                             disabled={isWishlistSubmitting(item.clothesId)}
                             aria-label={isWishlisted(item.clothesId) ? '위시리스트에서 빼기' : '위시리스트에 추가'}
