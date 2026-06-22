@@ -31,10 +31,11 @@ last_updated: 2026-06-22
 | `RECO-001` | 추천 | OOTD 코디 | 사용자 기준 코디 추천. 날씨, 계절, 체감온도는 보조 조건으로 반영 | `GET /api/v1/ootd/{wardrobeId}`, `WeatherCompatibilityTable` | 추천 메인 |
 | `RECO-002` | 추천 | 취향 분석/스타일 기반 추천 | 사용자 취향, 옷장, 지역, 날씨 등 데이터를 추천 근거로 활용 | `GET /api/v1/recommendations/{wardrobeId}`, `USER_STYLES`, `RECOMMENDATION_FEEDBACKS` | 추천 메인 |
 | `RECO-003` | 추천 | 유사 상품 탐색 | 선택한 상품이나 옷과 유사한 상품을 이미지, 카테고리, 색상, 스타일 기준으로 탐색 | `GET /api/v1/users/{userId}/clothes/{clothesId}/similar-products` | 옷 상세, 추천 상세 |
-| `RECO-005` | 추천 | 어울리는 옷 추천 | 사용자 옷장 데이터를 기준으로 함께 입기 좋은 상의, 하의, 아우터, 신발 추천 (`limitPerCategory` query, 기본 `5`, 허용 `1`~`50`) | `GET /api/v1/users/{userId}/clothes/{clothesId}/recommendations` | 추천 상세 |
-| `RECO-006` | 추천 | AI MD 추천 | AI가 TPO/드레스코드 코디를 추천하고 이유와 스타일링 설명 제공 | `/api/v1/users/{userId}/recommendations/ai-md/**`, `OUTFITS`, `OUTFIT_ITEMS`, Gemini, 네이버쇼핑 | 추천 상세, 코디북 |
-| `RECO-008`~`RECO-012` | 추천 상세 | 추천 결과 상세/액션 | 추천 상품/코디 상세, 코디 저장, 미보유 저장, 구매 링크 | `OUTFITS`, `OUTFIT_ITEMS`, `POST /api/users/{userId}/wishlist-clothes` | 추천 상세 |
-| `RECO-013`~`RECO-014` | 추천 상세 | 추천 피드백/제외 | 추천 결과에 사용자별 긍정/부정 피드백을 저장하고 추천 정책에 반영 | `POST /api/v1/users/{userId}/recommendations/feedback`, `RECOMMENDATION_FEEDBACKS`, `USER_STYLES.feedback_weight` | 추천 상세 |
+| `RECO-004` | 추천 | 어울리는 옷 추천 | 사용자 옷장 데이터를 기준으로 함께 입기 좋은 상의, 하의, 아우터, 신발 추천 (`limitPerCategory` query, 기본 `5`, 허용 `1`~`50`) | `GET /api/v1/users/{userId}/clothes/{clothesId}/recommendations` | 추천 상세 |
+| `RECO-005` | 추천 | AI MD 추천 | AI가 TPO/드레스코드 코디를 추천하고 이유와 스타일링 설명 제공 | `/api/v1/users/{userId}/recommendations/ai-md/**`, `OUTFITS`, `OUTFIT_ITEMS`, Gemini, 네이버쇼핑 | 추천 상세, 코디북 |
+| `RECO-006` | 추천 | 외부 API 오류 안내 | 날씨, 상품, AI 등 외부 API 오류 시 기본 추천 또는 대체 행동 안내 | 날씨 API, 네이버쇼핑, Gemini, 공통 에러 응답 | 추천 메인, 추천 상세 |
+| `RECO-007`~`RECO-011` | 추천 상세 | 추천 결과 상세/액션 | 추천 상품/코디 상세, 코디 저장, 미보유 저장, 구매 링크 | `OUTFITS`, `OUTFIT_ITEMS`, `POST /api/users/{userId}/wishlist-clothes` | 추천 상세 |
+| `RECO-012`~`RECO-013` | 추천 상세 | 추천 피드백/제외 | 추천 결과에 사용자별 긍정/부정 피드백을 저장하고 추천 정책에 반영 | `POST /api/v1/users/{userId}/recommendations/feedback`, `RECOMMENDATION_FEEDBACKS`, `USER_STYLES.feedback_weight` | 추천 상세 |
 | `OUTFIT-001`~`OUTFIT-006` | 코디 | 코디 저장/조회/수정/삭제/스타일 | 직접 저장하거나 추천받은 코디를 저장, 조회, 수정, 삭제하고 대표/보조 스타일 관리 | `OUTFITS`, `OUTFIT_ITEMS`, `OUTFIT_STYLES` | 코디북, 코디 상세 |
 | `OUTFITBOOK-001`~`OUTFITBOOK-003` | 코디북 | 코디북 관리 | 사용자별 단일 코디북, 코디 목록 조회, 코디북 상세 | `OUTFIT_BOOKS`, `/api/v1/outfit-books` | 코디북 |
 | `EXT-001`~`EXT-003` | 외부 연동 | 네이버쇼핑 상품 연동 | 외부 상품 검색, 상세 조회, 상품 저장 | `GET /api/naver/search`, `POST /api/v1/external/clothes/naver` | 외부 상품 검색, 추천 상세 |
@@ -45,6 +46,7 @@ last_updated: 2026-06-22
 | `SYSTEM-006`~`SYSTEM-007` | 공통 시스템 | 서비스 안내 | 서비스 소개와 도움말 안내. 최초 로그인 사용자에게 홈·옷장·피드·마이페이지·코디북 주요 기능을 순차 안내하는 가이드 투어 제공, 완료 후 `?` 버튼으로 재진입 가능 | `docs/planning/project-plan.md`, `docs/legal/terms.md`, `GET /api/v1/users/profile`, `PATCH /api/v1/users/guide-tour`, `USERS.guide_tour_completed_home`, `guide_tour_completed_wardrobe`, `guide_tour_completed_feed`, `guide_tour_completed_mypage`, `guide_tour_completed_outfit_book` | 홈, 옷장, 피드, 마이페이지, 코디북 |
 | `SYSTEM-008`~`SYSTEM-009` | 공통 시스템 | 필수 약관 동의 | 이용약관과 개인정보 처리방침을 확인하고 온보딩에서 필수 동의 기준으로 처리 | `GET /api/v1/legal/terms`, `GET /api/v1/legal/privacy-policy`, `BE docs/legal` | 로그인 모달, 온보딩 |
 | `SYSTEM-010` | 공통 시스템 | 마케팅 정보 수신 동의 | 선택 동의로 관리하며 온보딩/마이페이지에서 조회 및 변경 | `GET /api/v1/users/{userId}/marketing-consent`, `PATCH /api/v1/users/{userId}/marketing-consent`, `GET /api/v1/legal/marketing-consent`, `USERS.marketing_agreed`, `USERS.marketing_agreed_at`, `BE docs/legal/marketing-consent.md` | 온보딩, 마이페이지 |
+| `SYSTEM-011` | 공통 시스템 | 작성 중 이탈 확인 | 기본 정보 수정, 선호 스타일 수정, 룩피드 프로필 수정 등에서 저장하지 않은 변경이 있으면 작성 내용 손실을 안내 | `ExitConfirmModal`, 작성/수정 화면 dirty state | 마이페이지, 룩피드 프로필, 피드/코디 작성 |
 | `DATA-001` | 데이터 관리 | 초기 상품 데이터 | 추천 기능 시연을 위한 DB/API 초기 데이터 준비 | 샘플 상품 데이터 | 추천 |
 | `FEED-001`~`FEED-009` | 룩피드 | 피드/반응/빈 상태 | 코디 공유, 상세, 좋아요, 저장, 댓글, 대댓글, 팔로우, 빈 상태 | `FEED_POSTS`, `FEED_POST_IMAGES`, `FEED_LIKES`, `FEED_COMMENTS`, `FEED_POST_SAVES`, `USER_FOLLOWS` | 룩피드 |
 
