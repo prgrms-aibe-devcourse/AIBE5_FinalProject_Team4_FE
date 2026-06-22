@@ -127,7 +127,7 @@ function InlineEditableComment({
   bgClassName: string
   onSave: (commentId: number, content: string) => Promise<void>
   onDelete: (commentId: number) => void
-  onReply?: (commentId: number) => void
+  onReply?: () => void
 }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(comment.content)
@@ -214,10 +214,10 @@ function InlineEditableComment({
             ) : onReply ? (
               <button
                 type="button"
-                onClick={() => onReply(comment.feedCommentId)}
+                onClick={onReply}
                 className="text-[10px] font-black text-[#1E3A8A] cursor-pointer"
               >
-                답글
+                댓글
               </button>
             ) : null}
           </div>
@@ -229,15 +229,32 @@ function InlineEditableComment({
 
 function CommentItem({
   comment,
-  onReply,
   onDelete,
   onSave,
+  onSubmitReply,
 }: {
   comment: FeedComment
-  onReply: (commentId: number) => void
   onDelete: (commentId: number) => void
   onSave: (commentId: number, content: string) => Promise<void>
+  onSubmitReply: (parentCommentId: number, content: string) => Promise<void>
 }) {
+  const [replyOpen, setReplyOpen] = useState(false)
+  const [replyDraft, setReplyDraft] = useState('')
+  const [replySubmitting, setReplySubmitting] = useState(false)
+
+  const handleSubmitReply = async () => {
+    const content = replyDraft.trim()
+    if (!content || replySubmitting) return
+    setReplySubmitting(true)
+    try {
+      await onSubmitReply(comment.feedCommentId, content)
+      setReplyDraft('')
+      setReplyOpen(false)
+    } finally {
+      setReplySubmitting(false)
+    }
+  }
+
   return (
     <div className="space-y-2">
       <InlineEditableComment
@@ -245,7 +262,7 @@ function CommentItem({
         bgClassName="bg-slate-50"
         onSave={onSave}
         onDelete={onDelete}
-        onReply={onReply}
+        onReply={() => setReplyOpen((prev) => !prev)}
       />
       {comment.replies.length > 0 ? (
         <div className="ml-4 space-y-2 border-l-2 border-slate-100 pl-3">
@@ -258,6 +275,34 @@ function CommentItem({
               onDelete={onDelete}
             />
           ))}
+        </div>
+      ) : null}
+      {replyOpen ? (
+        <div className="ml-4 flex gap-2 border-l-2 border-slate-100 pl-3">
+          <input
+            type="text"
+            value={replyDraft}
+            onChange={(e) => setReplyDraft(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') void handleSubmitReply() }}
+            placeholder="댓글을 입력하세요"
+            autoFocus
+            className="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-800 focus:outline-none focus:border-[#1E3A8A]"
+          />
+          <button
+            type="button"
+            onClick={() => void handleSubmitReply()}
+            disabled={replySubmitting || !replyDraft.trim()}
+            className="shrink-0 rounded-xl bg-[#1E3A8A] px-4 py-2 text-xs font-black text-[#BBF7D0] cursor-pointer disabled:opacity-60"
+          >
+            {replySubmitting ? '…' : '등록'}
+          </button>
+          <button
+            type="button"
+            onClick={() => setReplyOpen(false)}
+            className="shrink-0 rounded-xl border border-slate-200 px-3 py-2 text-xs font-black text-slate-500 cursor-pointer"
+          >
+            취소
+          </button>
         </div>
       ) : null}
     </div>
@@ -288,7 +333,6 @@ export default function FeedPostDetailModal({
   const [commentsLoading, setCommentsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [commentDraft, setCommentDraft] = useState('')
-  const [replyToCommentId, setReplyToCommentId] = useState<number | null>(null)
   const [commentSubmitting, setCommentSubmitting] = useState(false)
   const [interactionSubmitting, setInteractionSubmitting] = useState(false)
   const [following, setFollowing] = useState<boolean | null>(null)
@@ -331,7 +375,6 @@ export default function FeedPostDetailModal({
       setPost(null)
       setComments([])
       setCommentDraft('')
-      setReplyToCommentId(null)
       setFollowing(null)
       setError(null)
       return
@@ -420,27 +463,33 @@ export default function FeedPostDetailModal({
 
     // 입력창 즉시 초기화 + 카운트 낙관적 업데이트
     const prevDraft = commentDraft
-    const prevReplyToId = replyToCommentId
     setCommentDraft('')
-    setReplyToCommentId(null)
     syncPost({ ...post, commentCount: post.commentCount + 1 })
 
     setCommentSubmitting(true)
     setError(null)
     try {
-      await createFeedComment(post.feedPostId, {
-        content,
-        parentCommentId: prevReplyToId,
-      })
+      await createFeedComment(post.feedPostId, { content, parentCommentId: null })
       await loadComments(post.feedPostId)
     } catch (submitError) {
-      // 실패 시 입력 복원 및 카운트 롤백
       setCommentDraft(prevDraft)
-      setReplyToCommentId(prevReplyToId)
       syncPost({ ...post, commentCount: Math.max(0, post.commentCount) })
       setError(extractApiErrorMessage(submitError, '댓글 작성에 실패했습니다.'))
     } finally {
       setCommentSubmitting(false)
+    }
+  }
+
+  const handleSubmitReply = async (parentCommentId: number, content: string) => {
+    if (!post) return
+    syncPost({ ...post, commentCount: post.commentCount + 1 })
+    try {
+      await createFeedComment(post.feedPostId, { content, parentCommentId })
+      await loadComments(post.feedPostId)
+    } catch (submitError) {
+      syncPost({ ...post, commentCount: Math.max(0, post.commentCount) })
+      setError(extractApiErrorMessage(submitError, '댓글 작성에 실패했습니다.'))
+      throw submitError
     }
   }
 
@@ -699,9 +748,9 @@ export default function FeedPostDetailModal({
                       <CommentItem
                         key={comment.feedCommentId}
                         comment={comment}
-                        onReply={setReplyToCommentId}
                         onDelete={(commentId) => void handleDeleteComment(commentId)}
                         onSave={handleSaveComment}
+                        onSubmitReply={handleSubmitReply}
                       />
                     ))}
                   </div>
@@ -709,26 +758,14 @@ export default function FeedPostDetailModal({
                   <p className="text-xs font-bold text-slate-400">첫 댓글을 남겨보세요.</p>
                 )}
 
-                {replyToCommentId ? (
-                  <p className="text-[10px] font-black text-[#1E3A8A]">
-                    답글 작성 중
-                    <button
-                      type="button"
-                      onClick={() => setReplyToCommentId(null)}
-                      className="ml-2 text-slate-400 cursor-pointer"
-                    >
-                      취소
-                    </button>
-                  </p>
-                ) : null}
-
                 <div className="flex gap-2">
                   <input
                     type="text"
                     value={commentDraft}
                     onChange={(event) => setCommentDraft(event.target.value)}
-                    placeholder={replyToCommentId ? '답글을 입력하세요' : '댓글을 입력하세요'}
-                    className="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-800"
+                    onKeyDown={(e) => { if (e.key === 'Enter') void handleSubmitComment() }}
+                    placeholder="댓글을 입력하세요"
+                    className="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-800 focus:outline-none focus:border-[#1E3A8A]"
                   />
                   <button
                     type="button"
