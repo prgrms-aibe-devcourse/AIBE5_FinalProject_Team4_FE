@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   createFeedComment,
   deleteFeedComment,
@@ -238,22 +238,66 @@ function CommentItem({
   onSave: (commentId: number, content: string) => Promise<void>
   onSubmitReply: (parentCommentId: number, content: string) => Promise<void>
 }) {
-  const [replyOpen, setReplyOpen] = useState(false)
+  // 현재 인라인 입력이 열린 댓글 ID (null = 닫힘)
+  const [replyingToId, setReplyingToId] = useState<number | null>(null)
   const [replyDraft, setReplyDraft] = useState('')
   const [replySubmitting, setReplySubmitting] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  const openReply = (targetId: number) => {
+    if (replyingToId === targetId) {
+      setReplyingToId(null)
+    } else {
+      setReplyingToId(targetId)
+      setReplyDraft('')
+      // 다음 렌더 후 포커스
+      setTimeout(() => inputRef.current?.focus(), 50)
+    }
+  }
 
   const handleSubmitReply = async () => {
+    if (!replyingToId) return
     const content = replyDraft.trim()
     if (!content || replySubmitting) return
     setReplySubmitting(true)
     try {
-      await onSubmitReply(comment.feedCommentId, content)
+      await onSubmitReply(replyingToId, content)
       setReplyDraft('')
-      setReplyOpen(false)
+      setReplyingToId(null)
     } finally {
       setReplySubmitting(false)
     }
   }
+
+  const inlineInput = (targetId: number) =>
+    replyingToId === targetId ? (
+      <div className="ml-4 flex gap-2 border-l-2 border-slate-100 pl-3">
+        <input
+          ref={inputRef}
+          type="text"
+          value={replyDraft}
+          onChange={(e) => setReplyDraft(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') void handleSubmitReply() }}
+          placeholder="댓글을 입력하세요"
+          className="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-800 focus:outline-none focus:border-[#1E3A8A]"
+        />
+        <button
+          type="button"
+          onClick={() => void handleSubmitReply()}
+          disabled={replySubmitting || !replyDraft.trim()}
+          className="shrink-0 rounded-xl bg-[#1E3A8A] px-4 py-2 text-xs font-black text-[#BBF7D0] cursor-pointer disabled:opacity-60"
+        >
+          {replySubmitting ? '…' : '등록'}
+        </button>
+        <button
+          type="button"
+          onClick={() => setReplyingToId(null)}
+          className="shrink-0 rounded-xl border border-slate-200 px-3 py-2 text-xs font-black text-slate-500 cursor-pointer"
+        >
+          취소
+        </button>
+      </div>
+    ) : null
 
   return (
     <div className="space-y-2">
@@ -262,47 +306,24 @@ function CommentItem({
         bgClassName="bg-slate-50"
         onSave={onSave}
         onDelete={onDelete}
-        onReply={() => setReplyOpen((prev) => !prev)}
+        onReply={() => openReply(comment.feedCommentId)}
       />
+      {inlineInput(comment.feedCommentId)}
+
       {comment.replies.length > 0 ? (
         <div className="ml-4 space-y-2 border-l-2 border-slate-100 pl-3">
           {comment.replies.map((reply) => (
-            <InlineEditableComment
-              key={reply.feedCommentId}
-              comment={reply}
-              bgClassName="bg-white"
-              onSave={onSave}
-              onDelete={onDelete}
-            />
+            <div key={reply.feedCommentId} className="space-y-2">
+              <InlineEditableComment
+                comment={reply}
+                bgClassName="bg-white"
+                onSave={onSave}
+                onDelete={onDelete}
+                onReply={() => openReply(reply.feedCommentId)}
+              />
+              {inlineInput(reply.feedCommentId)}
+            </div>
           ))}
-        </div>
-      ) : null}
-      {replyOpen ? (
-        <div className="ml-4 flex gap-2 border-l-2 border-slate-100 pl-3">
-          <input
-            type="text"
-            value={replyDraft}
-            onChange={(e) => setReplyDraft(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') void handleSubmitReply() }}
-            placeholder="댓글을 입력하세요"
-            autoFocus
-            className="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-800 focus:outline-none focus:border-[#1E3A8A]"
-          />
-          <button
-            type="button"
-            onClick={() => void handleSubmitReply()}
-            disabled={replySubmitting || !replyDraft.trim()}
-            className="shrink-0 rounded-xl bg-[#1E3A8A] px-4 py-2 text-xs font-black text-[#BBF7D0] cursor-pointer disabled:opacity-60"
-          >
-            {replySubmitting ? '…' : '등록'}
-          </button>
-          <button
-            type="button"
-            onClick={() => setReplyOpen(false)}
-            className="shrink-0 rounded-xl border border-slate-200 px-3 py-2 text-xs font-black text-slate-500 cursor-pointer"
-          >
-            취소
-          </button>
         </div>
       ) : null}
     </div>
