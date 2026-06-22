@@ -174,31 +174,49 @@ export default function FeedPostCard({
   const currentImage = images[imageIndex]
   const hasMultipleImages = images.length > 1
 
+  const renderProfileAvatar = (size: 'sm' | 'md') => {
+    const box = size === 'sm' ? 'h-6 w-6' : 'h-8 w-8'
+    const initial = size === 'sm' ? 'text-[10px]' : 'text-xs'
+    return (
+      <button
+        type="button"
+        className="shrink-0 cursor-pointer"
+        onClick={(e) => {
+          e.stopPropagation()
+          onViewProfile?.(post.author.userId)
+        }}
+        aria-label={`${post.author.nickname} 프로필 보기`}
+      >
+        <div className="rounded-full bg-gradient-to-tr from-[#f9ce34] via-[#ee2a7b] to-[#6228d7] p-[2px]">
+          <div className={`flex ${box} items-center justify-center overflow-hidden rounded-full bg-white`}>
+            {post.author.profileImageUrl ? (
+              <AuthenticatedImage
+                src={post.author.profileImageUrl}
+                alt={post.author.nickname}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <span className={`${initial} font-black text-[#1E3A8A]`}>
+                {(post.author.nickname || '?').slice(0, 1)}
+              </span>
+            )}
+          </div>
+        </div>
+      </button>
+    )
+  }
+
   return (
     <article className="border-b border-slate-100 bg-white">
-      {/* 헤더 — 프로필 클릭 시 룩피드 프로필, 나머지 클릭 시 모달 */}
+      {/* 헤더 — 프로필 이미지만 프로필, 닉네임·나머지는 상세 */}
       <div className="flex items-center gap-2 px-3 py-2.5">
+        {renderProfileAvatar('md')}
         <button
           type="button"
-          className="flex items-center gap-2 min-w-0 flex-1 text-left cursor-pointer"
-          onClick={() => onViewProfile?.(post.author.userId)}
-          aria-label={`${post.author.nickname} 프로필 보기`}
+          className="min-w-0 flex-1 text-left cursor-pointer"
+          onClick={onOpen}
+          aria-label={`${post.author.nickname} 피드 게시물 보기`}
         >
-          <div className="rounded-full bg-gradient-to-tr from-[#f9ce34] via-[#ee2a7b] to-[#6228d7] p-[2px] shrink-0">
-            <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-white">
-              {post.author.profileImageUrl ? (
-                <AuthenticatedImage
-                  src={post.author.profileImageUrl}
-                  alt={post.author.nickname}
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <span className="text-xs font-black text-[#1E3A8A]">
-                  {(post.author.nickname || '?').slice(0, 1)}
-                </span>
-              )}
-            </div>
-          </div>
           <p className="truncate text-sm font-semibold text-slate-900">{post.author.nickname}</p>
         </button>
       </div>
@@ -302,31 +320,46 @@ export default function FeedPostCard({
         </button>
       </div>
 
-      {/* 본문 */}
+      {/* 본문 — 프로필 이미지만 프로필, 나머지는 상세 */}
       <div className="space-y-1 px-3 pb-3">
         {post.likeCount > 0 ? (
-          <p className="text-sm font-semibold text-slate-900">
+          <button
+            type="button"
+            onClick={onOpen}
+            className="text-sm font-semibold text-slate-900 text-left cursor-pointer"
+          >
             좋아요 {post.likeCount.toLocaleString()}개
-          </p>
+          </button>
         ) : null}
-        {post.caption ? (
-          <p className="text-sm leading-snug text-slate-900">
-            <span className="mr-1.5 font-semibold">{post.author.nickname}</span>
-            <span className="font-normal">{post.caption}</span>
-          </p>
-        ) : null}
-        {post.commentCount > 0 && !commentsOpen ? (
+        {!commentsOpen ? (
           <button
             type="button"
             onClick={(e) => void handleToggleComments(e)}
-            className="text-sm text-slate-400 cursor-pointer hover:text-slate-600 transition-colors text-left"
+            className="block text-sm text-slate-400 cursor-pointer hover:text-slate-600 transition-colors text-left"
           >
-            댓글 {post.commentCount.toLocaleString()}개 모두 보기
+            댓글 모두보기
           </button>
         ) : null}
-        <p className="pt-0.5 text-[10px] uppercase tracking-wide text-slate-400">
+        {post.caption ? (
+          <div className="flex items-start gap-2">
+            {renderProfileAvatar('sm')}
+            <button
+              type="button"
+              onClick={onOpen}
+              className="min-w-0 flex-1 text-left text-sm leading-snug text-slate-900 cursor-pointer"
+            >
+              <span className="mr-1.5 font-semibold">{post.author.nickname}</span>
+              <span className="font-normal">{post.caption}</span>
+            </button>
+          </div>
+        ) : null}
+        <button
+          type="button"
+          onClick={onOpen}
+          className="block pt-0.5 text-[10px] uppercase tracking-wide text-slate-400 text-left cursor-pointer"
+        >
           {formatRelativeTime(post.createdAt)}
-        </p>
+        </button>
       </div>
 
       {/* 인라인 댓글 */}

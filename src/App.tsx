@@ -53,6 +53,7 @@ import { formatNicknameInput, getNicknameValidationError, NICKNAME_RULE_MESSAGE 
 // import { TRIGGER_PRODUCTS } from "@/data/triggerProducts";
 
 import ProfileTab from "@/components/ProfileTab";
+import { useToast } from "@/components/Toast";
 
 type MyProfilePayload = {
   userId: number;
@@ -79,22 +80,6 @@ type MyProfilePayload = {
   guideTourCompletedOutfitBook?: boolean | null;
 };
 
-type AppDialog =
-  | {
-      type: "message";
-      title: string;
-      message: string;
-      tone?: "info" | "success" | "danger";
-    }
-  | {
-      type: "confirm";
-      title: string;
-      message: string;
-      confirmLabel: string;
-      cancelLabel?: string;
-      tone?: "info" | "danger";
-      onConfirm: () => void | Promise<void>;
-    };
 
 type ProfileEditDraft = {
   nickname: string;
@@ -252,7 +237,7 @@ export default function App() {
   const [pendingTab, setPendingTab] = useState<"closet" | "profile" | null>(null);
   const [isWithdrawnRestoreOpen, setIsWithdrawnRestoreOpen] = useState(false);
   const [withdrawnRestoreLoading, setWithdrawnRestoreLoading] = useState(false);
-  const [appDialog, setAppDialog] = useState<AppDialog | null>(null);
+  const { showToast, showConfirm } = useToast();
   const [isProfileEditOpen, setIsProfileEditOpen] = useState(false);
   const [profileEditMode, setProfileEditMode] = useState<ProfileEditMode>("basic");
   const [profileEditDraft, setProfileEditDraft] = useState<ProfileEditDraft | null>(null);
@@ -522,20 +507,17 @@ export default function App() {
     message: string,
     tone: "info" | "success" | "danger" = "info",
   ) => {
-    setAppDialog({ type: "message", title, message, tone });
+    const type = tone === "success" ? "success" : tone === "danger" ? "error" : "info";
+    const text = message.trim()
+      ? `${title} ${message}`.replace(/\s+/g, " ").trim()
+      : title;
+    showToast(type, text);
   };
 
   const requestWithdraw = () => {
-    setAppDialog({
-      type: "confirm",
-      title: "회원탈퇴",
-      message:
-        "회원탈퇴를 진행하시겠습니까?\n탈퇴 후 30일 동안 계정 복구 가능성을 위해 데이터가 보관될 수 있으며, 서비스 이용이 제한됩니다.",
-      confirmLabel: "회원탈퇴",
-      cancelLabel: "취소",
-      tone: "danger",
-      onConfirm: async () => {
-        setAppDialog(null);
+    showConfirm(
+      "회원탈퇴를 진행하시겠습니까? 탈퇴 후 30일 동안 데이터가 보관될 수 있으며 서비스 이용이 제한됩니다.",
+      async () => {
         try {
           await api.delete('/api/v1/users/me');
           setIsProfileEditOpen(false);
@@ -546,7 +528,8 @@ export default function App() {
           showMessage("회원탈퇴 실패", "회원탈퇴에 실패했습니다. 잠시 후 다시 시도해주세요.", "danger");
         }
       },
-    });
+      { confirmLabel: "회원탈퇴", variant: "danger" },
+    );
   };
 
   const handleRestoreWithdrawnAccount = async () => {
@@ -935,6 +918,23 @@ export default function App() {
     setIsLookfeedProfileEditOpen(true);
   };
 
+  const tryCloseLookfeedProfileEdit = () => {
+    if (lookfeedProfileSaving) return;
+
+    const hasUnsavedDraft =
+      lookfeedProfileDraft.profileBio.trim() !== (profile.profileBio ?? "").trim()
+      || lookfeedProfileDraft.externalLinkUrl.trim() !== (profile.externalLinkUrl ?? "").trim();
+
+    if (hasUnsavedDraft) {
+      showConfirm("저장하지 않고 닫을까요?", () => {
+        setIsLookfeedProfileEditOpen(false);
+      }, { confirmLabel: "닫기", variant: "default" });
+      return;
+    }
+
+    setIsLookfeedProfileEditOpen(false);
+  };
+
   const saveLookfeedProfileEdit = async () => {
     if (authUserId == null) return;
 
@@ -1234,6 +1234,8 @@ export default function App() {
                 authUserId != null && (
                   <FeedTab
                       userId={authUserId}
+                      wardrobeGarments={clothes}
+                      onWishlistChanged={() => void refreshWardrobe()}
                       guideTourCompleted={profile.guideTourCompletedFeed ?? false}
                       onGuideTourComplete={() => { void handleGuideTourComplete("feed")}}
                       onViewProfile={handleViewFeedProfile}
@@ -1737,6 +1739,8 @@ export default function App() {
               open={lookfeedDetailPostId != null}
               postId={lookfeedDetailPostId}
               userId={authUserId}
+              wardrobeGarments={clothes}
+              onWishlistChanged={() => void refreshWardrobe()}
               onClose={() => setLookfeedDetailPostId(null)}
               onPostUpdated={handleLookfeedPostUpdated}
               onPostDeleted={handleLookfeedPostDeleted}
@@ -1747,9 +1751,7 @@ export default function App() {
 
         <Modal
           open={isLookfeedProfileEditOpen}
-          onClose={() => {
-            if (!lookfeedProfileSaving) setIsLookfeedProfileEditOpen(false);
-          }}
+          onClose={tryCloseLookfeedProfileEdit}
           size="lg"
           placement="sheet"
           zIndex={110}
@@ -1759,7 +1761,7 @@ export default function App() {
           <ModalHeader
             title="프로필 수정"
             subtitle="프로필 소개와 외부 링크를 수정합니다."
-            onClose={() => setIsLookfeedProfileEditOpen(false)}
+            onClose={tryCloseLookfeedProfileEdit}
             closeDisabled={lookfeedProfileSaving}
           />
           <ModalBody className="space-y-4 p-5 sm:p-7 bg-white">
@@ -1794,7 +1796,7 @@ export default function App() {
           <ModalFooter className="grid grid-cols-2 gap-2 p-4">
             <button
               type="button"
-              onClick={() => setIsLookfeedProfileEditOpen(false)}
+              onClick={tryCloseLookfeedProfileEdit}
               disabled={lookfeedProfileSaving}
               className="h-11 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-500 transition hover:bg-slate-50 disabled:opacity-40"
             >
@@ -2133,56 +2135,6 @@ export default function App() {
           documentType={activeLegalDocument ?? "terms"}
           onClose={() => setActiveLegalDocument(null)}
         />
-
-        <Modal
-          open={appDialog != null}
-          onClose={() => setAppDialog(null)}
-          size="sm"
-          zIndex={120}
-          closeOnBackdrop
-        >
-          {appDialog && (
-            <>
-              <ModalHeader
-                title={appDialog.title}
-                onClose={() => setAppDialog(null)}
-              />
-              <ModalBody className="p-5">
-                <p className="whitespace-pre-line text-sm leading-relaxed text-slate-600 break-keep">
-                  {appDialog.message}
-                </p>
-              </ModalBody>
-              <ModalFooter className="flex justify-end gap-2 p-4">
-                {appDialog.type === "confirm" && (
-                  <button
-                    type="button"
-                    onClick={() => setAppDialog(null)}
-                    className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-500 transition hover:bg-slate-50"
-                  >
-                    {appDialog.cancelLabel ?? "취소"}
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (appDialog.type === "message") {
-                      setAppDialog(null);
-                      return;
-                    }
-                    void appDialog.onConfirm();
-                  }}
-                  className={`h-10 rounded-xl px-4 text-sm font-black text-white transition ${
-                    appDialog.tone === "danger"
-                      ? "bg-rose-500 hover:bg-rose-600"
-                      : "bg-[#1E3A8A] hover:bg-[#172f72]"
-                  }`}
-                >
-                  {appDialog.type === "confirm" ? appDialog.confirmLabel : "확인"}
-                </button>
-              </ModalFooter>
-            </>
-          )}
-        </Modal>
 
       </div>
     );

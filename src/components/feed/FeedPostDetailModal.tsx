@@ -21,23 +21,40 @@ import { addExistingClothesToWishlist, createWishlistClothes } from '@/api/wardr
 import { resolveGarmentColorCode } from '@/data/garmentColors'
 import { CATEGORY_ITEM_TYPES } from '@/data/categoryItemTypes'
 import type { FeedComment, FeedPost } from '@/types/feed'
+import type { Garment } from '@/types'
 import { extractApiErrorMessage } from '@/utils/apiError'
+import {
+  DUPLICATE_WISHLIST_MESSAGE,
+  normalizeDuplicateRegisterError,
+} from '@/utils/garmentDuplicateCheck'
+import {
+  feedWishlistProductCode,
+  findWishlistGarmentForFeedClothes,
+} from '@/utils/recommendWishlistPayload'
 
 function ClothesDetailSheet({
   clothes,
   isMine,
   userId,
+  existingGarments,
+  onWishlistChanged,
   onClose,
 }: {
   clothes: ClothesResponse
   isMine: boolean
   userId: number
+  existingGarments: Garment[]
+  onWishlistChanged?: () => void
   onClose: () => void
 }) {
   const { showToast } = useToast()
   const imageUrl = clothes.userImageUrl ?? clothes.imageUrl
   const [wishlisted, setWishlisted] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+
+  useEffect(() => {
+    setWishlisted(findWishlistGarmentForFeedClothes(clothes.clothesId, existingGarments) != null)
+  }, [clothes.clothesId, existingGarments])
 
   const handleAddToWishlist = async () => {
     if (isMine || wishlisted || submitting) return
@@ -66,7 +83,7 @@ function ClothesDetailSheet({
         await createWishlistClothes(userId, {
           name: clothes.name,
           brandName: (clothes.brandName?.trim() || 'UNKNOWN').slice(0, 100),
-          productCode: `FEED-${clothes.clothesId}`,
+          productCode: feedWishlistProductCode(clothes.clothesId),
           imageUrl,
           category: beCategory,
           itemType,
@@ -82,8 +99,16 @@ function ClothesDetailSheet({
       }
       setWishlisted(true)
       showToast('success', '미보유 옷에 추가했어요.')
+      onWishlistChanged?.()
     } catch (err) {
-      showToast('error', extractApiErrorMessage(err, '미보유 옷 추가에 실패했습니다.'))
+      const message =
+        normalizeDuplicateRegisterError(extractApiErrorMessage(err)) ??
+        extractApiErrorMessage(err, '미보유 옷 추가에 실패했습니다.')
+      if (message === DUPLICATE_WISHLIST_MESSAGE) {
+        setWishlisted(true)
+        onWishlistChanged?.()
+      }
+      showToast('error', message)
     } finally {
       setSubmitting(false)
     }
@@ -374,6 +399,8 @@ interface FeedPostDetailModalProps {
   open: boolean
   postId: number | null
   userId: number
+  wardrobeGarments?: Garment[]
+  onWishlistChanged?: () => void
   onClose: () => void
   onPostUpdated: (post: FeedPost) => void
   onPostDeleted: (postId: number) => void
@@ -384,6 +411,8 @@ export default function FeedPostDetailModal({
   open,
   postId,
   userId,
+  wardrobeGarments = [],
+  onWishlistChanged,
   onClose,
   onPostUpdated,
   onPostDeleted,
@@ -466,9 +495,12 @@ export default function FeedPostDetailModal({
     try {
       const result = await toggleFeedLike(post.feedPostId)
       syncPost({ ...prevPost, likedByMe: result.active, likeCount: result.count })
+      showToast('success', result.active ? '좋아요 눌렀어요' : '좋아요 취소했어요')
     } catch (toggleError) {
       syncPost(prevPost) // 실패 시 원상 복구
-      setError(extractApiErrorMessage(toggleError, '좋아요 처리에 실패했습니다.'))
+      const message = extractApiErrorMessage(toggleError, '좋아요 처리에 실패했습니다.')
+      setError(message)
+      showToast('error', message)
     } finally {
       setInteractionSubmitting(false)
     }
@@ -609,8 +641,19 @@ export default function FeedPostDetailModal({
   }
 
   const handleClose = () => {
+    const hasUnsavedCaption = editingCaption
+      && captionDraft.trim() !== (post?.caption ?? '').trim()
+
+    if (hasUnsavedCaption) {
+      showConfirm('저장하지 않고 닫을까요?', () => {
+        setEditingCaption(false)
+        onClose()
+      }, { confirmLabel: '닫기', variant: 'default' })
+      return
+    }
+
     if (editingCaption) {
-      if (!confirm('현재 수정 중인 내용이 있습니다. 저장하지 않고 닫으시겠습니까?')) return
+      setEditingCaption(false)
     }
     onClose()
   }
@@ -674,21 +717,41 @@ export default function FeedPostDetailModal({
 
             <div className="space-y-4 px-5 py-4">
               <div className="flex items-center justify-between gap-3">
-                <button
-                  type="button"
-                  className="min-w-0 text-left cursor-pointer"
-                  onClick={() => {
-                    if (onViewProfile) {
-                      onClose()
-                      onViewProfile(post.author.userId)
-                    }
-                  }}
-                >
-                  <p className="text-sm font-black text-slate-900 hover:underline">{post.author.nickname}</p>
-                  <p className="text-[10px] font-bold text-slate-400">
-                    {formatFeedDate(post.createdAt)}
-                  </p>
-                </button>
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <button
+                    type="button"
+                    className="shrink-0 cursor-pointer"
+                    onClick={() => {
+                      if (onViewProfile) {
+                        onClose()
+                        onViewProfile(post.author.userId)
+                      }
+                    }}
+                    aria-label={`${post.author.nickname} 프로필 보기`}
+                  >
+                    <div className="rounded-full bg-gradient-to-tr from-[#f9ce34] via-[#ee2a7b] to-[#6228d7] p-[2px]">
+                      <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-white">
+                        {post.author.profileImageUrl ? (
+                          <AuthenticatedImage
+                            src={post.author.profileImageUrl}
+                            alt={post.author.nickname}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-xs font-black text-[#1E3A8A]">
+                            {(post.author.nickname || '?').slice(0, 1)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                  <div className="min-w-0">
+                    <p className="text-sm font-black text-slate-900">{post.author.nickname}</p>
+                    <p className="text-[10px] font-bold text-slate-400">
+                      {formatFeedDate(post.createdAt)}
+                    </p>
+                  </div>
+                </div>
                 {!post.mine && following !== null ? (
                   <button
                     type="button"
@@ -866,6 +929,8 @@ export default function FeedPostDetailModal({
         clothes={selectedClothes}
         isMine={post?.mine ?? false}
         userId={userId}
+        existingGarments={wardrobeGarments}
+        onWishlistChanged={onWishlistChanged}
         onClose={() => setSelectedClothes(null)}
       />
     ) : null}

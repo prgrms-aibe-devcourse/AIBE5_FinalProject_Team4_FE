@@ -31,6 +31,21 @@ export interface WishlistClothesCreatePayload {
 export const recommendationWishlistProductCode = (clothesId: number) =>
   `REC-${clothesId}`
 
+export const feedWishlistProductCode = (clothesId: number) =>
+  `FEED-${clothesId}`
+
+export function findWishlistGarmentForFeedClothes(
+  feedClothesId: number,
+  existingGarments: Garment[],
+): Garment | undefined {
+  const productCode = feedWishlistProductCode(feedClothesId)
+  return existingGarments.find(
+    (garment) =>
+      garment.isWishlist &&
+      (garment.id === String(feedClothesId) || garment.productCode === productCode),
+  )
+}
+
 export function buildWishlistPayloadFromRecommendedItem(
   item: RecommendedClothesItem,
 ): WishlistClothesCreatePayload {

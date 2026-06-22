@@ -8,26 +8,36 @@ import FeedPostDetailModal from '@/components/feed/FeedPostDetailModal'
 import FeedWriteModal from '@/components/feed/FeedWriteModal'
 import { Plus } from '@/components/icons'
 import type { FeedPost } from '@/types/feed'
+import type { Garment } from '@/types'
 import { extractApiErrorMessage } from '@/utils/apiError'
 import GuideTour from '@/components/common/GuideTour'
 
 interface FeedTabProps {
   userId: number
+  wardrobeGarments?: Garment[]
+  onWishlistChanged?: () => void
   guideTourCompleted: boolean
   onGuideTourComplete: () => void
   onViewProfile?: (userId: number) => void
 }
 
-export default function FeedTab({ userId, guideTourCompleted, onGuideTourComplete, onViewProfile }: FeedTabProps) {
+export default function FeedTab({
+  userId,
+  wardrobeGarments = [],
+  onWishlistChanged,
+  guideTourCompleted,
+  onGuideTourComplete,
+  onViewProfile,
+}: FeedTabProps) {
   const { showToast } = useToast()
 
   const handleShare = async (postId: number) => {
     const url = `${window.location.origin}${window.location.pathname}?post=${postId}`
     try {
       await navigator.clipboard.writeText(url)
-      showToast('success', '링크가 복사되었습니다.')
+      showToast('success', '링크 복사됨')
     } catch {
-      showToast('error', '링크 복사에 실패했습니다.')
+      showToast('error', '링크 복사 실패')
     }
   }
   const [posts, setPosts] = useState<FeedPost[]>([])
@@ -95,10 +105,13 @@ export default function FeedTab({ userId, guideTourCompleted, onGuideTourComplet
     try {
       const result = await toggleFeedLike(post.feedPostId)
       updatePostInList({ ...post, likedByMe: result.active, likeCount: result.count })
+      showToast('success', result.active ? '좋아요 눌렀어요' : '좋아요 취소했어요')
     } catch (toggleError) {
       // 실패 시 원상 복구
       updatePostInList(post)
-      setError(extractApiErrorMessage(toggleError, '좋아요 처리에 실패했습니다.'))
+      const message = extractApiErrorMessage(toggleError, '좋아요 처리에 실패했습니다.')
+      setError(message)
+      showToast('error', message)
     } finally {
       setSubmittingPostId(null)
       setSubmittingAction(null)
@@ -217,6 +230,8 @@ export default function FeedTab({ userId, guideTourCompleted, onGuideTourComplet
         open={detailPostId != null}
         postId={detailPostId}
         userId={userId}
+        wardrobeGarments={wardrobeGarments}
+        onWishlistChanged={onWishlistChanged}
         onClose={() => setDetailPostId(null)}
         onPostUpdated={updatePostInList}
         onPostDeleted={handleDeleted}
