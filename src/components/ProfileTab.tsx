@@ -12,7 +12,7 @@ type CatalogStyle = {
   description?: string
 }
 
-type ProfileEditMode = "basic" | "styles" | "image"
+type ProfileEditMode = "basic" | "styles"
 
 // ─── Props ────────────────────────────────────────────────────
 interface ProfileTabProps {
@@ -142,21 +142,13 @@ export default function ProfileTab({
 
         {/* 프로필 이미지 + 닉네임 */}
         <section ref={profileSectionRef} className="px-5 py-7 text-center">
-          <button
-            type="button"
-            onClick={() => { void onOpenProfileEdit("image") }}
-            className="group relative mx-auto block h-28 w-28 overflow-hidden rounded-full bg-slate-200 ring-1 ring-slate-200 transition active:scale-[0.98]"
-            aria-label="프로필 이미지 변경"
-          >
+          <div className="mx-auto h-28 w-28 overflow-hidden rounded-full bg-slate-200 ring-1 ring-slate-200">
             {profile.profileImageUrl ? (
               <img src={profile.profileImageUrl} alt="" className="h-full w-full object-cover" />
             ) : (
               <DefaultProfileAvatar />
             )}
-            <span className="absolute inset-x-0 bottom-0 bg-slate-950/55 py-1.5 text-[10px] font-black text-white opacity-100">
-              변경
-            </span>
-          </button>
+          </div>
           <h3 className="mt-4 truncate text-2xl font-black text-slate-900">
             {profile.nickname || "닉네임 미설정"}
           </h3>
@@ -281,7 +273,7 @@ export default function ProfileTab({
       {tourOpen && (
         <GuideTour
           steps={[
-            { targetRef: profileSectionRef, message: "프로필 이미지와 닉네임을 수정할 수 있어요" },
+            { targetRef: profileSectionRef, message: "내 프로필 이미지와 닉네임을 확인할 수 있어요" },
             { targetRef: accountSectionRef, message: "연결된 소셜 계정과 이메일 정보를 확인할 수 있어요" },
             { targetRef: basicInfoSectionRef, message: "생년월일·성별·지역을 입력하면 날씨 기반 추천이 더 정확해져요" },
             { targetRef: stylesSectionRef, message: "선호 스타일을 수정하면 추천이 더 정확해져요" },
