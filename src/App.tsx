@@ -54,6 +54,7 @@ import { checkNicknameAvailability } from "@/api/users";
 import { getGarmentStyleLabel } from "@/data/garmentStyles";
 import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/common/Modal";
 import LegalDocumentModal from "@/components/legal/LegalDocumentModal";
+import ExitConfirmModal from "@/components/common/ExitConfirmModal";
 import { formatNicknameInput, getNicknameValidationError, NICKNAME_RULE_MESSAGE } from "@/utils/nickname";
 // 기존 상수 data ( TRIGGER_PRODUCTS 는 사용을 하지않아 우선 주석처리함 )
 // import { TRIGGER_PRODUCTS } from "@/data/triggerProducts";
@@ -96,18 +97,16 @@ type ProfileEditDraft = {
   gender: UserProfile["gender"];
   region: RegionCode | "";
   styles: string[];
+  marketingAgreed: boolean;
+};
+
+type ProfileEditMode = "basic" | "styles";
+
+type LookfeedProfileDraft = {
   profileImageUrl: string;
   profileImagePreviewUrl: string;
   profileImageFile: File | null;
   profileImageFileName: string;
-  profileBio: string;
-  externalLinkUrl: string;
-  marketingAgreed: boolean;
-};
-
-type ProfileEditMode = "basic" | "styles" | "image";
-
-type LookfeedProfileDraft = {
   profileBio: string;
   externalLinkUrl: string;
 };
@@ -248,6 +247,7 @@ export default function App() {
   const [profileEditMode, setProfileEditMode] = useState<ProfileEditMode>("basic");
   const [profileEditDraft, setProfileEditDraft] = useState<ProfileEditDraft | null>(null);
   const [profileEditSaving, setProfileEditSaving] = useState(false);
+  const [isProfileExitConfirmOpen, setIsProfileExitConfirmOpen] = useState(false);
   const [isProfileRegionSheetOpen, setIsProfileRegionSheetOpen] = useState(false);
   const [profileNicknameStatus, setProfileNicknameStatus] = useState<NicknameAvailabilityStatus>("idle");
   const [profileNicknameMessage, setProfileNicknameMessage] = useState(NICKNAME_RULE_MESSAGE);
@@ -258,10 +258,15 @@ export default function App() {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isLookfeedProfileEditOpen, setIsLookfeedProfileEditOpen] = useState(false);
   const [lookfeedProfileDraft, setLookfeedProfileDraft] = useState<LookfeedProfileDraft>({
+    profileImageUrl: "",
+    profileImagePreviewUrl: "",
+    profileImageFile: null,
+    profileImageFileName: "",
     profileBio: "",
     externalLinkUrl: "",
   });
   const [lookfeedProfileSaving, setLookfeedProfileSaving] = useState(false);
+  const [isLookfeedProfileExitConfirmOpen, setIsLookfeedProfileExitConfirmOpen] = useState(false);
 
   // 비로그인 상태면 모달을 열고 false를 반환, 로그인 상태면 true를 반환
   const requireLogin = (destination?: "closet" | "profile"): boolean => {
@@ -579,12 +584,6 @@ export default function App() {
       gender: profile.gender,
       region: profile.region ?? "",
       styles: profile.styles.map((style) => style.trim()).filter(Boolean),
-      profileImageUrl: profile.profileImageUrl ?? "",
-      profileImagePreviewUrl: profile.profileImageUrl ?? "",
-      profileImageFile: null,
-      profileImageFileName: "",
-      profileBio: profile.profileBio ?? "",
-      externalLinkUrl: profile.externalLinkUrl ?? "",
       marketingAgreed: profileMarketingAgreed ?? false,
     };
 
@@ -631,7 +630,7 @@ export default function App() {
     });
   };
 
-  const handleProfileImageFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+  const handleLookfeedProfileImageFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith("image/")) {
@@ -641,11 +640,12 @@ export default function App() {
     }
 
     const previewUrl = URL.createObjectURL(file);
-    updateProfileEditDraft({
+    setLookfeedProfileDraft((current) => ({
+      ...current,
       profileImagePreviewUrl: previewUrl,
       profileImageFile: file,
       profileImageFileName: file.name,
-    });
+    }));
     event.target.value = "";
   };
 
@@ -708,6 +708,45 @@ export default function App() {
     });
   };
 
+
+  const closeProfileEdit = () => {
+    setIsProfileEditOpen(false);
+    setIsProfileRegionSheetOpen(false);
+    setActiveLegalDocument(null);
+    setIsProfileExitConfirmOpen(false);
+  };
+
+  const hasProfileEditUnsavedChanges = () => {
+    if (!profileEditDraft) return false;
+
+    if (profileEditMode === "basic") {
+      return (
+        profileEditDraft.nickname.trim() !== profile.nickname.trim() ||
+        buildBirthday(profileEditDraft.birthYear, profileEditDraft.birthMonth, profileEditDraft.birthDay) !== (profile.birthday ?? "") ||
+        profileEditDraft.gender !== profile.gender ||
+        profileEditDraft.region !== (profile.region ?? "") ||
+        profileEditDraft.marketingAgreed !== (profileMarketingAgreed ?? false)
+      );
+    }
+
+    if (profileEditMode === "styles") {
+      const currentStyles = profile.styles.map((style) => style.trim()).filter(Boolean).join("|");
+      const draftStyles = profileEditDraft.styles.map((style) => style.trim()).filter(Boolean).join("|");
+      return draftStyles !== currentStyles;
+    }
+
+    return false;
+  };
+
+  const tryCloseProfileEdit = () => {
+    if (profileEditSaving || profileMarketingSaving) return;
+    if (hasProfileEditUnsavedChanges()) {
+      setIsProfileExitConfirmOpen(true);
+      return;
+    }
+    closeProfileEdit();
+  };
+
   const saveProfileEdit = async () => {
     if (!profileEditDraft || authUserId == null) return;
 
@@ -717,10 +756,6 @@ export default function App() {
       profileEditDraft.birthMonth,
       profileEditDraft.birthDay,
     );
-    let profileImageUrl = profileEditDraft.profileImageUrl.trim();
-    const profileBio = profileEditDraft.profileBio.trim();
-    const externalLinkUrl = profileEditDraft.externalLinkUrl.trim();
-
     if (profileEditMode === "basic" && (!nickname || !birthday || profileEditDraft.gender === "None" || !profileEditDraft.region)) {
       showMessage("입력 확인", "닉네임, 생년월일, 성별, 지역을\n모두 입력해 주세요.", "danger");
       return;
@@ -739,19 +774,16 @@ export default function App() {
     setProfileEditSaving(true);
     try {
       const regionData = REGIONS.find((region) => region.code === profileEditDraft.region);
-      if (profileEditMode === "image" && profileEditDraft.profileImageFile) {
-        profileImageUrl = await uploadProfileImage(profileEditDraft.profileImageFile);
-      }
-      if (profileEditMode === "basic" || profileEditMode === "image") {
+      if (profileEditMode === "basic") {
         await api.patch('/api/v1/users/profile', {
           nickname,
           birthDate: birthday,
           gender: toApiGender(profileEditDraft.gender),
           regionName: regionData?.label ?? "",
           regionCode: profileEditDraft.region,
-          profileImageUrl,
-          profileBio,
-          externalLinkUrl,
+          profileImageUrl: profile.profileImageUrl ?? "",
+          profileBio: profile.profileBio ?? "",
+          externalLinkUrl: profile.externalLinkUrl ?? "",
         });
       }
       if (profileEditMode === "basic" && profileEditDraft.marketingAgreed !== (profileMarketingAgreed ?? false)) {
@@ -765,9 +797,7 @@ export default function App() {
         await api.post('/api/v1/users/styles', { styleCodes: profileEditDraft.styles });
       }
       await checkAuthProfile();
-      setIsProfileEditOpen(false);
-      setIsProfileRegionSheetOpen(false);
-      setActiveLegalDocument(null);
+      closeProfileEdit();
       showMessage("저장 완료", "변경 내용이 저장되었습니다.", "success");
     } catch {
       showMessage("저장 실패", "변경 내용을 저장하지 못했습니다.\n입력값을 확인한 뒤 다시 시도해 주세요.", "danger");
@@ -950,27 +980,36 @@ export default function App() {
 
   const openLookfeedProfileEdit = () => {
     setLookfeedProfileDraft({
+      profileImageUrl: profile.profileImageUrl ?? "",
+      profileImagePreviewUrl: profile.profileImageUrl ?? "",
+      profileImageFile: null,
+      profileImageFileName: "",
       profileBio: profile.profileBio ?? "",
       externalLinkUrl: profile.externalLinkUrl ?? "",
     });
     setIsLookfeedProfileEditOpen(true);
   };
 
+  const closeLookfeedProfileEdit = () => {
+    setIsLookfeedProfileEditOpen(false);
+    setIsLookfeedProfileExitConfirmOpen(false);
+  };
+
+  const hasLookfeedProfileUnsavedChanges = () => (
+    Boolean(lookfeedProfileDraft.profileImageFile) ||
+    lookfeedProfileDraft.profileBio.trim() !== (profile.profileBio ?? "").trim() ||
+    lookfeedProfileDraft.externalLinkUrl.trim() !== (profile.externalLinkUrl ?? "").trim()
+  );
+
   const tryCloseLookfeedProfileEdit = () => {
     if (lookfeedProfileSaving) return;
 
-    const hasUnsavedDraft =
-      lookfeedProfileDraft.profileBio.trim() !== (profile.profileBio ?? "").trim()
-      || lookfeedProfileDraft.externalLinkUrl.trim() !== (profile.externalLinkUrl ?? "").trim();
-
-    if (hasUnsavedDraft) {
-      showConfirm("저장하지 않고 닫을까요?", () => {
-        setIsLookfeedProfileEditOpen(false);
-      }, { confirmLabel: "닫기", variant: "default" });
+    if (hasLookfeedProfileUnsavedChanges()) {
+      setIsLookfeedProfileExitConfirmOpen(true);
       return;
     }
 
-    setIsLookfeedProfileEditOpen(false);
+    closeLookfeedProfileEdit();
   };
 
   const saveLookfeedProfileEdit = async () => {
@@ -984,18 +1023,21 @@ export default function App() {
     setLookfeedProfileSaving(true);
     try {
       const regionData = REGIONS.find((region) => region.code === profile.region);
+      const profileImageUrl = lookfeedProfileDraft.profileImageFile
+        ? await uploadProfileImage(lookfeedProfileDraft.profileImageFile)
+        : lookfeedProfileDraft.profileImageUrl.trim();
       await api.patch('/api/v1/users/profile', {
         nickname: profile.nickname,
         birthDate: profile.birthday,
         gender: toApiGender(profile.gender),
         regionName: regionData?.label ?? "",
         regionCode: profile.region,
-        profileImageUrl: profile.profileImageUrl ?? "",
+        profileImageUrl,
         profileBio: lookfeedProfileDraft.profileBio.trim(),
         externalLinkUrl: lookfeedProfileDraft.externalLinkUrl.trim(),
       });
       await checkAuthProfile();
-      setIsLookfeedProfileEditOpen(false);
+      closeLookfeedProfileEdit();
       showMessage("저장 완료", "룩피드 프로필이 저장되었습니다.", "success");
     } catch {
       showMessage("저장 실패", "룩피드 프로필 저장에 실패했습니다. 다시 시도해 주세요.", "danger");
@@ -1804,11 +1846,38 @@ export default function App() {
         >
           <ModalHeader
             title="프로필 수정"
-            subtitle="프로필 소개와 외부 링크를 수정합니다."
+            subtitle="프로필 이미지, 소개, 외부 링크를 수정합니다."
             onClose={tryCloseLookfeedProfileEdit}
             closeDisabled={lookfeedProfileSaving}
           />
-          <ModalBody className="space-y-4 p-5 sm:p-7 bg-white">
+          <ModalBody className="space-y-5 p-5 sm:p-7 bg-white">
+            <section className="flex flex-col items-center gap-3 text-center">
+              <label className="group relative h-28 w-28 cursor-pointer overflow-hidden rounded-full border border-slate-200 bg-slate-100 shadow-sm transition active:scale-[0.98]">
+                {lookfeedProfileDraft.profileImagePreviewUrl ? (
+                  <img
+                    src={lookfeedProfileDraft.profileImagePreviewUrl}
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <DefaultProfileAvatar />
+                )}
+                <span className="absolute inset-x-0 bottom-0 bg-slate-950/55 py-1.5 text-[10px] font-black text-white">
+                  변경
+                </span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleLookfeedProfileImageFileChange}
+                  className="sr-only"
+                />
+              </label>
+              {lookfeedProfileDraft.profileImageFileName && (
+                <p className="max-w-full truncate text-[11px] font-bold text-slate-400">
+                  {lookfeedProfileDraft.profileImageFileName}
+                </p>
+              )}
+            </section>
             <label className="block space-y-1.5">
               <span className="text-xs font-bold text-slate-500">소개</span>
               <textarea
@@ -1859,13 +1928,7 @@ export default function App() {
 
         <Modal
           open={isProfileEditOpen && profileEditDraft != null}
-          onClose={() => {
-            if (!profileEditSaving) {
-              setIsProfileEditOpen(false);
-              setIsProfileRegionSheetOpen(false);
-              setActiveLegalDocument(null);
-            }
-          }}
+          onClose={tryCloseProfileEdit}
           size="lg"
           placement="sheet"
           zIndex={110}
@@ -1873,18 +1936,8 @@ export default function App() {
           preventClose={profileEditSaving}
         >
           <ModalHeader
-            title={
-              profileEditMode === "styles"
-                ? "선호 스타일 수정"
-                : profileEditMode === "image"
-                  ? "프로필 이미지 변경"
-                  : "기본 정보 수정"
-            }
-            onClose={() => {
-              setIsProfileEditOpen(false);
-              setIsProfileRegionSheetOpen(false);
-              setActiveLegalDocument(null);
-            }}
+            title={profileEditMode === "styles" ? "선호 스타일 수정" : "기본 정보 수정"}
+            onClose={tryCloseProfileEdit}
             closeDisabled={profileEditSaving}
           />
           {profileEditDraft && (
@@ -2072,51 +2125,11 @@ export default function App() {
                     </div>
                   </section>
                 )}
-
-                {profileEditMode === "image" && (
-                  <section className="space-y-4">
-                    <div className="mx-auto h-28 w-28 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
-                      {profileEditDraft.profileImagePreviewUrl ? (
-                        <img
-                          src={profileEditDraft.profileImagePreviewUrl}
-                          alt=""
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <DefaultProfileAvatar />
-                      )}
-                    </div>
-                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-center">
-                      <p className="text-xs font-black text-slate-900">프로필 이미지</p>
-                      <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
-                        이미지를 선택하면 미리보기로 확인할 수 있습니다.
-                      </p>
-                      {profileEditDraft.profileImageFileName && (
-                        <p className="mt-2 truncate text-[10px] font-bold text-slate-500">
-                          {profileEditDraft.profileImageFileName}
-                        </p>
-                      )}
-                      <label className="mt-3 inline-flex h-10 cursor-pointer items-center justify-center rounded-xl bg-[#111827] px-5 text-xs font-black text-white transition hover:bg-slate-800">
-                        이미지 선택
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleProfileImageFileChange}
-                          className="hidden"
-                        />
-                      </label>
-                    </div>
-                  </section>
-                )}
               </ModalBody>
               <ModalFooter className="grid grid-cols-2 gap-2 p-4">
                 <button
                   type="button"
-                  onClick={() => {
-                    setIsProfileEditOpen(false);
-                    setIsProfileRegionSheetOpen(false);
-                    setActiveLegalDocument(null);
-                  }}
+                  onClick={tryCloseProfileEdit}
                   disabled={profileEditSaving || profileMarketingSaving}
                   className="h-11 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-500 transition hover:bg-slate-50 disabled:opacity-40"
                 >
@@ -2173,6 +2186,18 @@ export default function App() {
             </ModalBody>
           )}
         </Modal>
+
+        <ExitConfirmModal
+          open={isLookfeedProfileExitConfirmOpen}
+          onConfirm={closeLookfeedProfileEdit}
+          onCancel={() => setIsLookfeedProfileExitConfirmOpen(false)}
+        />
+
+        <ExitConfirmModal
+          open={isProfileExitConfirmOpen}
+          onConfirm={closeProfileEdit}
+          onCancel={() => setIsProfileExitConfirmOpen(false)}
+        />
 
         <LegalDocumentModal
           open={activeLegalDocument != null}

@@ -40,7 +40,7 @@ last_updated: 2026-06-22
 | 룩피드 프로필 피드 목록 | `lookfeed-profile`에서 게시/좋아요 탭 API 연동. `page=0`, `size=20`만 로드 | 프로필 피드 grid 페이지네이션(더 보기) | [frontend-api-usage.md](../api/frontend-api-usage.md), [routing.md](routing.md) |
 | 피드 팔로우 초기 상태 | `FeedAuthor.followedByMe`가 optional. BE `FeedAuthorResponse`에 해당 필드가 없으면 팔로우 버튼 미표시 | BE PR #128 `FeedAuthorResponse`에 `followedByMe` 추가 후 FE 타입을 필수로 전환 | [frontend-api-usage.md](../api/frontend-api-usage.md), [domain-types.md](domain-types.md) |
 | BE 신규 API 타입 | 일부 신규 API 응답/요청 타입이 `src/types/be.ts`에 모두 정리되어 있지 않을 수 있음 | BE develop 기준 API 계약 타입 반영 | [frontend-api-usage.md](../api/frontend-api-usage.md), [domain-types.md](domain-types.md) |
-| 프로필 이미지 저장소 전환 | FE는 `POST /api/v1/users/profile/image` 업로드 후 BE가 반환한 `imageUrl`을 저장/표시. 현재 BE 반환 URL은 로컬 `/api/v1/images/profile/**` 조회 endpoint 기준 | 운영 기준은 BE가 AWS S3 또는 CDN URL을 반환하고 FE는 반환된 이미지 URL을 그대로 표시 | [frontend-api-usage.md](../api/frontend-api-usage.md), [mypage.md](../features/mypage.md), [system-architecture.md](../architecture/system-architecture.md) |
+| 프로필 이미지 저장소 전환 | FE는 룩피드 프로필 수정에서 `POST /api/v1/users/profile/image` 업로드 후 BE가 반환한 `imageUrl`을 저장/표시. 현재 BE 반환 URL은 로컬 `/api/v1/images/profile/**` 조회 endpoint 기준 | 운영 기준은 BE가 AWS S3 또는 CDN URL을 반환하고 FE는 반환된 이미지 URL을 그대로 표시 | [frontend-api-usage.md](../api/frontend-api-usage.md), [mypage.md](../features/mypage.md), [system-architecture.md](../architecture/system-architecture.md) |
 | 배포/인프라 목표 구조 | GitHub Actions는 lint/build CI를 수행하고, AWS 배포와 CD 자동화는 진행 예정. 공통 시스템 아키텍처는 목표 구조 기준 | FE/BE 배포 구현 시 시스템 아키텍처, 기술 스택, 기획서, gap 문서 동시 갱신 | [system-architecture.md](../architecture/system-architecture.md), [tech-stack.md](../architecture/tech-stack.md) |
 
 ## Feature ID 연결표
@@ -217,7 +217,7 @@ BE API 계약 기준으로 `500`은 서버 내부 오류이고, `502`는 외부 
 
 ### 프로필 이미지 저장소 전환
 
-현재 FE는 `POST /api/v1/users/profile/image`에 파일을 업로드하고, BE가 반환한 `imageUrl`을 사용자 프로필 이미지로 저장하고 표시합니다.
+현재 FE는 룩피드 프로필 수정에서 `POST /api/v1/users/profile/image`에 파일을 업로드하고, BE가 반환한 `imageUrl`을 사용자 프로필 이미지로 저장하고 표시합니다.
 
 현재 BE 구현은 로컬 파일 저장소를 사용하므로 반환 URL은 `/api/v1/images/profile/{userId}/{filename}` 형태의 로컬 이미지 조회 endpoint입니다. 운영 기준은 AWS S3 저장과 이미지 URL 관리이므로, S3 전환 시 FE는 API 경로를 변경하기보다 BE가 반환하는 `imageUrl`을 그대로 사용하는 구조를 유지합니다.
 
