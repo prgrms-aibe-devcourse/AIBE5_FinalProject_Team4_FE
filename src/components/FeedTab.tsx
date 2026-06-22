@@ -1,24 +1,45 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { fetchFeedPosts, toggleFeedLike, toggleFeedSave } from '@/api/feed'
+import { useToast } from '@/components/Toast'
 import Spinner from '@/components/common/Spinner'
 import FeedEmptyState from '@/components/feed/FeedEmptyState'
 import FeedPostCard from '@/components/feed/FeedPostCard'
 import FeedPostDetailModal from '@/components/feed/FeedPostDetailModal'
 import FeedWriteModal from '@/components/feed/FeedWriteModal'
 import { Plus } from '@/components/icons'
-import { useToast } from '@/components/Toast'
 import type { FeedPost } from '@/types/feed'
+import type { Garment } from '@/types'
 import { extractApiErrorMessage } from '@/utils/apiError'
 import GuideTour from '@/components/common/GuideTour'
 
 interface FeedTabProps {
   userId: number
+  wardrobeGarments?: Garment[]
+  onWishlistChanged?: () => void
   guideTourCompleted: boolean
   onGuideTourComplete: () => void
+  onViewProfile?: (userId: number) => void
 }
 
-export default function FeedTab({ userId, guideTourCompleted, onGuideTourComplete }: FeedTabProps) {
+export default function FeedTab({
+  userId,
+  wardrobeGarments = [],
+  onWishlistChanged,
+  guideTourCompleted,
+  onGuideTourComplete,
+  onViewProfile,
+}: FeedTabProps) {
   const { showToast } = useToast()
+
+  const handleShare = async (postId: number) => {
+    const url = `${window.location.origin}${window.location.pathname}?post=${postId}`
+    try {
+      await navigator.clipboard.writeText(url)
+      showToast('success', '링크 복사됨')
+    } catch {
+      showToast('error', '링크 복사 실패')
+    }
+  }
   const [posts, setPosts] = useState<FeedPost[]>([])
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -44,7 +65,9 @@ export default function FeedTab({ userId, guideTourCompleted, onGuideTourComplet
 
     try {
       const data = await fetchFeedPosts(nextPage, 20)
-      setPosts((prev) => (append ? [...prev, ...data.content] : data.content))
+      const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000
+      const fresh = data.content.filter((p) => new Date(p.createdAt).getTime() >= cutoff)
+      setPosts((prev) => (append ? [...prev, ...fresh] : fresh))
       setPage(data.page)
       setHasNext(data.hasNext)
     } catch (loadError) {
@@ -70,17 +93,25 @@ export default function FeedTab({ userId, guideTourCompleted, onGuideTourComplet
 
   const handleToggleLike = async (post: FeedPost) => {
     if (submittingPostId != null) return
+    // 낙관적 업데이트: API 응답 전 즉시 반영
+    const nextLiked = !post.likedByMe
+    updatePostInList({
+      ...post,
+      likedByMe: nextLiked,
+      likeCount: nextLiked ? post.likeCount + 1 : Math.max(0, post.likeCount - 1),
+    })
     setSubmittingPostId(post.feedPostId)
     setSubmittingAction('like')
     try {
       const result = await toggleFeedLike(post.feedPostId)
-      updatePostInList({
-        ...post,
-        likedByMe: result.active,
-        likeCount: result.count,
-      })
+      updatePostInList({ ...post, likedByMe: result.active, likeCount: result.count })
+      showToast('success', result.active ? '좋아요 눌렀어요' : '좋아요 취소했어요')
     } catch (toggleError) {
-      setError(extractApiErrorMessage(toggleError, '좋아요 처리에 실패했습니다.'))
+      // 실패 시 원상 복구
+      updatePostInList(post)
+      const message = extractApiErrorMessage(toggleError, '좋아요 처리에 실패했습니다.')
+      setError(message)
+      showToast('error', message)
     } finally {
       setSubmittingPostId(null)
       setSubmittingAction(null)
@@ -126,7 +157,7 @@ export default function FeedTab({ userId, guideTourCompleted, onGuideTourComplet
 
   return (
     <div className="relative -mx-5 pb-24 animate-fade-in text-left">
-      <div ref={feedHeaderRef} className="sticky top-0 z-10 border-b border-slate-100 bg-white/95 px-5 py-3 backdrop-blur-sm">
+      <div ref={feedHeaderRef} className="border-b border-slate-100 bg-white px-5 py-3">
         <h3 className="text-center text-base font-semibold text-slate-900">룩피드</h3>
       </div>
 
@@ -155,9 +186,13 @@ export default function FeedTab({ userId, guideTourCompleted, onGuideTourComplet
             <FeedPostCard
               key={post.feedPostId}
               post={post}
+              userId={userId}
               onOpen={() => setDetailPostId(post.feedPostId)}
               onToggleLike={() => void handleToggleLike(post)}
               onToggleSave={() => void handleToggleSave(post)}
+              onShare={() => void handleShare(post.feedPostId)}
+              onCommentAdded={() => updatePostInList({ ...post, commentCount: post.commentCount + 1 })}
+              onViewProfile={onViewProfile}
               likeSubmitting={
                 submittingPostId === post.feedPostId && submittingAction === 'like'
               }
@@ -195,9 +230,12 @@ export default function FeedTab({ userId, guideTourCompleted, onGuideTourComplet
         open={detailPostId != null}
         postId={detailPostId}
         userId={userId}
+        wardrobeGarments={wardrobeGarments}
+        onWishlistChanged={onWishlistChanged}
         onClose={() => setDetailPostId(null)}
         onPostUpdated={updatePostInList}
         onPostDeleted={handleDeleted}
+        onViewProfile={onViewProfile}
       />
 
       {!writeOpen ? (
