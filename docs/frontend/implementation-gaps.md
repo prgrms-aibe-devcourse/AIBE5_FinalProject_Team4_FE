@@ -1,7 +1,7 @@
 ---
 doc_type: fe_implementation_gaps
 source_of_truth: AIBE5_FinalProject_Team4_FE
-last_updated: 2026-06-19
+last_updated: 2026-06-22
 ---
 
 # FE 구현 정합성 현황
@@ -37,7 +37,7 @@ last_updated: 2026-06-19
 | 옷장 통계 범위 | `ClosetTab` local count와 현재 BE `totalOwnedCount`만으로 전체 요약을 해석할 수 있음 | 옷장 전체 요약은 `OWNED`와 `WISHLIST`를 함께 고려 | [wardrobe.md](../features/wardrobe.md) |
 | 공통 응답 | `src/types/index.ts`의 `ApiResponse<T>`에 `status` 필드 포함 | `success`, `data`, `message` 기준 | [domain-types.md](domain-types.md) |
 | 에러 분기 | `src/api/index.ts`에서 `status >= 500`을 모두 `/error/server`로 이동 | 500 서버 내부 오류와 502 외부 서비스 오류 구분 | [frontend-api-usage.md](../api/frontend-api-usage.md), [common-loading-error.md](../features/common-loading-error.md) |
-| 룩피드 프로필 피드 목록 | 프로필 화면의 2열 피드 영역은 UI 틀만 있으며 실제 피드 데이터와 연결되지 않음 | 피드 API 연동 후 게시/저장 피드 개수에 따라 최신순 2열 grid와 빈 상태 문구를 조건부 표시 | [feature-index.md](../requirements/feature-index.md), [routing.md](routing.md) |
+| 룩피드 프로필 피드 목록 | `lookfeed-profile`에서 게시/좋아요 탭 API 연동. `page=0`, `size=20`만 로드 | 프로필 피드 grid 페이지네이션(더 보기) | [frontend-api-usage.md](../api/frontend-api-usage.md), [routing.md](routing.md) |
 | 피드 팔로우 초기 상태 | `FeedAuthor.followedByMe`가 optional. BE `FeedAuthorResponse`에 해당 필드가 없으면 팔로우 버튼 미표시 | BE PR #128 `FeedAuthorResponse`에 `followedByMe` 추가 후 FE 타입을 필수로 전환 | [frontend-api-usage.md](../api/frontend-api-usage.md), [domain-types.md](domain-types.md) |
 | BE 신규 API 타입 | 일부 신규 API 응답/요청 타입이 `src/types/be.ts`에 모두 정리되어 있지 않을 수 있음 | BE develop 기준 API 계약 타입 반영 | [frontend-api-usage.md](../api/frontend-api-usage.md), [domain-types.md](domain-types.md) |
 | 프로필 이미지 저장소 전환 | FE는 `POST /api/v1/users/profile/image` 업로드 후 BE가 반환한 `imageUrl`을 저장/표시. 현재 BE 반환 URL은 로컬 `/api/v1/images/profile/**` 조회 endpoint 기준 | 운영 기준은 BE가 AWS S3 또는 CDN URL을 반환하고 FE는 반환된 이미지 URL을 그대로 표시 | [frontend-api-usage.md](../api/frontend-api-usage.md), [mypage.md](../features/mypage.md), [system-architecture.md](../architecture/system-architecture.md) |
@@ -54,7 +54,7 @@ last_updated: 2026-06-19
 | `RECO-002` | `home` tab `style` 라벨 | `HomeTab.tsx` | [home-recommendation.md](../features/home-recommendation.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | BE `GET /api/v1/recommendations/{wardrobeId}` 연동 |
 | `RECO-005` | `home` tab `match` 라벨 | `HomeTab.tsx`, `MatchRecommendationByCategory.tsx`, `src/api/recommendations.ts` | [home-recommendation.md](../features/home-recommendation.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | BE recommendations API 연동. 기본 `limitPerCategory=50` (BE 허용 `1`~`50`). 추천 피드백 API와 별개로 동작 |
 | `RECO-013`~`RECO-014` | 추천 카드 액션 | `HomeTab.tsx`, `MatchRecommendationByCategory.tsx`, `RecommendProductDetailModal.tsx`, `OutfitDetailModal.tsx` | [home-recommendation.md](../features/home-recommendation.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | 싫어요/추천 제외와 일부 저장 액션은 피드백 API에 연결. 외부 상품 저장/AI MD 등 세부 액션의 피드백 기록 범위 확인 필요 |
-| `FEED-001` | `lookfeed-profile` view | `App.tsx` 내부 lookfeed profile section | [feature-index.md](../requirements/feature-index.md), [routing.md](routing.md) | 2열 피드 목록 UI 틀만 있음. 게시/저장 피드 API 미연동 |
+| `FEED-001` | `lookfeed-profile` view | `App.tsx` lookfeed profile section, `src/api/feed.ts` | [feature-index.md](../requirements/feature-index.md), [routing.md](routing.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | 게시한 피드·좋아요한 피드·프로필 통계 API 연동. 코디 업로드(`FeedWriteModal`) 연동. 남은 gap: grid 페이지네이션 |
 | `FEED-008` | `feed` tab 상세 모달 팔로우 버튼 | `FeedPostDetailModal.tsx`, `src/types/feed.ts` | [frontend-api-usage.md](../api/frontend-api-usage.md), [domain-types.md](domain-types.md) | `FeedAuthor.followedByMe`가 BE 응답에 없으면 팔로우 버튼 미표시. BE PR #128 `FeedAuthorResponse`에 필드 추가 후 FE 타입 필수로 전환 필요 |
 
 ## FE 코드와 공식 기준 확인 필요
@@ -159,16 +159,26 @@ BE API 계약이 확정되면 [frontend-api-usage.md](../api/frontend-api-usage.
 
 ### 룩피드 프로필 피드 목록
 
-현재 룩피드 프로필 화면은 게시한 피드와 저장한 피드 탭, 2열 grid, 빈 상태 문구, 피드 등록 버튼의 기본 UI 틀만 제공합니다.
+`lookfeed-profile` 화면은 아래 API와 연결되어 있습니다.
+
+- 내 프로필: `GET /api/v1/feed/users/{userId}/profile`, `GET /api/v1/feed/users/{userId}/posts`(게시한 피드), `GET /api/v1/feed/users/{userId}/liked-posts`(좋아요한 피드, 본인만)
+- 타인 프로필: `GET /api/v1/feed/users/{userId}/profile`, `GET /api/v1/feed/users/{userId}/posts`
+- 피드 작성: `FeedWriteModal` → `POST /api/v1/feed/posts`
+- grid 상세: `FeedPostDetailModal` → `GET /api/v1/feed/posts/{postId}`
+
+`FeedUserProfile.mine` 또는 `authUserId === targetUserId`로 내/타인 프로필 UI를 분기합니다. 내 게시물 작성자 아바타 클릭 시 타인 프로필(팔로우 버튼)로 열리지 않습니다.
+
+BE 의존성 (BE PR #156):
+
+- `GET /api/v1/feed/users/{userId}/profile`, `GET /api/v1/feed/users/{userId}/liked-posts`, `FeedAuthor.followedByMe`는 BE PR #156 기준이며 develop에 아직 없을 수 있습니다.
+- FE `src/api/feedProfileSupport.ts`는 위 endpoint 404 시 fallback을 사용합니다. 게시물 grid는 `GET .../posts`만으로 동작하고, profile/liked/follow UI는 API 가용 시에만 활성화됩니다.
 
 남은 gap:
 
-- 게시한 피드/저장한 피드 목록을 실제 룩피드 API와 연결해야 합니다.
-- 피드가 1개 이상 존재하면 `피드가 아직 없습니다.` 문구를 숨기고, 최신 피드를 왼쪽 상단부터 2열 grid에 표시해야 합니다.
-- 피드가 없을 때는 2x2 영역을 유지하고, 해당 영역의 가로/세로 중앙에 `피드가 아직 없습니다.` 문구를 표시해야 합니다.
-- 현재 `피드 등록` 버튼은 준비 중 안내만 표시하므로, 추후 피드 작성 화면 또는 피드 등록 API와 연결해야 합니다.
-- 피드 API가 확정되면 [frontend-api-usage.md](../api/frontend-api-usage.md), [routing.md](routing.md), 관련 기능 문서를 함께 갱신해야 합니다.
+- 프로필 grid는 현재 첫 페이지(`page=0`, `size=20`)만 표시합니다. 게시물이 더 많을 때 더 보기 또는 무한 스크롤 페이지네이션이 필요합니다.
+- 팔로워/팔로잉 목록 drill-down 화면은 아직 없습니다(통계 숫자만 표시).
 
+관련 문서: [frontend-api-usage.md](../api/frontend-api-usage.md), [domain-types.md](domain-types.md), [routing.md](routing.md).
 
 ### `ApiResponse<T>`와 에러 분기
 

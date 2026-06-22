@@ -243,6 +243,12 @@ export default function ClosetTab({
       return;
     }
 
+    // 낙관적 업데이트: API 응답 전에 즉시 UI 반영
+    setClothes((prev) =>
+      prev.map((c) => c.id === item.id ? { ...c, isWishlist: false } : c)
+    );
+    setClosetTab("owned");
+
     try {
       const updated = await convertWishlistToOwned(Number(item.id), {
         productCode: item.productCode ?? "UNKNOWN",
@@ -250,10 +256,16 @@ export default function ClosetTab({
         userImageUrl: imageUrl,
         isVerified: false,
       });
+      // 서버 응답으로 최종 상태 확정
       upsertGarment(updated);
-      setClosetTab("owned");
+      void refreshWardrobeStats();
       triggerToast(`🛍️ "${item.name}" 이(가) 보유 옷장으로 이동했습니다!`);
     } catch {
+      // 실패 시 롤백
+      setClothes((prev) =>
+        prev.map((c) => c.id === item.id ? { ...c, isWishlist: true } : c)
+      );
+      setClosetTab("wishlist");
       triggerToast("보유 옷장 전환에 실패했습니다.");
     }
   };
@@ -427,7 +439,6 @@ export default function ClosetTab({
                         ? "스마트 위시 보드"
                         : "즐겨찾기 컬렉션"}
               </span>
-                <span className="text-slate-400 font-normal text-xs">({filteredClothes.length}개 발견됨)</span>
               </h2>
             </div>
 
