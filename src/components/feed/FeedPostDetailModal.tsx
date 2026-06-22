@@ -348,15 +348,20 @@ export default function FeedPostDetailModal({
 
   const handleToggleLike = async () => {
     if (!post || interactionSubmitting) return
+    // 낙관적 업데이트: 즉시 UI 반영
+    const prevPost = post
+    const nextLiked = !post.likedByMe
+    syncPost({
+      ...post,
+      likedByMe: nextLiked,
+      likeCount: nextLiked ? post.likeCount + 1 : Math.max(0, post.likeCount - 1),
+    })
     setInteractionSubmitting(true)
     try {
       const result = await toggleFeedLike(post.feedPostId)
-      syncPost({
-        ...post,
-        likedByMe: result.active,
-        likeCount: result.count,
-      })
+      syncPost({ ...prevPost, likedByMe: result.active, likeCount: result.count })
     } catch (toggleError) {
+      syncPost(prevPost) // 실패 시 원상 복구
       setError(extractApiErrorMessage(toggleError, '좋아요 처리에 실패했습니다.'))
     } finally {
       setInteractionSubmitting(false)
@@ -413,18 +418,26 @@ export default function FeedPostDetailModal({
     const content = commentDraft.trim()
     if (!content) return
 
+    // 입력창 즉시 초기화 + 카운트 낙관적 업데이트
+    const prevDraft = commentDraft
+    const prevReplyToId = replyToCommentId
+    setCommentDraft('')
+    setReplyToCommentId(null)
+    syncPost({ ...post, commentCount: post.commentCount + 1 })
+
     setCommentSubmitting(true)
     setError(null)
     try {
       await createFeedComment(post.feedPostId, {
         content,
-        parentCommentId: replyToCommentId,
+        parentCommentId: prevReplyToId,
       })
-      setCommentDraft('')
-      setReplyToCommentId(null)
       await loadComments(post.feedPostId)
-      syncPost({ ...post, commentCount: post.commentCount + 1 })
     } catch (submitError) {
+      // 실패 시 입력 복원 및 카운트 롤백
+      setCommentDraft(prevDraft)
+      setReplyToCommentId(prevReplyToId)
+      syncPost({ ...post, commentCount: Math.max(0, post.commentCount) })
       setError(extractApiErrorMessage(submitError, '댓글 작성에 실패했습니다.'))
     } finally {
       setCommentSubmitting(false)

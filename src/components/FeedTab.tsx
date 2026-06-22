@@ -70,16 +70,21 @@ export default function FeedTab({ userId, guideTourCompleted, onGuideTourComplet
 
   const handleToggleLike = async (post: FeedPost) => {
     if (submittingPostId != null) return
+    // 낙관적 업데이트: API 응답 전 즉시 반영
+    const nextLiked = !post.likedByMe
+    updatePostInList({
+      ...post,
+      likedByMe: nextLiked,
+      likeCount: nextLiked ? post.likeCount + 1 : Math.max(0, post.likeCount - 1),
+    })
     setSubmittingPostId(post.feedPostId)
     setSubmittingAction('like')
     try {
       const result = await toggleFeedLike(post.feedPostId)
-      updatePostInList({
-        ...post,
-        likedByMe: result.active,
-        likeCount: result.count,
-      })
+      updatePostInList({ ...post, likedByMe: result.active, likeCount: result.count })
     } catch (toggleError) {
+      // 실패 시 원상 복구
+      updatePostInList(post)
       setError(extractApiErrorMessage(toggleError, '좋아요 처리에 실패했습니다.'))
     } finally {
       setSubmittingPostId(null)
