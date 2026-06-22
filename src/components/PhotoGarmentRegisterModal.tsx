@@ -24,6 +24,9 @@ import {
 } from '@/utils/garmentRegisterValidation'
 import type { Garment } from '@/types'
 import { isDuplicateRegisterError } from '@/utils/garmentDuplicateCheck'
+import { useToast } from '@/components/Toast'
+
+const UNSAVED_GARMENT_LEAVE_MESSAGE = '현재 저장하지 않은 옷이 있습니다. 나가시겠습니까?'
 
 interface PhotoGarmentRegisterModalProps {
   open: boolean
@@ -42,6 +45,7 @@ export default function PhotoGarmentRegisterModal({
   onBackToMethodSelect,
   onSaved,
 }: PhotoGarmentRegisterModalProps) {
+  const { showConfirm } = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [subCategoryOpen, setSubCategoryOpen] = useState(false)
   const [mainColorOpen, setMainColorOpen] = useState(false)
@@ -53,6 +57,7 @@ export default function PhotoGarmentRegisterModal({
     step,
     selectedFile,
     displayImageUrl,
+    photoId,
     draft,
     setDraft,
     fieldErrors,
@@ -88,9 +93,43 @@ export default function PhotoGarmentRegisterModal({
       ? '사진을 선택하면 AI 분석을 시작할 수 있습니다.'
       : '사진이 준비되었습니다. 아래 버튼을 눌러 분석을 시작하세요.'
 
-  const handleClose = () => {
+  const hasUnsavedWork =
+    Boolean(selectedFile) || photoId != null || step === 'analyzing' || step === 'form'
+
+  const forceClose = () => {
     reset()
     onClose()
+  }
+
+  const tryClose = () => {
+    if (step === 'saving') return
+    if (!hasUnsavedWork) {
+      forceClose()
+      return
+    }
+    showConfirm(
+      UNSAVED_GARMENT_LEAVE_MESSAGE,
+      forceClose,
+      { confirmLabel: '나가기', cancelLabel: '취소', variant: 'default' },
+    )
+  }
+
+  const tryBackToMethodSelect = () => {
+    if (!onBackToMethodSelect) return
+    if (step === 'saving') return
+    const leave = () => {
+      reset()
+      onBackToMethodSelect()
+    }
+    if (!hasUnsavedWork) {
+      leave()
+      return
+    }
+    showConfirm(
+      UNSAVED_GARMENT_LEAVE_MESSAGE,
+      leave,
+      { confirmLabel: '나가기', cancelLabel: '취소', variant: 'default' },
+    )
   }
 
   const handleSubmit = async (e: FormEvent) => {
@@ -98,21 +137,21 @@ export default function PhotoGarmentRegisterModal({
     const saved = await saveToCloset()
     if (saved) {
       onSaved(saved)
-      handleClose()
+      forceClose()
     }
   }
 
   return (
     <Modal
       open={open}
-      onClose={handleClose}
+      onClose={tryClose}
       id="modal-photo-register"
       panelClassName="min-h-[720px] relative"
     >
       <ModalHeader
         title="사진 기반 등록"
         subtitle="옷 사진을 업로드하면 AI가 분석하고, 확인 후 옷장에 저장합니다."
-        onClose={handleClose}
+        onClose={tryClose}
       />
 
       <ModalBody className="px-7 py-4 space-y-4">
@@ -223,10 +262,7 @@ export default function PhotoGarmentRegisterModal({
               {onBackToMethodSelect && (
                 <button
                   type="button"
-                  onClick={() => {
-                    reset()
-                    onBackToMethodSelect()
-                  }}
+                  onClick={tryBackToMethodSelect}
                   className="w-full h-10 text-slate-500 hover:text-[#1E3A8A] hover:bg-slate-50 rounded-xl text-sm font-bold transition"
                 >
                   뒤로가기 · 등록 방식 다시 선택
@@ -713,10 +749,7 @@ export default function PhotoGarmentRegisterModal({
                 {onBackToMethodSelect && (
                   <button
                     type="button"
-                    onClick={() => {
-                      reset()
-                      onBackToMethodSelect()
-                    }}
+                    onClick={tryBackToMethodSelect}
                     className="w-full h-10 text-slate-500 hover:text-[#1E3A8A] hover:bg-slate-50 rounded-xl text-sm font-bold transition"
                   >
                     뒤로가기 · 등록 방식 다시 선택
