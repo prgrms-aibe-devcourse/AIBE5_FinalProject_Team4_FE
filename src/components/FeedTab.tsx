@@ -44,7 +44,9 @@ export default function FeedTab({ userId, guideTourCompleted, onGuideTourComplet
 
     try {
       const data = await fetchFeedPosts(nextPage, 20)
-      setPosts((prev) => (append ? [...prev, ...data.content] : data.content))
+      const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000
+      const fresh = data.content.filter((p) => new Date(p.createdAt).getTime() >= cutoff)
+      setPosts((prev) => (append ? [...prev, ...fresh] : fresh))
       setPage(data.page)
       setHasNext(data.hasNext)
     } catch (loadError) {

@@ -6,7 +6,6 @@ import {
   ChevronRight,
   Heart,
   MessageSquare,
-  MoreHorizontal,
   Send,
 } from '@/components/icons'
 import type { FeedPost } from '@/types/feed'
@@ -108,9 +107,6 @@ export default function FeedPostCard({
               <p className="truncate text-xs text-slate-500">{post.outfit.title}</p>
             ) : null}
           </div>
-        </div>
-        <div className="shrink-0 p-1 text-slate-800" aria-hidden="true">
-          <MoreHorizontal className="h-5 w-5" />
         </div>
       </div>
 
