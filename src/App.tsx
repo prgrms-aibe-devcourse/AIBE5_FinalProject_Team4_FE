@@ -4,10 +4,11 @@
  */
 
 import api from "@/api/index";
-import { useState, useEffect, type ChangeEvent } from "react";
+import { useState, useEffect, useCallback, type ChangeEvent } from "react";
 import {
   Home,
   X,
+  ChevronLeft,
   ChevronRight,
   Plus,
   Activity,
@@ -38,6 +39,17 @@ import {
 } from "@/api/marketingConsent";
 import { updateGuideTour } from "@/api/guideTour";
 import { uploadProfileImage } from "@/api/profileImage";
+import { fetchUserFeedPosts, toggleFollow } from "@/api/feed";
+import {
+  isFeedLikedPostsApiAvailable,
+  isFeedProfileApiAvailable,
+  loadFeedUserProfileSafe,
+  loadUserLikedFeedPostsSafe,
+} from "@/api/feedProfileSupport";
+import type { FeedPost, FeedUserProfile } from "@/types/feed";
+import FeedWriteModal from "./components/feed/FeedWriteModal";
+import FeedPostDetailModal from "./components/feed/FeedPostDetailModal";
+import AuthenticatedImage from "@/components/common/AuthenticatedImage";
 import { checkNicknameAvailability } from "@/api/users";
 import { getGarmentStyleLabel } from "@/data/garmentStyles";
 import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/common/Modal";
@@ -47,6 +59,7 @@ import { formatNicknameInput, getNicknameValidationError, NICKNAME_RULE_MESSAGE 
 // import { TRIGGER_PRODUCTS } from "@/data/triggerProducts";
 
 import ProfileTab from "@/components/ProfileTab";
+import { useToast } from "@/components/Toast";
 
 type MyProfilePayload = {
   userId: number;
@@ -73,22 +86,6 @@ type MyProfilePayload = {
   guideTourCompletedOutfitBook?: boolean | null;
 };
 
-type AppDialog =
-  | {
-      type: "message";
-      title: string;
-      message: string;
-      tone?: "info" | "success" | "danger";
-    }
-  | {
-      type: "confirm";
-      title: string;
-      message: string;
-      confirmLabel: string;
-      cancelLabel?: string;
-      tone?: "info" | "danger";
-      onConfirm: () => void | Promise<void>;
-    };
 
 type ProfileEditDraft = {
   nickname: string;
@@ -246,7 +243,7 @@ export default function App() {
   const [pendingTab, setPendingTab] = useState<"closet" | "profile" | null>(null);
   const [isWithdrawnRestoreOpen, setIsWithdrawnRestoreOpen] = useState(false);
   const [withdrawnRestoreLoading, setWithdrawnRestoreLoading] = useState(false);
-  const [appDialog, setAppDialog] = useState<AppDialog | null>(null);
+  const { showToast, showConfirm } = useToast();
   const [isProfileEditOpen, setIsProfileEditOpen] = useState(false);
   const [profileEditMode, setProfileEditMode] = useState<ProfileEditMode>("basic");
   const [profileEditDraft, setProfileEditDraft] = useState<ProfileEditDraft | null>(null);
@@ -311,7 +308,19 @@ export default function App() {
 
   // Navigation state: 'home' | 'closet' | 'outfit-book' | 'feed' | 'profile' | 'lookfeed-profile'
   const [currentTab, setCurrentTab] = useState<"home" | "closet" | "outfit-book" | "feed" | "profile" | "lookfeed-profile">("home");
-  const [lookfeedProfileView, setLookfeedProfileView] = useState<"shared" | "saved">("shared");
+  const [lookfeedProfileView, setLookfeedProfileView] = useState<"shared" | "liked">("shared");
+  // null = 내 프로필, number = 타인 프로필
+  const [lookfeedTargetUserId, setLookfeedTargetUserId] = useState<number | null>(null);
+  const [lookfeedTargetProfile, setLookfeedTargetProfile] = useState<FeedUserProfile | null>(null);
+  const [lookfeedTargetPosts, setLookfeedTargetPosts] = useState<FeedPost[]>([]);
+  const [lookfeedTargetLoading, setLookfeedTargetLoading] = useState(false);
+  const [lookfeedFollowSubmitting, setLookfeedFollowSubmitting] = useState(false);
+  const [lookfeedMyProfile, setLookfeedMyProfile] = useState<FeedUserProfile | null>(null);
+  const [lookfeedMyPosts, setLookfeedMyPosts] = useState<FeedPost[]>([]);
+  const [lookfeedMyLikedPosts, setLookfeedMyLikedPosts] = useState<FeedPost[]>([]);
+  const [lookfeedMyLoading, setLookfeedMyLoading] = useState(false);
+  const [isLookfeedWriteOpen, setIsLookfeedWriteOpen] = useState(false);
+  const [lookfeedDetailPostId, setLookfeedDetailPostId] = useState<number | null>(null);
   const [homeResetSignal, setHomeResetSignal] = useState<number>(0);
   const [isPhotoRegisterOpen, setIsPhotoRegisterOpen] = useState(false);
   const [isPurchaseRegisterOpen, setIsPurchaseRegisterOpen] = useState(false);
@@ -505,20 +514,17 @@ export default function App() {
     message: string,
     tone: "info" | "success" | "danger" = "info",
   ) => {
-    setAppDialog({ type: "message", title, message, tone });
+    const type = tone === "success" ? "success" : tone === "danger" ? "error" : "info";
+    const text = message.trim()
+      ? `${title} ${message}`.replace(/\s+/g, " ").trim()
+      : title;
+    showToast(type, text);
   };
 
   const requestWithdraw = () => {
-    setAppDialog({
-      type: "confirm",
-      title: "회원탈퇴",
-      message:
-        "회원탈퇴를 진행하시겠습니까?\n탈퇴 후 30일 동안 계정 복구 가능성을 위해 데이터가 보관될 수 있으며, 서비스 이용이 제한됩니다.",
-      confirmLabel: "회원탈퇴",
-      cancelLabel: "취소",
-      tone: "danger",
-      onConfirm: async () => {
-        setAppDialog(null);
+    showConfirm(
+      "회원탈퇴를 진행하시겠습니까? 탈퇴 후 30일 동안 데이터가 보관될 수 있으며 서비스 이용이 제한됩니다.",
+      async () => {
         try {
           await api.delete('/api/v1/users/me');
           setIsProfileEditOpen(false);
@@ -529,7 +535,8 @@ export default function App() {
           showMessage("회원탈퇴 실패", "회원탈퇴에 실패했습니다. 잠시 후 다시 시도해주세요.", "danger");
         }
       },
-    });
+      { confirmLabel: "회원탈퇴", variant: "danger" },
+    );
   };
 
   const handleRestoreWithdrawnAccount = async () => {
@@ -775,10 +782,164 @@ export default function App() {
     setIsProfileMenuOpen(true);
   };
 
+  const loadMyLookfeedShared = useCallback(async (userId: number) => {
+    setLookfeedMyLoading(true);
+    try {
+      const postsPage = await fetchUserFeedPosts(userId, 0, 20);
+      const profileData = await loadFeedUserProfileSafe(userId, userId, {
+        nickname: profile.nickname,
+        profileImageUrl: profile.profileImageUrl ?? null,
+        profileBio: profile.profileBio ?? null,
+        externalLinkUrl: profile.externalLinkUrl ?? null,
+        postsPage,
+      });
+      setLookfeedMyProfile(profileData);
+      setLookfeedMyPosts(postsPage.content);
+    } catch {
+      setLookfeedMyProfile(null);
+      setLookfeedMyPosts([]);
+    } finally {
+      setLookfeedMyLoading(false);
+    }
+  }, [profile.nickname, profile.profileImageUrl, profile.profileBio, profile.externalLinkUrl]);
+
+  const loadMyLookfeedLiked = useCallback(async (userId: number) => {
+    setLookfeedMyLoading(true);
+    try {
+      const postsPage = await loadUserLikedFeedPostsSafe(userId, 0, 20);
+      setLookfeedMyLikedPosts(postsPage.content);
+      if (!isFeedLikedPostsApiAvailable()) {
+        setLookfeedProfileView("shared");
+      }
+    } catch {
+      setLookfeedMyLikedPosts([]);
+    } finally {
+      setLookfeedMyLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (currentTab !== "lookfeed-profile" || authUserId == null) return;
+    const viewingOtherUser =
+      lookfeedTargetUserId != null && lookfeedTargetUserId !== authUserId;
+    if (viewingOtherUser) return;
+    if (lookfeedProfileView === "liked") {
+      void loadMyLookfeedLiked(authUserId);
+    }
+  }, [currentTab, lookfeedProfileView, lookfeedTargetUserId, authUserId, loadMyLookfeedLiked]);
+
+  const handleLookfeedPostCreated = (created: FeedPost) => {
+    setLookfeedMyPosts((prev) => [created, ...prev]);
+    setLookfeedMyProfile((prev) =>
+      prev ? { ...prev, postCount: prev.postCount + 1 } : prev,
+    );
+    setLookfeedProfileView("shared");
+  };
+
+  const handleLookfeedPostUpdated = (updated: FeedPost) => {
+    const merge = (prev: FeedPost[]) =>
+      prev.map((post) => (post.feedPostId === updated.feedPostId ? updated : post));
+    setLookfeedMyPosts(merge);
+    setLookfeedMyLikedPosts((prev) => {
+      const merged = merge(prev);
+      if (!updated.likedByMe) {
+        return merged.filter((post) => post.feedPostId !== updated.feedPostId);
+      }
+      if (!prev.some((post) => post.feedPostId === updated.feedPostId) && updated.likedByMe) {
+        return [updated, ...prev];
+      }
+      return merged;
+    });
+    setLookfeedTargetPosts(merge);
+  };
+
+  const handleLookfeedPostDeleted = (postId: number) => {
+    setLookfeedMyPosts((prev) => prev.filter((post) => post.feedPostId !== postId));
+    setLookfeedMyLikedPosts((prev) => prev.filter((post) => post.feedPostId !== postId));
+    setLookfeedTargetPosts((prev) => prev.filter((post) => post.feedPostId !== postId));
+    setLookfeedMyProfile((prev) =>
+      prev ? { ...prev, postCount: Math.max(0, prev.postCount - 1) } : prev,
+    );
+    setLookfeedDetailPostId(null);
+  };
+
   const openLookfeedProfile = () => {
     setIsProfileMenuOpen(false);
+    setLookfeedTargetUserId(null);
+    setLookfeedTargetProfile(null);
+    setLookfeedProfileView("shared");
     setCurrentTab("lookfeed-profile");
     window.setTimeout(scrollAppToTop, 0);
+    if (authUserId != null) {
+      void loadMyLookfeedShared(authUserId);
+    }
+  };
+
+  const handleViewFeedProfile = (targetUserId: number) => {
+    if (authUserId != null && targetUserId === authUserId) {
+      openLookfeedProfile();
+      return;
+    }
+
+    setLookfeedTargetUserId(targetUserId);
+    setLookfeedTargetProfile(null);
+    setLookfeedTargetPosts([]);
+    setCurrentTab("lookfeed-profile");
+    window.setTimeout(scrollAppToTop, 0);
+
+    setLookfeedTargetLoading(true);
+    void (async () => {
+      try {
+        const postsPage = await fetchUserFeedPosts(targetUserId, 0, 20);
+        const profileData = await loadFeedUserProfileSafe(targetUserId, authUserId, {
+          postsPage,
+          samplePost: postsPage.content[0],
+        });
+        if (authUserId != null && (profileData.mine || targetUserId === authUserId)) {
+          setLookfeedTargetUserId(null);
+          setLookfeedTargetProfile(null);
+          setLookfeedTargetPosts([]);
+          setLookfeedMyProfile(profileData);
+          setLookfeedMyPosts(postsPage.content);
+          setLookfeedProfileView("shared");
+          return;
+        }
+        setLookfeedTargetProfile(profileData);
+        setLookfeedTargetPosts(postsPage.content);
+      } catch {
+        setLookfeedTargetProfile(null);
+        setLookfeedTargetPosts([]);
+      } finally {
+        setLookfeedTargetLoading(false);
+      }
+    })();
+  };
+
+  const handleToggleLookfeedFollow = async () => {
+    if (
+      lookfeedTargetUserId == null
+      || lookfeedFollowSubmitting
+      || lookfeedTargetUserId === authUserId
+      || lookfeedTargetProfile?.mine
+      || !isFeedProfileApiAvailable()
+    ) return;
+    setLookfeedFollowSubmitting(true);
+    try {
+      const result = await toggleFollow(lookfeedTargetUserId);
+      setLookfeedTargetProfile((prev) =>
+        prev
+          ? {
+              ...prev,
+              followedByMe: result.active,
+              followerCount: result.active
+                ? prev.followerCount + 1
+                : Math.max(0, prev.followerCount - 1),
+            }
+          : prev,
+      );
+    } finally {
+      setLookfeedFollowSubmitting(false);
+    }
   };
 
   const openMyInfo = () => {
@@ -793,6 +954,23 @@ export default function App() {
       externalLinkUrl: profile.externalLinkUrl ?? "",
     });
     setIsLookfeedProfileEditOpen(true);
+  };
+
+  const tryCloseLookfeedProfileEdit = () => {
+    if (lookfeedProfileSaving) return;
+
+    const hasUnsavedDraft =
+      lookfeedProfileDraft.profileBio.trim() !== (profile.profileBio ?? "").trim()
+      || lookfeedProfileDraft.externalLinkUrl.trim() !== (profile.externalLinkUrl ?? "").trim();
+
+    if (hasUnsavedDraft) {
+      showConfirm("저장하지 않고 닫을까요?", () => {
+        setIsLookfeedProfileEditOpen(false);
+      }, { confirmLabel: "닫기", variant: "default" });
+      return;
+    }
+
+    setIsLookfeedProfileEditOpen(false);
   };
 
   const saveLookfeedProfileEdit = async () => {
@@ -1094,8 +1272,11 @@ export default function App() {
                 authUserId != null && (
                   <FeedTab
                       userId={authUserId}
+                      wardrobeGarments={clothes}
+                      onWishlistChanged={() => void refreshWardrobe()}
                       guideTourCompleted={profile.guideTourCompletedFeed ?? false}
                       onGuideTourComplete={() => { void handleGuideTourComplete("feed")}}
+                      onViewProfile={handleViewFeedProfile}
                   />
                 )}
               {currentTab === "feed" &&
@@ -1109,113 +1290,230 @@ export default function App() {
               {/* ========================================================= */}
               {/* TAB 4: LOOKFEED PUBLIC PROFILE */}
               {/* ========================================================= */}
-              {currentTab === "lookfeed-profile" && (
-                <div className="-mx-5 -mt-4 animate-fade-in bg-white text-left">
-                  <header className="border-b border-slate-100/80 px-5 py-5 text-center">
-                    <h2 className="truncate text-2xl font-black text-slate-900">
-                      {profile.nickname || "룩피드 프로필"}
-                    </h2>
-                  </header>
+              {currentTab === "lookfeed-profile" && (() => {
+                const isOtherUser =
+                  lookfeedTargetUserId != null
+                  && authUserId != null
+                  && lookfeedTargetUserId !== authUserId
+                  && lookfeedTargetProfile?.mine !== true;
+                const displayNickname = isOtherUser
+                  ? (lookfeedTargetProfile?.nickname || "룩피드 프로필")
+                  : (profile.nickname || "룩피드 프로필");
+                const displayImageUrl = isOtherUser
+                  ? lookfeedTargetProfile?.profileImageUrl ?? null
+                  : profile.profileImageUrl ?? null;
+                const postCount = isOtherUser
+                  ? (lookfeedTargetProfile?.postCount ?? 0)
+                  : (lookfeedMyProfile?.postCount ?? 0);
+                const followerCount = isOtherUser
+                  ? (lookfeedTargetProfile?.followerCount ?? 0)
+                  : (lookfeedMyProfile?.followerCount ?? 0);
+                const followingCount = isOtherUser
+                  ? (lookfeedTargetProfile?.followingCount ?? 0)
+                  : (lookfeedMyProfile?.followingCount ?? 0);
+                const activePosts = isOtherUser
+                  ? lookfeedTargetPosts
+                  : lookfeedProfileView === "shared"
+                    ? lookfeedMyPosts
+                    : lookfeedMyLikedPosts;
+                const activeLoading = isOtherUser ? lookfeedTargetLoading : lookfeedMyLoading;
+                const emptyMessage = isOtherUser || lookfeedProfileView === "shared"
+                  ? "게시한 피드가 없습니다."
+                  : "좋아요한 피드가 없습니다.";
 
-                  <section className="px-5 pb-4 pt-5">
-                    <div className="flex items-center gap-5">
-                      <div className="h-24 w-24 shrink-0 overflow-hidden rounded-full bg-slate-100 ring-1 ring-slate-200">
-                        {profile.profileImageUrl ? (
-                          <img src={profile.profileImageUrl} alt="" className="h-full w-full object-cover" />
-                        ) : (
-                          <DefaultProfileAvatar />
-                        )}
+                const renderPostsGrid = () => {
+                  if (activeLoading) {
+                    return (
+                      <div className="flex items-center justify-center py-16">
+                        <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-300 border-t-slate-700" />
                       </div>
-                      <div className="grid flex-1 grid-cols-3 gap-2 text-center">
-                        {[
-                          { label: "게시물", value: 0 },
-                          { label: "팔로워", value: 0 },
-                          { label: "팔로잉", value: 0 },
-                        ].map((item) => (
-                          <div key={item.label} className="space-y-0.5">
-                            <p className="text-lg font-black text-slate-900">{item.value}</p>
-                            <p className="text-[11px] font-bold text-slate-500">{item.label}</p>
-                          </div>
-                        ))}
+                    );
+                  }
+                  if (activePosts.length === 0) {
+                    return (
+                      <div className="flex items-center justify-center py-16">
+                        <p className="text-sm font-bold text-slate-400">{emptyMessage}</p>
                       </div>
-                    </div>
-
-                    <div className="mt-4 space-y-1">
-                      <p className="text-sm font-medium leading-relaxed text-slate-900">
-                        {profile.profileBio || "아직 소개가 등록되지 않았습니다."}
-                      </p>
-                      {profile.externalLinkUrl && (
-                        <a
-                          href={profile.externalLinkUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="block break-all text-sm font-semibold text-[#00376B] hover:underline"
+                    );
+                  }
+                  return (
+                    <div className="grid grid-cols-2 gap-px bg-slate-200">
+                      {activePosts.map((fp) => (
+                        <button
+                          key={fp.feedPostId}
+                          type="button"
+                          onClick={() => setLookfeedDetailPostId(fp.feedPostId)}
+                          className="aspect-square bg-slate-50 overflow-hidden cursor-pointer"
                         >
-                          {profile.externalLinkUrl}
-                        </a>
-                      )}
-                    </div>
-
-                    <div className="mt-4">
-                      <button
-                        type="button"
-                        onClick={openLookfeedProfileEdit}
-                        className="h-10 w-full rounded-lg bg-slate-100 text-sm font-black text-slate-900 transition hover:bg-slate-200 active:scale-[0.99]"
-                      >
-                        프로필 수정
-                      </button>
-                    </div>
-                  </section>
-
-                  <section>
-                    <div className="grid grid-cols-2 border-y border-slate-200 text-center">
-                      {[
-                        { id: "shared" as const, label: "게시한 피드" },
-                        { id: "saved" as const, label: "저장한 피드" },
-                      ].map((item) => {
-                        const selected = lookfeedProfileView === item.id;
-                        return (
-                          <button
-                            key={item.id}
-                            type="button"
-                            onClick={() => setLookfeedProfileView(item.id)}
-                            className={`relative h-12 text-xs font-black transition ${
-                              selected ? "text-slate-950" : "text-slate-400"
-                            }`}
-                          >
-                            {item.label}
-                            {selected && (
-                              <span className="absolute inset-x-5 bottom-0 h-0.5 rounded-full bg-slate-950" />
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    <div className="relative grid grid-cols-2 gap-px border-y border-slate-200 bg-slate-200">
-                      {Array.from({ length: 4 }).map((_, index) => (
-                        <div
-                          key={index}
-                          className="aspect-square bg-slate-50"
-                        />
+                          {fp.images[0] ? (
+                            <AuthenticatedImage
+                              src={fp.images[0].imageUrl}
+                              alt={fp.caption ?? "피드"}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <div className="h-full w-full bg-slate-100" />
+                          )}
+                        </button>
                       ))}
-                      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                        <p className="text-sm font-bold text-slate-500">피드가 아직 없습니다.</p>
-                      </div>
                     </div>
-                  </section>
+                  );
+                };
 
-                  <div className="pointer-events-none fixed bottom-20 left-0 right-0 z-20 flex justify-center px-5">
-                    <button
-                      type="button"
-                      onClick={() => showMessage("준비 중", "피드 등록 기능은 추후 제공될 예정입니다.")}
-                      className="pointer-events-auto flex h-11 items-center gap-2 rounded-2xl bg-[#1E3A8A] px-6 text-sm font-bold text-[#BBF7D0] shadow-lg transition hover:bg-[#1E3A8A]/90 active:scale-95"
-                    >
-                      <Plus className="h-5 w-5 stroke-[3]" />
-                      <span>피드 등록</span>
-                    </button>
+                return (
+                  <div className="-mx-5 -mt-4 animate-fade-in bg-white text-left">
+                    <header className="relative border-b border-slate-100/80 px-5 py-5 flex items-center justify-center gap-3">
+                      {isOtherUser && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCurrentTab("feed");
+                            setLookfeedTargetUserId(null);
+                            setLookfeedTargetProfile(null);
+                          }}
+                          className="absolute left-4 flex h-9 w-9 items-center justify-center rounded-full hover:bg-slate-100 transition cursor-pointer"
+                          aria-label="뒤로 가기"
+                        >
+                          <ChevronLeft className="h-5 w-5 text-slate-700" />
+                        </button>
+                      )}
+                      <h2 className="truncate text-xl font-black text-slate-900">
+                        {displayNickname}
+                      </h2>
+                    </header>
+
+                    <section className="px-5 pb-4 pt-5">
+                      <div className="flex items-center gap-5">
+                        <div className="h-24 w-24 shrink-0 overflow-hidden rounded-full bg-slate-100 ring-1 ring-slate-200">
+                          {displayImageUrl ? (
+                            <img src={displayImageUrl} alt={displayNickname} className="h-full w-full object-cover" />
+                          ) : (
+                            <DefaultProfileAvatar />
+                          )}
+                        </div>
+                        <div className="grid flex-1 grid-cols-3 gap-2 text-center">
+                          {[
+                            { label: "게시물", value: postCount },
+                            { label: "팔로워", value: followerCount },
+                            { label: "팔로잉", value: followingCount },
+                          ].map((item) => (
+                            <div key={item.label} className="space-y-0.5">
+                              <p className="text-lg font-black text-slate-900">{item.value}</p>
+                              <p className="text-[11px] font-bold text-slate-500">{item.label}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {isOtherUser ? (
+                        <>
+                          <div className="mt-4 space-y-1">
+                            <p className="text-sm font-medium leading-relaxed text-slate-900">
+                              {lookfeedTargetProfile?.profileBio || "아직 소개가 등록되지 않았습니다."}
+                            </p>
+                            {lookfeedTargetProfile?.externalLinkUrl ? (
+                              <a
+                                href={lookfeedTargetProfile.externalLinkUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="block break-all text-sm font-semibold text-[#00376B] hover:underline"
+                              >
+                                {lookfeedTargetProfile.externalLinkUrl}
+                              </a>
+                            ) : null}
+                          </div>
+                          <div className="mt-4">
+                            {isFeedProfileApiAvailable() ? (
+                              <button
+                                type="button"
+                                onClick={() => { void handleToggleLookfeedFollow(); }}
+                                disabled={lookfeedFollowSubmitting || lookfeedTargetLoading}
+                                className={`h-10 w-full rounded-lg text-sm font-black transition active:scale-[0.99] disabled:opacity-60 ${
+                                  lookfeedTargetProfile?.followedByMe
+                                    ? "bg-slate-100 text-slate-900 hover:bg-slate-200"
+                                    : "bg-[#1E3A8A] text-[#BBF7D0] hover:bg-[#1E3A8A]/90"
+                                }`}
+                              >
+                                {lookfeedTargetProfile?.followedByMe ? "팔로잉" : "팔로우"}
+                              </button>
+                            ) : null}
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="mt-4 space-y-1">
+                            <p className="text-sm font-medium leading-relaxed text-slate-900">
+                              {profile.profileBio || "아직 소개가 등록되지 않았습니다."}
+                            </p>
+                            {profile.externalLinkUrl && (
+                              <a
+                                href={profile.externalLinkUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="block break-all text-sm font-semibold text-[#00376B] hover:underline"
+                              >
+                                {profile.externalLinkUrl}
+                              </a>
+                            )}
+                          </div>
+                          <div className="mt-4">
+                            <button
+                              type="button"
+                              onClick={openLookfeedProfileEdit}
+                              className="h-10 w-full rounded-lg bg-slate-100 text-sm font-black text-slate-900 transition hover:bg-slate-200 active:scale-[0.99]"
+                            >
+                              프로필 수정
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </section>
+
+                    <section>
+                      {!isOtherUser && isFeedLikedPostsApiAvailable() ? (
+                        <div className="grid grid-cols-2 border-y border-slate-200 text-center">
+                          {[
+                            { id: "shared" as const, label: "게시한 피드" },
+                            { id: "liked" as const, label: "좋아요한 피드" },
+                          ].map((item) => {
+                            const selected = lookfeedProfileView === item.id;
+                            return (
+                              <button
+                                key={item.id}
+                                type="button"
+                                onClick={() => setLookfeedProfileView(item.id)}
+                                className={`relative h-12 text-xs font-black transition ${
+                                  selected ? "text-slate-950" : "text-slate-400"
+                                }`}
+                              >
+                                {item.label}
+                                {selected && (
+                                  <span className="absolute inset-x-5 bottom-0 h-0.5 rounded-full bg-slate-950" />
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : null}
+
+                      {renderPostsGrid()}
+                    </section>
+
+                    {!isOtherUser && !isLookfeedWriteOpen && (
+                      <div className="pointer-events-none fixed bottom-20 left-0 right-0 z-20 flex justify-center px-5">
+                        <button
+                          type="button"
+                          onClick={() => setIsLookfeedWriteOpen(true)}
+                          className="pointer-events-auto flex items-center gap-2 h-12 px-6 rounded-2xl bg-[#1E3A8A] hover:bg-[#1E3A8A]/90 text-[#BBF7D0] shadow-lg font-bold text-sm transition active:scale-95 cursor-pointer"
+                        >
+                          <Plus className="w-5 h-5 stroke-[3]" />
+                          <span>코디 업로드</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               {/* ========================================================= */}
               {/* TAB 5: MY INFO */}
@@ -1473,11 +1771,31 @@ export default function App() {
           </>
         )}
 
+        {authUserId != null && (
+          <>
+            <FeedWriteModal
+              open={isLookfeedWriteOpen}
+              userId={authUserId}
+              onClose={() => setIsLookfeedWriteOpen(false)}
+              onCreated={handleLookfeedPostCreated}
+            />
+            <FeedPostDetailModal
+              open={lookfeedDetailPostId != null}
+              postId={lookfeedDetailPostId}
+              userId={authUserId}
+              wardrobeGarments={clothes}
+              onWishlistChanged={() => void refreshWardrobe()}
+              onClose={() => setLookfeedDetailPostId(null)}
+              onPostUpdated={handleLookfeedPostUpdated}
+              onPostDeleted={handleLookfeedPostDeleted}
+              onViewProfile={handleViewFeedProfile}
+            />
+          </>
+        )}
+
         <Modal
           open={isLookfeedProfileEditOpen}
-          onClose={() => {
-            if (!lookfeedProfileSaving) setIsLookfeedProfileEditOpen(false);
-          }}
+          onClose={tryCloseLookfeedProfileEdit}
           size="lg"
           placement="sheet"
           zIndex={110}
@@ -1487,7 +1805,7 @@ export default function App() {
           <ModalHeader
             title="프로필 수정"
             subtitle="프로필 소개와 외부 링크를 수정합니다."
-            onClose={() => setIsLookfeedProfileEditOpen(false)}
+            onClose={tryCloseLookfeedProfileEdit}
             closeDisabled={lookfeedProfileSaving}
           />
           <ModalBody className="space-y-4 p-5 sm:p-7 bg-white">
@@ -1522,7 +1840,7 @@ export default function App() {
           <ModalFooter className="grid grid-cols-2 gap-2 p-4">
             <button
               type="button"
-              onClick={() => setIsLookfeedProfileEditOpen(false)}
+              onClick={tryCloseLookfeedProfileEdit}
               disabled={lookfeedProfileSaving}
               className="h-11 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-500 transition hover:bg-slate-50 disabled:opacity-40"
             >
@@ -1861,56 +2179,6 @@ export default function App() {
           documentType={activeLegalDocument ?? "terms"}
           onClose={() => setActiveLegalDocument(null)}
         />
-
-        <Modal
-          open={appDialog != null}
-          onClose={() => setAppDialog(null)}
-          size="sm"
-          zIndex={120}
-          closeOnBackdrop
-        >
-          {appDialog && (
-            <>
-              <ModalHeader
-                title={appDialog.title}
-                onClose={() => setAppDialog(null)}
-              />
-              <ModalBody className="p-5">
-                <p className="whitespace-pre-line text-sm leading-relaxed text-slate-600 break-keep">
-                  {appDialog.message}
-                </p>
-              </ModalBody>
-              <ModalFooter className="flex justify-end gap-2 p-4">
-                {appDialog.type === "confirm" && (
-                  <button
-                    type="button"
-                    onClick={() => setAppDialog(null)}
-                    className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-500 transition hover:bg-slate-50"
-                  >
-                    {appDialog.cancelLabel ?? "취소"}
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (appDialog.type === "message") {
-                      setAppDialog(null);
-                      return;
-                    }
-                    void appDialog.onConfirm();
-                  }}
-                  className={`h-10 rounded-xl px-4 text-sm font-black text-white transition ${
-                    appDialog.tone === "danger"
-                      ? "bg-rose-500 hover:bg-rose-600"
-                      : "bg-[#1E3A8A] hover:bg-[#172f72]"
-                  }`}
-                >
-                  {appDialog.type === "confirm" ? appDialog.confirmLabel : "확인"}
-                </button>
-              </ModalFooter>
-            </>
-          )}
-        </Modal>
 
       </div>
     );
