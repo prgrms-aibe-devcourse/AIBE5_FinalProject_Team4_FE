@@ -486,6 +486,7 @@ export default function App() {
     setCurrentTab("home");
     setAuthReady(false);
     setShowIntro(true);
+    setHomeResetSignal((signal) => signal + 1);
   };
 
   const handleGuideTourComplete = async (page: "home" | "wardrobe" | "feed" | "mypage" | "outfit-book") => {
