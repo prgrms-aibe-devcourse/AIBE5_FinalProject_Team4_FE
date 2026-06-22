@@ -12,6 +12,7 @@ import {
   updateFeedPost,
 } from '@/api/feed'
 import AuthenticatedImage from '@/components/common/AuthenticatedImage'
+import FeedClothesImage from '@/components/feed/FeedClothesImage'
 import { Modal, ModalBody, ModalFooter, ModalHeader } from '@/components/common/Modal'
 import Spinner from '@/components/common/Spinner'
 import { Heart, MessageSquare, User, X } from '@/components/icons'
@@ -31,6 +32,7 @@ import {
   feedWishlistProductCode,
   findWishlistGarmentForFeedClothes,
 } from '@/utils/recommendWishlistPayload'
+import { resolveClothesDisplayImageUrl } from '@/utils/clothesImageUrl'
 
 function ClothesDetailSheet({
   clothes,
@@ -48,7 +50,7 @@ function ClothesDetailSheet({
   onClose: () => void
 }) {
   const { showToast } = useToast()
-  const imageUrl = clothes.userImageUrl ?? clothes.imageUrl
+  const displayImageUrl = resolveClothesDisplayImageUrl(clothes)
   const [wishlisted, setWishlisted] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
@@ -58,7 +60,7 @@ function ClothesDetailSheet({
 
   const handleAddToWishlist = async () => {
     if (isMine || wishlisted || submitting) return
-    const imageUrl = clothes.userImageUrl ?? clothes.imageUrl ?? ''
+    const imageUrl = resolveClothesDisplayImageUrl(clothes) ?? ''
     if (!imageUrl.startsWith('http')) {
       showToast('error', '이미지 URL이 없어 추가할 수 없습니다.')
       return
@@ -143,8 +145,12 @@ function ClothesDetailSheet({
           </div>
         </div>
         <div className="mx-5 mt-4 aspect-square w-[calc(100%-2.5rem)] rounded-2xl border border-slate-200 bg-slate-50 overflow-hidden">
-          {imageUrl ? (
-            <AuthenticatedImage src={imageUrl} alt={clothes.name} className="w-full h-full object-contain p-4" />
+          {displayImageUrl ? (
+            <FeedClothesImage
+              clothes={clothes}
+              alt={clothes.name}
+              className="w-full h-full object-contain p-4"
+            />
           ) : null}
         </div>
         <div className="px-5 py-4 space-y-1 pb-8">
@@ -812,8 +818,8 @@ export default function FeedPostDetailModal({
                       className="shrink-0 w-16 space-y-1 text-center cursor-pointer group"
                     >
                       <div className="aspect-square overflow-hidden rounded-xl border border-slate-200 bg-white group-hover:border-[#1E3A8A]/40 transition-colors">
-                        <AuthenticatedImage
-                          src={item.clothes.userImageUrl ?? item.clothes.imageUrl}
+                        <FeedClothesImage
+                          clothes={item.clothes}
                           alt={item.clothes.name}
                           className="h-full w-full object-contain p-1"
                         />

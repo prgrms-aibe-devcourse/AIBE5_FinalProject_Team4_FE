@@ -2,18 +2,22 @@ import { useEffect, useState } from 'react'
 import api from '@/api'
 
 const PROTECTED_IMAGE_PATH =
-  /^\/api\/v1\/images\/(clothes|purchase-captures|feed)\//
+  /\/api\/v1\/images\/(clothes|purchase-captures)\//i
 
-/** BE 로컬/운영 저장 이미지 URL인지 확인 */
+function normalizeImagePathname(url: string): string {
+  const raw = url.startsWith('http')
+    ? new URL(url).pathname
+    : url.startsWith('/')
+      ? url
+      : `/${url}`
+  return raw.split(/[?#]/)[0]
+}
+
+/** BE 로컬/운영 저장 이미지 URL인지 확인 (clothes·purchase-captures는 인증 fetch 필요) */
 export function isProtectedStorageImageUrl(url: string): boolean {
   if (url.startsWith('blob:') || url.startsWith('data:')) return false
   try {
-    const pathname = url.startsWith('http')
-      ? new URL(url).pathname
-      : url.startsWith('/')
-        ? url
-        : `/${url}`
-    return PROTECTED_IMAGE_PATH.test(pathname)
+    return PROTECTED_IMAGE_PATH.test(normalizeImagePathname(url))
   } catch {
     return false
   }
@@ -50,7 +54,10 @@ export async function fetchAuthenticatedImageObjectUrl(
 export function useAuthenticatedImageSrc(
   src: string | null | undefined,
 ): string | null {
-  const [resolved, setResolved] = useState<string | null>(null)
+  const [resolved, setResolved] = useState<string | null>(() => {
+    if (!src) return null
+    return isProtectedStorageImageUrl(src) ? null : src
+  })
 
   useEffect(() => {
     if (!src) {
@@ -62,6 +69,8 @@ export function useAuthenticatedImageSrc(
       setResolved(src)
       return
     }
+
+    setResolved(null)
 
     let cancelled = false
     let objectUrl: string | null = null
