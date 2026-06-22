@@ -27,6 +27,9 @@ import { PRODUCT_CODE_MAX_LENGTH } from '@/utils/purchaseRegisterValidation'
 import type { Garment } from '@/types'
 import type { ExternalSourceCode } from '@/data/externalSources'
 import { isDuplicateRegisterError } from '@/utils/garmentDuplicateCheck'
+import { useToast } from '@/components/Toast'
+
+const UNSAVED_GARMENT_LEAVE_MESSAGE = '현재 저장하지 않은 옷이 있습니다. 나가시겠습니까?'
 
 interface PurchaseGarmentRegisterModalProps {
   open: boolean
@@ -45,6 +48,7 @@ export default function PurchaseGarmentRegisterModal({
   onBackToMethodSelect,
   onSaved,
 }: PurchaseGarmentRegisterModalProps) {
+  const { showConfirm } = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [subCategoryOpen, setSubCategoryOpen] = useState(false)
   const [mainColorOpen, setMainColorOpen] = useState(false)
@@ -62,6 +66,7 @@ export default function PurchaseGarmentRegisterModal({
     activeItemIndex,
     hasMultipleItems,
     remainingPendingCount,
+    captureId,
     draft,
     setDraft,
     fieldErrors,
@@ -101,9 +106,48 @@ export default function PurchaseGarmentRegisterModal({
       ? '구매내역 캡처를 선택하거나 붙여넣으세요.'
       : '캡처가 준비되었습니다. 아래 버튼을 눌러 분석을 시작하세요.'
 
-  const handleClose = () => {
+  const hasUnsavedWork =
+    Boolean(selectedFile)
+    || captureId != null
+    || pendingItems.length > 0
+    || step === 'analyzing'
+    || step === 'item-select'
+    || step === 'form'
+
+  const forceClose = () => {
     reset()
     onClose()
+  }
+
+  const tryClose = () => {
+    if (step === 'saving' || isSubmitting) return
+    if (!hasUnsavedWork) {
+      forceClose()
+      return
+    }
+    showConfirm(
+      UNSAVED_GARMENT_LEAVE_MESSAGE,
+      forceClose,
+      { confirmLabel: '나가기', cancelLabel: '취소', variant: 'default' },
+    )
+  }
+
+  const tryBackToMethodSelect = () => {
+    if (!onBackToMethodSelect) return
+    if (step === 'saving' || isSubmitting) return
+    const leave = () => {
+      reset()
+      onBackToMethodSelect()
+    }
+    if (!hasUnsavedWork) {
+      leave()
+      return
+    }
+    showConfirm(
+      UNSAVED_GARMENT_LEAVE_MESSAGE,
+      leave,
+      { confirmLabel: '나가기', cancelLabel: '취소', variant: 'default' },
+    )
   }
 
   const handleSubmit = async (e: FormEvent) => {
@@ -112,7 +156,7 @@ export default function PurchaseGarmentRegisterModal({
     if (result) {
       onSaved(result.garment, { finished: !result.hasMorePending })
       if (!result.hasMorePending) {
-        handleClose()
+        forceClose()
       }
     }
   }
@@ -128,7 +172,7 @@ export default function PurchaseGarmentRegisterModal({
   return (
     <Modal
       open={open}
-      onClose={handleClose}
+      onClose={tryClose}
       id="modal-purchase-register"
       panelClassName="min-h-[720px] relative"
       overlayProps={{ onPaste: handlePaste }}
@@ -136,7 +180,7 @@ export default function PurchaseGarmentRegisterModal({
       <ModalHeader
         title="구매내역 기반 등록"
         subtitle="쇼핑몰 구매내역 캡처를 분석해 옷장에 보유 옷으로 저장합니다."
-        onClose={handleClose}
+        onClose={tryClose}
       />
 
       <ModalBody className="px-7 py-4 space-y-4">
@@ -261,10 +305,7 @@ export default function PurchaseGarmentRegisterModal({
               {onBackToMethodSelect && (
                 <button
                   type="button"
-                  onClick={() => {
-                    reset()
-                    onBackToMethodSelect()
-                  }}
+                  onClick={tryBackToMethodSelect}
                   className="w-full h-10 text-slate-500 hover:text-[#1E3A8A] hover:bg-slate-50 rounded-xl text-sm font-bold transition"
                 >
                   뒤로가기 · 등록 방식 다시 선택
@@ -371,7 +412,7 @@ export default function PurchaseGarmentRegisterModal({
               {remainingPendingCount === 0 && (
                 <button
                   type="button"
-                  onClick={handleClose}
+                  onClick={forceClose}
                   className="w-full h-11 bg-[#1E3A8A] text-[#BBF7D0] rounded-xl font-bold text-sm"
                 >
                   등록 완료
@@ -381,10 +422,7 @@ export default function PurchaseGarmentRegisterModal({
               {onBackToMethodSelect && (
                 <button
                   type="button"
-                  onClick={() => {
-                    reset()
-                    onBackToMethodSelect()
-                  }}
+                  onClick={tryBackToMethodSelect}
                   className="w-full h-10 text-slate-500 hover:text-[#1E3A8A] hover:bg-slate-50 rounded-xl text-sm font-bold transition"
                 >
                   뒤로가기 · 등록 방식 다시 선택
@@ -978,10 +1016,7 @@ export default function PurchaseGarmentRegisterModal({
                   onBackToMethodSelect && (
                     <button
                       type="button"
-                      onClick={() => {
-                        reset()
-                        onBackToMethodSelect()
-                      }}
+                      onClick={tryBackToMethodSelect}
                       className="w-full h-10 text-slate-500 hover:text-[#1E3A8A] hover:bg-slate-50 rounded-xl text-sm font-bold transition"
                     >
                       뒤로가기 · 등록 방식 다시 선택

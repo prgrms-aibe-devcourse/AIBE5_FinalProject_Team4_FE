@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import AuthenticatedImage from '@/components/common/AuthenticatedImage'
 import BrandDisplay from '@/components/common/BrandDisplay'
 import GarmentEditModal, { type GarmentEditDraft } from '@/components/GarmentEditModal'
+import { useToast } from '@/components/Toast'
 import { formatRecommendBrandLabel, getBrandLogoUrl } from '@/data/brandLogos'
 import type { Garment } from '@/types'
 import { UI_CATEGORY_TO_BE } from '@/data/categoryItemTypes'
@@ -20,6 +21,8 @@ import {
 } from '@/utils/garmentRegisterValidation'
 import { isExternalProductGarment } from '@/utils/garmentEditRules'
 import { resolveClothesDisplayImageUrl } from '@/utils/clothesImageUrl'
+
+const UNSAVED_GARMENT_LEAVE_MESSAGE = '현재 저장하지 않은 옷이 있습니다. 나가시겠습니까?'
 
 interface ClosetGarmentDetailProps {
   garment: Garment | null
@@ -69,6 +72,7 @@ export default function ClosetGarmentDetail({
   onGarmentDeleted,
   onToast,
 }: ClosetGarmentDetailProps) {
+  const { showConfirm } = useToast()
   const [detail, setDetail] = useState<Garment | null>(garment)
   const [loading, setLoading] = useState(false)
   const [editModalOpen, setEditModalOpen] = useState(false)
@@ -79,6 +83,7 @@ export default function ClosetGarmentDetail({
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null)
   const [imageError, setImageError] = useState<string | null>(null)
   const previewBlobRef = useRef<string | null>(null)
+  const initialEditDraftRef = useRef<GarmentEditDraft | null>(null)
 
   const revokePreviewBlob = useCallback(() => {
     if (previewBlobRef.current) {
@@ -136,7 +141,9 @@ export default function ClosetGarmentDetail({
       onToast('수정할 수 없는 데이터입니다. 다시 선택해 주세요.')
       return
     }
-    setEditDraft(garmentToEditDraft(detail))
+    const draft = garmentToEditDraft(detail)
+    initialEditDraftRef.current = draft
+    setEditDraft(draft)
     resetImageEditState(detail)
     setFieldErrors({})
     setEditModalOpen(true)
@@ -146,12 +153,41 @@ export default function ClosetGarmentDetail({
     if (!saving) {
       setEditModalOpen(false)
       setEditDraft(null)
+      initialEditDraftRef.current = null
       setFieldErrors({})
       revokePreviewBlob()
       setPendingImageFile(null)
       setImagePreviewUrl(null)
       setImageError(null)
     }
+  }
+
+  const hasUnsavedEditChanges = (): boolean => {
+    if (!editDraft || !initialEditDraftRef.current || !detail) return false
+    if (pendingImageFile) return true
+
+    const initial = initialEditDraftRef.current
+    const sizeOnly = isExternalProductGarment(detail)
+    if (sizeOnly) {
+      return editDraft.size.trim() !== initial.size.trim()
+    }
+
+    return (
+      editDraft.name.trim() !== initial.name.trim()
+      || editDraft.size.trim() !== initial.size.trim()
+    )
+  }
+
+  const tryCloseEditModal = () => {
+    if (saving) return
+    if (hasUnsavedEditChanges()) {
+      showConfirm(UNSAVED_GARMENT_LEAVE_MESSAGE, closeEditModal, {
+        confirmLabel: '나가기',
+        variant: 'default',
+      })
+      return
+    }
+    closeEditModal()
   }
 
   const handleImageFileSelect = (file: File | null) => {
@@ -342,7 +378,7 @@ export default function ClosetGarmentDetail({
           onDraftChange={handleDraftChange}
           onImageFileSelect={handleImageFileSelect}
           onSave={() => void handleSave()}
-          onClose={closeEditModal}
+          onClose={tryCloseEditModal}
         />
       )}
 

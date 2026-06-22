@@ -30,6 +30,7 @@ import {
 } from "@/utils/authLogin";
 import LoginPage from "@/pages/LoginPage";
 import OnboardingPage from "@/pages/OnboardingPage";
+import IntroPage from "@/pages/IntroPage";
 import { useChat } from "@/hooks/useChat";
 import { useCloset } from "@/hooks/useCloset";
 import { useWardrobeLoader } from "@/hooks/useWardrobeLoader";
@@ -280,6 +281,8 @@ export default function App() {
     }
     return true;
   }
+  const [showIntro, setShowIntro] = useState(true);
+
   /** 쿠키 기반 인증 확인 완료 여부 */
   const [authReady, setAuthReady] = useState(false);
 
@@ -487,6 +490,7 @@ export default function App() {
     setProfileMarketingAgreed(null);
     setCurrentTab("home");
     setAuthReady(false);
+    setShowIntro(true);
     setHomeResetSignal((signal) => signal + 1);
   };
 
@@ -1127,7 +1131,11 @@ export default function App() {
 
       {/* 2. ONBOARDING PROFILE FLOWS */}
       {/* ========================================================= */}
-      {isOnboardingActive && (
+      {isOnboardingActive && showIntro && (
+          <IntroPage onStart={() => setShowIntro(false)} />
+      )}
+
+      {isOnboardingActive && !showIntro && (
           <OnboardingPage
             defaultNickname={profile.nickname}
             styleOptions={catalogStyles}
@@ -1291,6 +1299,7 @@ export default function App() {
                           onOpenRegister={openGarmentRegister}
                           guideTourCompleted={profile.guideTourCompletedWardrobe ?? false}
                           onGuideTourComplete={() => {void handleGuideTourComplete("wardrobe")}}
+                          isRegisterOpen={isMethodSelectOpen}
                       />
                   )}
               {currentTab === "closet" &&
