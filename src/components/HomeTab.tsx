@@ -1,4 +1,5 @@
-﻿import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+﻿import { Heart } from '@/components/icons'
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { fetchAuthenticatedImageObjectUrl } from '@/utils/authenticatedImageUrl';
 import AuthenticatedImage from "@/components/common/AuthenticatedImage";
 import {
@@ -916,9 +917,25 @@ export default function HomeTab({
                             setSelectedItem(item);
                             setSelectedCombo(null);
                           }}
-                          className={`group rounded-[24px] border overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:rotate-[0.5deg] hover:shadow-xl active:scale-[0.99] cursor-pointer ${item.isAnchor ? "border-[#1E3A8A]/30 bg-indigo-50/40 ring-1 ring-[#1E3A8A]/20" : "border-slate-100 bg-slate-50"}`}
+                          className={`group relative rounded-[24px] border overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:rotate-[0.5deg] hover:shadow-xl active:scale-[0.99] cursor-pointer ${item.isAnchor ? "border-[#1E3A8A]/30 bg-indigo-50/40 ring-1 ring-[#1E3A8A]/20" : "border-slate-100 bg-slate-50"}`}
                       >
                         <div className="h-44 sm:h-52 lg:h-72 bg-slate-100 relative overflow-hidden">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              toggleWishlist(toCardItem(item))
+                            }}
+                            disabled={isWishlistSubmitting(item.clothesId)}
+                            aria-label={isWishlisted(item.clothesId) ? '위시리스트에서 빼기' : '위시리스트에 추가'}
+                            className={`absolute top-1.5 right-1.5 z-10 p-1.5 rounded-full border bg-white/95 shadow-sm transition-colors cursor-pointer disabled:opacity-60 ${
+                              isWishlisted(item.clothesId)
+                                ? 'border-rose-200 text-rose-500 hover:bg-rose-50'
+                                : 'border-slate-200/90 text-slate-400 hover:text-rose-500 hover:border-rose-200 hover:bg-rose-50'
+                            }`}
+                          >
+                            <Heart className={`w-3.5 h-3.5 ${isWishlisted(item.clothesId) ? 'text-rose-500 fill-rose-500' : ''}`} />
+                          </button>
                           <AuthenticatedImage src={item.imageUrl} alt={item.title} className="w-full h-full object-cover object-top transition-transform duration-300 group-hover:scale-105" fallback={<div className="w-full h-full flex items-center justify-center bg-slate-200 text-slate-400 text-xs font-bold">이미지 없음</div>} />
                           <div className="absolute left-0 bottom-0 p-3 bg-gradient-to-t from-black/80 via-black/40 to-transparent text-white flex flex-col items-start max-w-[66%]">
                               {item.brand ? <div className="text-[11px] font-bold text-white/90 uppercase tracking-wide truncate">{item.brand}</div> : null}
