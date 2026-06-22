@@ -168,6 +168,11 @@ BE API 계약이 확정되면 [frontend-api-usage.md](../api/frontend-api-usage.
 
 `FeedUserProfile.mine` 또는 `authUserId === targetUserId`로 내/타인 프로필 UI를 분기합니다. 내 게시물 작성자 아바타 클릭 시 타인 프로필(팔로우 버튼)로 열리지 않습니다.
 
+BE 의존성 (BE PR #156):
+
+- `GET /api/v1/feed/users/{userId}/profile`, `GET /api/v1/feed/users/{userId}/liked-posts`, `FeedAuthor.followedByMe`는 BE PR #156 기준이며 develop에 아직 없을 수 있습니다.
+- FE `src/api/feedProfileSupport.ts`는 위 endpoint 404 시 fallback을 사용합니다. 게시물 grid는 `GET .../posts`만으로 동작하고, profile/liked/follow UI는 API 가용 시에만 활성화됩니다.
+
 남은 gap:
 
 - 프로필 grid는 현재 첫 페이지(`page=0`, `size=20`)만 표시합니다. 게시물이 더 많을 때 더 보기 또는 무한 스크롤 페이지네이션이 필요합니다.

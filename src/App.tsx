@@ -39,7 +39,13 @@ import {
 } from "@/api/marketingConsent";
 import { updateGuideTour } from "@/api/guideTour";
 import { uploadProfileImage } from "@/api/profileImage";
-import { fetchFeedUserProfile, fetchUserFeedPosts, fetchUserLikedFeedPosts, toggleFollow } from "@/api/feed";
+import { fetchUserFeedPosts, toggleFollow } from "@/api/feed";
+import {
+  isFeedLikedPostsApiAvailable,
+  isFeedProfileApiAvailable,
+  loadFeedUserProfileSafe,
+  loadUserLikedFeedPostsSafe,
+} from "@/api/feedProfileSupport";
 import type { FeedPost, FeedUserProfile } from "@/types/feed";
 import FeedWriteModal from "./components/feed/FeedWriteModal";
 import FeedPostDetailModal from "./components/feed/FeedPostDetailModal";
@@ -778,10 +784,14 @@ export default function App() {
   const loadMyLookfeedShared = useCallback(async (userId: number) => {
     setLookfeedMyLoading(true);
     try {
-      const [profileData, postsPage] = await Promise.all([
-        fetchFeedUserProfile(userId),
-        fetchUserFeedPosts(userId, 0, 20),
-      ]);
+      const postsPage = await fetchUserFeedPosts(userId, 0, 20);
+      const profileData = await loadFeedUserProfileSafe(userId, userId, {
+        nickname: profile.nickname,
+        profileImageUrl: profile.profileImageUrl ?? null,
+        profileBio: profile.profileBio ?? null,
+        externalLinkUrl: profile.externalLinkUrl ?? null,
+        postsPage,
+      });
       setLookfeedMyProfile(profileData);
       setLookfeedMyPosts(postsPage.content);
     } catch {
@@ -790,13 +800,16 @@ export default function App() {
     } finally {
       setLookfeedMyLoading(false);
     }
-  }, []);
+  }, [profile.nickname, profile.profileImageUrl, profile.profileBio, profile.externalLinkUrl]);
 
   const loadMyLookfeedLiked = useCallback(async (userId: number) => {
     setLookfeedMyLoading(true);
     try {
-      const postsPage = await fetchUserLikedFeedPosts(userId, 0, 20);
+      const postsPage = await loadUserLikedFeedPostsSafe(userId, 0, 20);
       setLookfeedMyLikedPosts(postsPage.content);
+      if (!isFeedLikedPostsApiAvailable()) {
+        setLookfeedProfileView("shared");
+      }
     } catch {
       setLookfeedMyLikedPosts([]);
     } finally {
@@ -874,11 +887,13 @@ export default function App() {
     window.setTimeout(scrollAppToTop, 0);
 
     setLookfeedTargetLoading(true);
-    Promise.all([
-      fetchFeedUserProfile(targetUserId),
-      fetchUserFeedPosts(targetUserId, 0, 20),
-    ])
-      .then(([profileData, postsPage]) => {
+    void (async () => {
+      try {
+        const postsPage = await fetchUserFeedPosts(targetUserId, 0, 20);
+        const profileData = await loadFeedUserProfileSafe(targetUserId, authUserId, {
+          postsPage,
+          samplePost: postsPage.content[0],
+        });
         if (authUserId != null && (profileData.mine || targetUserId === authUserId)) {
           setLookfeedTargetUserId(null);
           setLookfeedTargetProfile(null);
@@ -890,14 +905,13 @@ export default function App() {
         }
         setLookfeedTargetProfile(profileData);
         setLookfeedTargetPosts(postsPage.content);
-      })
-      .catch(() => {
+      } catch {
         setLookfeedTargetProfile(null);
         setLookfeedTargetPosts([]);
-      })
-      .finally(() => {
+      } finally {
         setLookfeedTargetLoading(false);
-      });
+      }
+    })();
   };
 
   const handleToggleLookfeedFollow = async () => {
@@ -906,6 +920,7 @@ export default function App() {
       || lookfeedFollowSubmitting
       || lookfeedTargetUserId === authUserId
       || lookfeedTargetProfile?.mine
+      || !isFeedProfileApiAvailable()
     ) return;
     setLookfeedFollowSubmitting(true);
     try {
@@ -1407,18 +1422,20 @@ export default function App() {
                             ) : null}
                           </div>
                           <div className="mt-4">
-                            <button
-                              type="button"
-                              onClick={() => { void handleToggleLookfeedFollow(); }}
-                              disabled={lookfeedFollowSubmitting || lookfeedTargetLoading}
-                              className={`h-10 w-full rounded-lg text-sm font-black transition active:scale-[0.99] disabled:opacity-60 ${
-                                lookfeedTargetProfile?.followedByMe
-                                  ? "bg-slate-100 text-slate-900 hover:bg-slate-200"
-                                  : "bg-[#1E3A8A] text-[#BBF7D0] hover:bg-[#1E3A8A]/90"
-                              }`}
-                            >
-                              {lookfeedTargetProfile?.followedByMe ? "팔로잉" : "팔로우"}
-                            </button>
+                            {isFeedProfileApiAvailable() ? (
+                              <button
+                                type="button"
+                                onClick={() => { void handleToggleLookfeedFollow(); }}
+                                disabled={lookfeedFollowSubmitting || lookfeedTargetLoading}
+                                className={`h-10 w-full rounded-lg text-sm font-black transition active:scale-[0.99] disabled:opacity-60 ${
+                                  lookfeedTargetProfile?.followedByMe
+                                    ? "bg-slate-100 text-slate-900 hover:bg-slate-200"
+                                    : "bg-[#1E3A8A] text-[#BBF7D0] hover:bg-[#1E3A8A]/90"
+                                }`}
+                              >
+                                {lookfeedTargetProfile?.followedByMe ? "팔로잉" : "팔로우"}
+                              </button>
+                            ) : null}
                           </div>
                         </>
                       ) : (
@@ -1452,7 +1469,7 @@ export default function App() {
                     </section>
 
                     <section>
-                      {!isOtherUser && (
+                      {!isOtherUser && isFeedLikedPostsApiAvailable() ? (
                         <div className="grid grid-cols-2 border-y border-slate-200 text-center">
                           {[
                             { id: "shared" as const, label: "게시한 피드" },
@@ -1476,7 +1493,7 @@ export default function App() {
                             );
                           })}
                         </div>
-                      )}
+                      ) : null}
 
                       {renderPostsGrid()}
                     </section>
