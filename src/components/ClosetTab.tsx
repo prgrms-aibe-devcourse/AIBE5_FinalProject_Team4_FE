@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import Spinner from "@/components/common/Spinner";
-import AuthenticatedImage from "@/components/common/AuthenticatedImage";
+import GarmentPickerGridCard from "@/components/common/GarmentPickerGridCard";
 import {
   fetchWardrobeGarments,
   fetchWardrobeStatistics,
@@ -23,6 +23,7 @@ import {
   Plus,
 } from "./icons";
 import { Garment } from "@/types/index";
+import { resolveClothesDisplayImageUrl } from "@/utils/clothesImageUrl";
 import GuideTour from "@/components/common/GuideTour"
 
 type ClosetTabView = "owned" | "wishlist" | "favorites";
@@ -453,89 +454,43 @@ export default function ClosetTab({
               </h2>
             </div>
 
-            <div ref={gridRef} className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div ref={gridRef} className="grid grid-cols-2 gap-4 sm:gap-5">
               {filteredClothes.map((item) => {
                 const isSelected = selectedGarment?.id === item.id;
-
-                // Custom pastel colors to map nicely
-                let cardBg = "from-sky-50 to-white";
-                if (item.category === "Top") cardBg = "from-[#ECF5FD] to-white";
-                else if (item.category === "Bottom") cardBg = "from-[#EAF9F5] to-white";
-                else if (item.category === "Outer") cardBg = "from-[#FFF5F3] to-white";
-                else if (item.category === "Shoes") cardBg = "from-[#FFFDF0] to-white";
+                const imgSrc = resolveClothesDisplayImageUrl({
+                  userImageUrl: item.userImageUrl,
+                  imageUrl: item.be?.imageUrl ?? item.thumbnailUrl,
+                }) ?? '';
 
                 return (
-                    <div
-                        key={item.id}
-                        onClick={() => setSelectedGarment(item)}
-                        className={`aspect-square bg-gradient-to-tr ${cardBg} rounded-[24px] border-2 transition-all duration-300 relative p-3 text-left cursor-pointer group hover:scale-101 flex flex-col overflow-hidden ${
-                            isSelected
-                                ? "border-[#1E3A8A] ring-4 ring-[#1E3A8A]/10 shadow-md"
-                                : "border-slate-100 hover:border-slate-300 shadow-3xs"
-                        }`}
-                    >
-
-                      {/* Absolute category badge hanger icon floating left */}
-                      <div className="absolute top-2 left-2 bg-white/95 px-2 py-1 rounded-lg border border-slate-150/40 text-[9px] font-extrabold text-slate-500 font-mono tracking-tight shadow-3xs z-5 flex items-center gap-1">
-                    <span>
-                      {item.category === "Top" && "👕"}
-                      {item.category === "Bottom" && "👖"}
-                      {item.category === "Outer" && "🧥"}
-                      {item.category === "Shoes" && "👟"}
-                    </span>
-                        <span>{item.category}</span>
-                      </div>
-
-                      {/* Top Heart favorite picker button */}
+                  <GarmentPickerGridCard
+                    key={item.id}
+                    name={item.name}
+                    imageUrl={imgSrc}
+                    subtitle={item.be?.brandName || item.category}
+                    selected={isSelected}
+                    owned={!item.isWishlist}
+                    showOwnershipBadge={false}
+                    size="md"
+                    onClick={() => setSelectedGarment(item)}
+                    favorite={{
+                      active: item.isFavorite,
+                      onToggle: (event) => toggleFavorite(item.id, event),
+                    }}
+                    footer={item.isWishlist ? (
                       <button
-                          onClick={(e) => toggleFavorite(item.id, e)}
-                          className="absolute top-2 right-2 p-1.5 rounded-full bg-white/95 hover:bg-white text-rose-500 border border-slate-100 shadow-3xs transition-transform duration-200 active:scale-90 cursor-pointer z-5 hover:rotate-3"
-                          title="즐겨찾기"
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handlePromoteToOwned(item);
+                        }}
+                        className="mt-2 w-full h-8 text-xs font-black rounded-lg bg-orange-100 text-orange-900 border border-orange-200 hover:bg-orange-200 transition flex items-center justify-center gap-1 cursor-pointer"
                       >
-                        <Heart className={`w-3.5 h-3.5 transition-colors ${item.isFavorite ? "fill-rose-500 text-rose-500" : "text-slate-350"}`} />
+                        <HeartHandshake className="w-3 h-3 text-orange-700" />
+                        <span>옷장입고</span>
                       </button>
-
-                      {/* Apparel Display visual slot */}
-                      <div className="flex-1 min-h-0 mt-5 bg-[#F8FAFC]/55 rounded-2xl flex items-center justify-center overflow-hidden border border-slate-50 relative select-none">
-                        {item.thumbnailUrl ? (
-                            <AuthenticatedImage
-                                src={item.thumbnailUrl}
-                                alt={item.name}
-                                className="w-full h-full object-contain p-2 transition-transform duration-500 group-hover:scale-105"
-                                fallback={
-                                  <span className="text-4xl filter drop-shadow-sm select-none">👚</span>
-                                }
-                            />
-                        ) : (
-                            <span className="text-4xl filter drop-shadow-sm select-none">👚</span>
-                        )}
-                      </div>
-
-                      {/* Descriptions texts */}
-                      <div className="shrink-0 pt-2 space-y-1">
-                        <h4 className="text-[12px] sm:text-[13px] font-black text-slate-800 tracking-tight leading-snug line-clamp-1 group-hover:text-[#1E3A8A] transition">{item.name}</h4>
-
-                        <div className="flex items-center gap-1 flex-wrap text-[9px] text-slate-400 font-bold select-none">
-                          <span className="bg-slate-100 hover:bg-slate-200/60 px-1.5 py-0.5 rounded-md text-slate-500 transition">{item.color}</span>
-                          <span className="bg-slate-100 hover:bg-slate-200/60 px-1.5 py-0.5 rounded-md text-slate-500 transition line-clamp-1 truncate max-w-[72px]">{item.fitType}</span>
-                        </div>
-
-                        {/* Specialized wishlist Promotion button */}
-                        {item.isWishlist && (
-                            <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handlePromoteToOwned(item);
-                                }}
-                                className="w-full mt-1 h-7 text-[9px] font-black rounded-lg bg-orange-100 text-orange-900 border border-orange-250 hover:bg-orange-200 transition-all duration-200 flex items-center justify-center space-x-1 shadow-3xs cursor-pointer focus:ring-2 focus:ring-orange-300 active:scale-95"
-                            >
-                              <HeartHandshake className="w-3 h-3 text-orange-700 animate-pulse" />
-                              <span>옷장입고</span>
-                            </button>
-                        )}
-                      </div>
-
-                    </div>
+                    ) : undefined}
+                  />
                 );
               })}
 

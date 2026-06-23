@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { fetchAuthenticatedImageObjectUrl } from '@/utils/authenticatedImageUrl';
 import AuthenticatedImage from "@/components/common/AuthenticatedImage";
+import GarmentPickerGridCard from "@/components/common/GarmentPickerGridCard";
 import {
   fetchClothesRecommendations,
   fetchOotdRecommendations,
@@ -1048,41 +1049,17 @@ export default function HomeTab({
           <div className="grid grid-cols-3 sm:grid-cols-5 gap-x-2.5 gap-y-4">
             {filteredMatchPickerClothes.map((item) => {
               const selected = anchorClothesId === item.id;
-              const owned = !item.isWishlist;
               const imgSrc = resolveClothesDisplayImageUrl({ userImageUrl: item.userImageUrl, imageUrl: item.be?.imageUrl ?? item.thumbnailUrl }) || fallbackImages[item.category];
               return (
-                  <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => { setAnchorClothesId(item.id); setMatchPickerOpen(false); }}
-                      className="min-w-0 text-left group"
-                      aria-pressed={selected}
-                  >
-                    <div className={`relative aspect-square rounded-xl overflow-hidden bg-slate-100 border-2 transition group-hover:-translate-y-0.5 group-hover:shadow-md ${selected ? "border-[#111827] ring-2 ring-[#C4B5FD]" : "border-transparent"}`}>
-                      <AuthenticatedImage
-                          src={imgSrc}
-                          alt={item.name}
-                          className="w-full h-full object-cover"
-                          fallback={<div className="w-full h-full grid place-items-center text-slate-400 text-xs font-bold">이미지 없음</div>}
-                      />
-                      {selected && (
-                          <span className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-[#111827] text-white grid place-items-center shadow">
-                            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg>
-                          </span>
-                      )}
-                      <span
-                        className={`absolute left-1.5 bottom-1.5 h-5 px-2 rounded-full text-[10px] font-black shadow-sm ${
-                          owned
-                            ? 'bg-emerald-500 text-white'
-                            : 'bg-orange-500 text-white'
-                        }`}
-                      >
-                        {owned ? '보유' : '위시리스트'}
-                      </span>
-                    </div>
-                    <p className="mt-1.5 text-[11px] font-black text-slate-800 truncate">{item.name}</p>
-                    <p className="text-[10px] font-bold text-slate-400 truncate">{item.be?.brandName || item.category}</p>
-                  </button>
+                <GarmentPickerGridCard
+                  key={item.id}
+                  name={item.name}
+                  imageUrl={imgSrc}
+                  subtitle={item.be?.brandName || item.category}
+                  selected={selected}
+                  owned={!item.isWishlist}
+                  onClick={() => { setAnchorClothesId(item.id); setMatchPickerOpen(false); }}
+                />
               );
             })}
           </div>
