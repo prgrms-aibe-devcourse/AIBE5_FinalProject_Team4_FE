@@ -226,20 +226,18 @@ export default function FeedPostCard({
         }}
         aria-label={`${post.author.nickname} 프로필 보기`}
       >
-        <div className="rounded-full bg-gradient-to-tr from-[#f9ce34] via-[#ee2a7b] to-[#6228d7] p-[2px]">
-          <div className={`flex ${box} items-center justify-center overflow-hidden rounded-full bg-white`}>
-            {post.author.profileImageUrl ? (
-              <AuthenticatedImage
-                src={post.author.profileImageUrl}
-                alt={post.author.nickname}
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <span className={`${initial} font-black text-[#1E3A8A]`}>
-                {(post.author.nickname || '?').slice(0, 1)}
-              </span>
-            )}
-          </div>
+        <div className={`flex ${box} shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-100 ring-1 ring-slate-200`}>
+          {post.author.profileImageUrl ? (
+            <AuthenticatedImage
+              src={post.author.profileImageUrl}
+              alt={post.author.nickname}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <span className={`${initial} font-black text-[#1E3A8A]`}>
+              {(post.author.nickname || '?').slice(0, 1)}
+            </span>
+          )}
         </div>
       </button>
     )

@@ -15,7 +15,7 @@ import AuthenticatedImage from '@/components/common/AuthenticatedImage'
 import FeedClothesImage from '@/components/feed/FeedClothesImage'
 import { Modal, ModalBody, ModalFooter, ModalHeader } from '@/components/common/Modal'
 import Spinner from '@/components/common/Spinner'
-import { Heart, MessageSquare, User, X } from '@/components/icons'
+import { Heart, LayoutGrid, MessageSquare, User, X } from '@/components/icons'
 import { useToast } from '@/components/Toast'
 import type { ClothesResponse } from '@/types/be'
 import { addExistingClothesToWishlist, createWishlistClothes } from '@/api/wardrobe'
@@ -796,20 +796,18 @@ export default function FeedPostDetailModal({
                     onClick={() => handleViewAuthorProfile(post.author.userId)}
                     aria-label={`${post.author.nickname} 프로필 보기`}
                   >
-                    <div className="rounded-full bg-gradient-to-tr from-[#f9ce34] via-[#ee2a7b] to-[#6228d7] p-[2px]">
-                      <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-white">
-                        {post.author.profileImageUrl ? (
-                          <AuthenticatedImage
-                            src={post.author.profileImageUrl}
-                            alt={post.author.nickname}
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          <span className="text-xs font-black text-[#1E3A8A]">
-                            {(post.author.nickname || '?').slice(0, 1)}
-                          </span>
-                        )}
-                      </div>
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-100 ring-1 ring-slate-200">
+                      {post.author.profileImageUrl ? (
+                        <AuthenticatedImage
+                          src={post.author.profileImageUrl}
+                          alt={post.author.nickname}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <span className="text-xs font-black text-[#1E3A8A]">
+                          {(post.author.nickname || '?').slice(0, 1)}
+                        </span>
+                      )}
                     </div>
                   </button>
                   <div className="min-w-0">
@@ -929,6 +927,8 @@ export default function FeedPostDetailModal({
                     type="button"
                     onClick={() => void handleToggleSave()}
                     disabled={interactionSubmitting || !post.outfit}
+                    aria-pressed={post.savedByMe}
+                    aria-label="코디북에 저장"
                     title={post.outfit ? '코디북에 저장' : '연결된 코디가 없습니다'}
                     className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-black transition-colors cursor-pointer disabled:opacity-40 ${
                       post.savedByMe
@@ -936,7 +936,7 @@ export default function FeedPostDetailModal({
                         : 'border-slate-200 bg-white text-slate-600'
                     }`}
                   >
-                    저장
+                    <LayoutGrid className="h-4 w-4" />
                   </button>
                 ) : null}
               </div>
