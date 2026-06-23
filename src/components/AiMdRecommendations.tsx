@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import axios from 'axios'
 import {
   fetchAiMdOutfits,
@@ -10,8 +10,9 @@ import {
 import { postRecommendationFeedback } from '@/api/recommendations'
 import { connectWishlistClothes, createWishlistClothes } from '@/api/wardrobe'
 import AuthenticatedImage from '@/components/common/AuthenticatedImage'
+import ExitConfirmModal from '@/components/common/ExitConfirmModal'
 import { Modal, ModalBody, ModalFooter, ModalHeader } from '@/components/common/Modal'
-import { Check, Heart, Sparkles } from '@/components/icons'
+import { Check, Heart, Sparkles, X } from '@/components/icons'
 import RecommendProductDetailModal from '@/components/RecommendProductDetailModal'
 import {
   BE_CATEGORY_TO_UI,
@@ -51,6 +52,11 @@ interface AiMdRecommendationsProps {
     description?: string
     situation?: string
     season?: string
+    saveDisabledMessage?: string
+    saveOverride?: () => Promise<void>
+    saveSuccessMessage?: string
+    saveButtonLabel?: string
+    hideFavoriteAction?: boolean
   }) => void
 }
 
@@ -256,6 +262,7 @@ export default function AiMdRecommendations({
   const [mdLoading, setMdLoading] = useState(true)
   const [mdError, setMdError] = useState<string | null>(null)
   const [recommendLoading, setRecommendLoading] = useState(false)
+  const [showRecommendCancelConfirm, setShowRecommendCancelConfirm] = useState(false)
   const [recommendError, setRecommendError] = useState<string | null>(null)
   const [outfits, setOutfits] = useState<AiMdOutfitRecommendation[]>([])
   const [products, setProducts] = useState<AiMdProductRecommendation[]>([])
@@ -269,6 +276,7 @@ export default function AiMdRecommendations({
   const [saveOpen, setSaveOpen] = useState(false)
   const [savingProducts, setSavingProducts] = useState(false)
   const [feedbackSubmittingKey, setFeedbackSubmittingKey] = useState<string | null>(null)
+  const recommendRequestIdRef = useRef(0)
 
   const selectedMd = useMemo(
     () => mds.find((md) => md.id === selectedMdId) ?? null,
@@ -454,7 +462,10 @@ export default function AiMdRecommendations({
 
   const requestRecommendations = async () => {
     if (userId == null || !selectedMdId || recommendLoading) return
+    const requestId = recommendRequestIdRef.current + 1
+    recommendRequestIdRef.current = requestId
     setRecommendLoading(true)
+    setShowRecommendCancelConfirm(false)
     setRecommendError(null)
     setSelectedOutfits(new Set())
     setSelectedProducts(new Set())
@@ -463,20 +474,32 @@ export default function AiMdRecommendations({
     try {
       if (mode === 'outfits') {
         const result = await fetchAiMdOutfits(userId, selectedMdId)
+        if (recommendRequestIdRef.current !== requestId) return
         setOutfits(result.outfits)
         setProducts([])
       } else {
         const result = await fetchAiMdProducts(userId, selectedMdId)
+        if (recommendRequestIdRef.current !== requestId) return
         setProducts(result.products.slice(0, MAX_AI_MD_PRODUCTS))
         setOutfits([])
       }
     } catch (error) {
+      if (recommendRequestIdRef.current !== requestId) return
       setRecommendError(
         extractApiErrorMessage(error, 'AI MD 추천을 불러오지 못했습니다.'),
       )
     } finally {
-      setRecommendLoading(false)
+      if (recommendRequestIdRef.current === requestId) {
+        setRecommendLoading(false)
+        setShowRecommendCancelConfirm(false)
+      }
     }
+  }
+
+  const cancelRecommendationRequest = () => {
+    recommendRequestIdRef.current += 1
+    setRecommendLoading(false)
+    setShowRecommendCancelConfirm(false)
   }
 
   const toggleOutfit = (key: string) => {
@@ -489,7 +512,7 @@ export default function AiMdRecommendations({
     })
   }
 
-  const openOutfitDetail = (outfit: AiMdOutfitRecommendation) => {
+  const openOutfitDetail = (outfit: AiMdOutfitRecommendation, key: string) => {
     const combination: {
       top?: OutfitModalItem | null
       bottom?: OutfitModalItem | null
@@ -500,6 +523,11 @@ export default function AiMdRecommendations({
       description?: string
       situation?: string
       season?: string
+      saveDisabledMessage?: string
+      saveOverride?: () => Promise<void>
+      saveSuccessMessage?: string
+      saveButtonLabel?: string
+      hideFavoriteAction?: boolean
     } = {
       top: null,
       bottom: null,
@@ -510,6 +538,25 @@ export default function AiMdRecommendations({
       situation: outfit.situation,
       season: outfit.season,
       weatherLabel: outfit.reason || outfit.stylingTip,
+      saveOverride: async () => {
+        if (userId == null || !selectedMdId) {
+          throw new Error('AI MD 추천 정보를 찾을 수 없습니다.')
+        }
+        await saveAiMdOutfit(
+          userId,
+          selectedMdId,
+          toAiMdOutfitSaveRequest(outfit),
+        )
+        setSavedOutfits((current) => new Set([...current, key]))
+        setSelectedOutfits((current) => {
+          const next = new Set(current)
+          next.delete(key)
+          return next
+        })
+      },
+      saveSuccessMessage: 'AI MD 추천 코디를 저장했어요.',
+      saveButtonLabel: '코디 저장하기',
+      hideFavoriteAction: true,
     }
 
     outfit.ownedItems.forEach((item) => {
@@ -836,13 +883,31 @@ export default function AiMdRecommendations({
         zIndex={120}
         panelClassName="max-w-xs"
       >
-        <ModalBody className="px-6 py-8">
+        <ModalBody className="relative px-6 py-8">
+          <button
+            type="button"
+            onClick={() => setShowRecommendCancelConfirm(true)}
+            className="absolute right-4 top-4 rounded-full bg-slate-100 p-1.5 text-slate-500 transition hover:bg-slate-200"
+            aria-label="MD 추천 취소"
+          >
+            <X className="h-4 w-4" />
+          </button>
           <AiMdLoadingSpinner
             message={recommendationLoadingMessage}
             subMessage="잠시만 기다려 주세요."
           />
         </ModalBody>
       </Modal>
+
+      <ExitConfirmModal
+        open={showRecommendCancelConfirm}
+        title="MD 추천을 취소하시겠습니까?"
+        description="추천 요청을 취소하고 이전 화면으로 돌아갑니다."
+        confirmText="추천 취소"
+        cancelText="계속 기다리기"
+        onConfirm={cancelRecommendationRequest}
+        onCancel={() => setShowRecommendCancelConfirm(false)}
+      />
 
       {!recommendLoading && mode === 'outfits' && outfits.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -876,7 +941,7 @@ export default function AiMdRecommendations({
               >
                 <button
                   type="button"
-                  onClick={() => openOutfitDetail(outfit)}
+                  onClick={() => openOutfitDetail(outfit, key)}
                   className="w-full text-left cursor-pointer"
                 >
                   <div className="relative grid grid-cols-2 h-48 bg-slate-100">
