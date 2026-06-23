@@ -23,7 +23,13 @@ import {
   Plus,
 } from "./icons";
 import { Garment } from "@/types/index";
-import { resolveClothesDisplayImageUrl } from "@/utils/clothesImageUrl";
+import { extractApiErrorMessage } from "@/utils/apiError";
+import {
+  isUsableClothesImageUrl,
+  normalizeClothesImageUrlForApi,
+  resolveGarmentImageUrl,
+} from "@/utils/clothesImageUrl";
+import { recommendationWishlistProductCode } from "@/utils/recommendWishlistPayload";
 import GuideTour from "@/components/common/GuideTour"
 
 type ClosetTabView = "owned" | "wishlist" | "favorites";
@@ -63,6 +69,7 @@ export default function ClosetTab({
   const filterRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   const [tourOpen, setTourOpen] = useState(!guideTourCompleted && !isRegisterOpen);
+  const [promotingGarmentId, setPromotingGarmentId] = useState<string | null>(null);
 
   useEffect(() => {
     if(!isRegisterOpen && !guideTourCompleted) {
@@ -247,36 +254,39 @@ export default function ClosetTab({
   };
 
   const handlePromoteToOwned = async (item: Garment) => {
-    const imageUrl = item.userImageUrl ?? item.thumbnailUrl;
-    if (!imageUrl?.startsWith("http")) {
+    if (promotingGarmentId === item.id) return;
+
+    const rawImageUrl = resolveGarmentImageUrl(item);
+    if (!isUsableClothesImageUrl(rawImageUrl)) {
       triggerToast("보유 전환에 필요한 이미지 URL이 없습니다.");
       return;
     }
 
-    // 낙관적 업데이트: API 응답 전에 즉시 UI 반영
-    setClothes((prev) =>
-      prev.map((c) => c.id === item.id ? { ...c, isWishlist: false } : c)
-    );
-    setClosetTab("owned");
+    const clothesId = Number(item.id);
+    if (!Number.isFinite(clothesId)) {
+      triggerToast("옷 정보가 올바르지 않습니다. 다시 시도해 주세요.");
+      return;
+    }
+
+    setPromotingGarmentId(item.id);
 
     try {
-      const updated = await convertWishlistToOwned(Number(item.id), {
-        productCode: item.productCode ?? "UNKNOWN",
+      const updated = await convertWishlistToOwned(clothesId, {
+        productCode: item.productCode ?? recommendationWishlistProductCode(clothesId),
         size: item.size ?? "FREE",
-        userImageUrl: imageUrl,
+        userImageUrl: normalizeClothesImageUrlForApi(rawImageUrl),
         isVerified: false,
       });
-      // 서버 응답으로 최종 상태 확정
-      upsertGarment(updated);
+      const ownedGarment = { ...updated, isWishlist: false };
+      upsertGarment(ownedGarment);
+      setSelectedGarment(ownedGarment);
+      setClosetTab("owned");
       void refreshWardrobeStats();
       triggerToast(`🛍️ "${item.name}" 이(가) 보유 옷장으로 이동했습니다!`);
-    } catch {
-      // 실패 시 롤백
-      setClothes((prev) =>
-        prev.map((c) => c.id === item.id ? { ...c, isWishlist: true } : c)
-      );
-      setClosetTab("wishlist");
-      triggerToast("보유 옷장 전환에 실패했습니다.");
+    } catch (error) {
+      triggerToast(extractApiErrorMessage(error, "보유 옷장 전환에 실패했습니다."));
+    } finally {
+      setPromotingGarmentId(null);
     }
   };
 
@@ -457,10 +467,7 @@ export default function ClosetTab({
             <div ref={gridRef} className="grid grid-cols-2 gap-4 sm:gap-5">
               {filteredClothes.map((item) => {
                 const isSelected = selectedGarment?.id === item.id;
-                const imgSrc = resolveClothesDisplayImageUrl({
-                  userImageUrl: item.userImageUrl,
-                  imageUrl: item.be?.imageUrl ?? item.thumbnailUrl,
-                }) ?? '';
+                const imgSrc = resolveGarmentImageUrl(item);
 
                 return (
                   <GarmentPickerGridCard
@@ -480,14 +487,15 @@ export default function ClosetTab({
                     footer={item.isWishlist ? (
                       <button
                         type="button"
+                        disabled={promotingGarmentId === item.id}
                         onClick={(event) => {
                           event.stopPropagation();
-                          handlePromoteToOwned(item);
+                          void handlePromoteToOwned(item);
                         }}
-                        className="mt-2 w-full h-8 text-xs font-black rounded-lg bg-orange-100 text-orange-900 border border-orange-200 hover:bg-orange-200 transition flex items-center justify-center gap-1 cursor-pointer"
+                        className="mt-2 w-full h-8 text-xs font-black rounded-lg bg-orange-100 text-orange-900 border border-orange-200 hover:bg-orange-200 transition flex items-center justify-center gap-1 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                       >
                         <HeartHandshake className="w-3 h-3 text-orange-700" />
-                        <span>옷장입고</span>
+                        <span>{promotingGarmentId === item.id ? '옷장입고 중…' : '옷장입고'}</span>
                       </button>
                     ) : undefined}
                   />
