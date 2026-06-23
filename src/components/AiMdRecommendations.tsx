@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import axios from 'axios'
 import {
   fetchAiMdOutfits,
@@ -10,8 +10,9 @@ import {
 import { postRecommendationFeedback } from '@/api/recommendations'
 import { connectWishlistClothes, createWishlistClothes } from '@/api/wardrobe'
 import AuthenticatedImage from '@/components/common/AuthenticatedImage'
+import ExitConfirmModal from '@/components/common/ExitConfirmModal'
 import { Modal, ModalBody, ModalFooter, ModalHeader } from '@/components/common/Modal'
-import { Check, Heart, Sparkles } from '@/components/icons'
+import { Check, Heart, Sparkles, X } from '@/components/icons'
 import RecommendProductDetailModal from '@/components/RecommendProductDetailModal'
 import {
   BE_CATEGORY_TO_UI,
@@ -27,6 +28,7 @@ import type {
   AiMdOutfitRecommendation,
   AiMdProductRecommendation,
 } from '@/types/aiMd'
+import type { OutfitModalItem } from '@/components/OutfitDetailModal'
 import type { NaverShoppingProduct, SimilarProductSaveForm } from '@/types/similarProducts'
 import type { Garment } from '@/types'
 import type { UserGender } from '@/utils/genderClothesFilter'
@@ -39,11 +41,40 @@ interface AiMdRecommendationsProps {
   gender: UserGender
   existingGarments: Garment[]
   onWishlistAdded?: () => void
+  onOutfitOpen?: (combination: {
+    top?: OutfitModalItem | null
+    bottom?: OutfitModalItem | null
+    outer?: OutfitModalItem | null
+    shoes?: OutfitModalItem | null
+    weatherLabel?: string
+    bookId?: number | null
+    title?: string
+    description?: string
+    situation?: string
+    season?: string
+    saveDisabledMessage?: string
+    saveOverride?: () => Promise<void>
+    saveSuccessMessage?: string
+    saveButtonLabel?: string
+    hideFavoriteAction?: boolean
+  }) => void
 }
 
 type RecommendationMode = 'outfits' | 'products'
 
 const MAX_AI_MD_PRODUCTS = 40
+
+const AI_MD_CHARACTER_IMAGES = Object.fromEntries(
+  Object.entries(
+    import.meta.glob<string>('../assets/ai-md/*.png', {
+      eager: true,
+      import: 'default',
+    }),
+  ).map(([path, src]) => [
+    path.split('/').pop()?.replace(/\.png$/, ''),
+    src,
+  ]),
+) as Partial<Record<AiMdId, string>>
 
 const seasonOptions = [
   { code: '', label: '선택 안 함' },
@@ -191,11 +222,38 @@ function outfitKey(outfit: AiMdOutfitRecommendation, index: number) {
   return `${index}-${outfit.title}`
 }
 
+function categoryToRole(category: string | null | undefined): 'top' | 'bottom' | 'outer' | 'shoes' {
+  const value = (category ?? '').toUpperCase()
+  if (value === 'BOTTOM') return 'bottom'
+  if (value === 'OUTER') return 'outer'
+  if (value === 'SHOES') return 'shoes'
+  return 'top'
+}
+
+function AiMdLoadingSpinner({
+  message,
+  subMessage,
+}: {
+  message: string
+  subMessage?: string
+}) {
+  return (
+    <div className="flex flex-col items-center text-center">
+      <div className="h-12 w-12 rounded-full border-4 border-slate-100 border-t-[#111827] animate-spin" />
+      <p className="mt-5 text-sm font-black text-slate-900">{message}</p>
+      {subMessage ? (
+        <p className="mt-2 text-xs font-bold text-slate-400">{subMessage}</p>
+      ) : null}
+    </div>
+  )
+}
+
 export default function AiMdRecommendations({
   userId,
   gender,
   existingGarments,
   onWishlistAdded,
+  onOutfitOpen,
 }: AiMdRecommendationsProps) {
   const { showToast } = useToast() || { showToast: () => {} }
   const [mds, setMds] = useState<AiMd[]>([])
@@ -204,6 +262,7 @@ export default function AiMdRecommendations({
   const [mdLoading, setMdLoading] = useState(true)
   const [mdError, setMdError] = useState<string | null>(null)
   const [recommendLoading, setRecommendLoading] = useState(false)
+  const [showRecommendCancelConfirm, setShowRecommendCancelConfirm] = useState(false)
   const [recommendError, setRecommendError] = useState<string | null>(null)
   const [outfits, setOutfits] = useState<AiMdOutfitRecommendation[]>([])
   const [products, setProducts] = useState<AiMdProductRecommendation[]>([])
@@ -217,6 +276,7 @@ export default function AiMdRecommendations({
   const [saveOpen, setSaveOpen] = useState(false)
   const [savingProducts, setSavingProducts] = useState(false)
   const [feedbackSubmittingKey, setFeedbackSubmittingKey] = useState<string | null>(null)
+  const recommendRequestIdRef = useRef(0)
 
   const selectedMd = useMemo(
     () => mds.find((md) => md.id === selectedMdId) ?? null,
@@ -402,7 +462,10 @@ export default function AiMdRecommendations({
 
   const requestRecommendations = async () => {
     if (userId == null || !selectedMdId || recommendLoading) return
+    const requestId = recommendRequestIdRef.current + 1
+    recommendRequestIdRef.current = requestId
     setRecommendLoading(true)
+    setShowRecommendCancelConfirm(false)
     setRecommendError(null)
     setSelectedOutfits(new Set())
     setSelectedProducts(new Set())
@@ -411,20 +474,32 @@ export default function AiMdRecommendations({
     try {
       if (mode === 'outfits') {
         const result = await fetchAiMdOutfits(userId, selectedMdId)
+        if (recommendRequestIdRef.current !== requestId) return
         setOutfits(result.outfits)
         setProducts([])
       } else {
         const result = await fetchAiMdProducts(userId, selectedMdId)
+        if (recommendRequestIdRef.current !== requestId) return
         setProducts(result.products.slice(0, MAX_AI_MD_PRODUCTS))
         setOutfits([])
       }
     } catch (error) {
+      if (recommendRequestIdRef.current !== requestId) return
       setRecommendError(
         extractApiErrorMessage(error, 'AI MD 추천을 불러오지 못했습니다.'),
       )
     } finally {
-      setRecommendLoading(false)
+      if (recommendRequestIdRef.current === requestId) {
+        setRecommendLoading(false)
+        setShowRecommendCancelConfirm(false)
+      }
     }
+  }
+
+  const cancelRecommendationRequest = () => {
+    recommendRequestIdRef.current += 1
+    setRecommendLoading(false)
+    setShowRecommendCancelConfirm(false)
   }
 
   const toggleOutfit = (key: string) => {
@@ -435,6 +510,80 @@ export default function AiMdRecommendations({
       else next.add(key)
       return next
     })
+  }
+
+  const openOutfitDetail = (outfit: AiMdOutfitRecommendation, key: string) => {
+    const combination: {
+      top?: OutfitModalItem | null
+      bottom?: OutfitModalItem | null
+      outer?: OutfitModalItem | null
+      shoes?: OutfitModalItem | null
+      weatherLabel?: string
+      title?: string
+      description?: string
+      situation?: string
+      season?: string
+      saveDisabledMessage?: string
+      saveOverride?: () => Promise<void>
+      saveSuccessMessage?: string
+      saveButtonLabel?: string
+      hideFavoriteAction?: boolean
+    } = {
+      top: null,
+      bottom: null,
+      outer: null,
+      shoes: null,
+      title: outfit.title,
+      description: outfit.description,
+      situation: outfit.situation,
+      season: outfit.season,
+      weatherLabel: outfit.reason || outfit.stylingTip,
+      saveOverride: async () => {
+        if (userId == null || !selectedMdId) {
+          throw new Error('AI MD 추천 정보를 찾을 수 없습니다.')
+        }
+        await saveAiMdOutfit(
+          userId,
+          selectedMdId,
+          toAiMdOutfitSaveRequest(outfit),
+        )
+        setSavedOutfits((current) => new Set([...current, key]))
+        setSelectedOutfits((current) => {
+          const next = new Set(current)
+          next.delete(key)
+          return next
+        })
+      },
+      saveSuccessMessage: 'AI MD 추천 코디를 저장했어요.',
+      saveButtonLabel: '코디 저장하기',
+      hideFavoriteAction: true,
+    }
+
+    outfit.ownedItems.forEach((item) => {
+      const role = categoryToRole(item.category)
+      if (combination[role]) return
+      combination[role] = {
+        clothesId: item.clothesId,
+        name: item.name,
+        brand: item.brandName,
+        imageUrl: item.imageUrl,
+        userImageUrl: item.userImageUrl ?? undefined,
+        category: item.category,
+      }
+    })
+
+    outfit.externalProducts.forEach((product) => {
+      const role = categoryToRole(inferCategory(product))
+      if (combination[role]) return
+      combination[role] = {
+        name: stripHtml(product.title),
+        brand: product.brand || product.mallName,
+        imageUrl: product.image,
+        category: inferCategory(product),
+      }
+    })
+
+    onOutfitOpen?.(combination)
   }
 
   const saveChosenOutfits = async () => {
@@ -605,6 +754,10 @@ export default function AiMdRecommendations({
     )
   }
 
+  const recommendationLoadingMessage = `${selectedMd?.name ?? 'AI'} MD가 ${
+    mode === 'outfits' ? '코디를' : '상품을'
+  } 추천해주고 있습니다.`
+
   return (
     <div className="space-y-5">
       <div>
@@ -612,39 +765,50 @@ export default function AiMdRecommendations({
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {mds.map((md) => {
             const selected = md.id === selectedMdId
+            const characterImage = AI_MD_CHARACTER_IMAGES[md.id]
             return (
               <button
                 key={md.id}
                 type="button"
                 disabled={recommendLoading}
                 onClick={() => selectMd(md.id)}
-                className={`min-h-28 rounded-2xl border p-3 text-left transition hover:-translate-y-0.5 disabled:opacity-60 ${
+                className={`min-h-40 rounded-2xl border p-3 text-left transition hover:-translate-y-0.5 disabled:opacity-60 ${
                   selected
                     ? 'border-[#111827] bg-[#111827] text-white ring-2 ring-[#C4B5FD]'
                     : 'border-slate-100 bg-slate-50 text-slate-800 hover:bg-white hover:shadow-md'
                 }`}
               >
-                <div className="flex items-center justify-between gap-2">
-                  <strong className="text-sm font-black">{md.name}</strong>
-                  {selected && <Check className="w-4 h-4 text-[#C4B5FD]" />}
+                <div className="grid grid-cols-[64px_minmax(0,1fr)] items-start">
+                  <img
+                    src={characterImage}
+                    alt=""
+                    className="h-36 w-auto object-contain object-bottom bg-transparent"
+                  />
+                  <div className="min-w-0 pt-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <strong className="truncate text-sm font-black">{md.name}</strong>
+                      {selected && <Check className="w-4 h-4 shrink-0 text-[#C4B5FD]" />}
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {md.styleNames.slice(0, 3).map((style) => (
+                        <span
+                          key={style}
+                          className={`max-w-full rounded-full px-1.5 py-0.5 text-[9px] font-black leading-tight ${
+                            selected ? 'bg-white/10 text-white/80' : 'bg-white text-slate-500'
+                          }`}
+                          title={style}
+                        >
+                          {style}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-                <p className={`mt-2 text-[10px] font-bold leading-relaxed line-clamp-2 ${
+                <p className={`mt-3 text-[9px] font-bold leading-relaxed line-clamp-2 ${
                   selected ? 'text-white/70' : 'text-slate-400'
                 }`}>
                   {md.description}
                 </p>
-                <div className="mt-2 flex flex-wrap gap-1">
-                  {md.styleNames.slice(0, 3).map((style) => (
-                    <span
-                      key={style}
-                      className={`rounded-full px-2 py-0.5 text-[9px] font-black ${
-                        selected ? 'bg-white/10 text-white/80' : 'bg-white text-slate-500'
-                      }`}
-                    >
-                      {style}
-                    </span>
-                  ))}
-                </div>
               </button>
             )
           })}
@@ -708,6 +872,43 @@ export default function AiMdRecommendations({
         </div>
       )}
 
+      <Modal
+        open={recommendLoading}
+        onClose={() => {}}
+        preventClose
+        closeOnBackdrop={false}
+        closeOnEscape={false}
+        size="sm"
+        placement="center"
+        zIndex={120}
+        panelClassName="max-w-xs"
+      >
+        <ModalBody className="relative px-6 py-8">
+          <button
+            type="button"
+            onClick={() => setShowRecommendCancelConfirm(true)}
+            className="absolute right-4 top-4 rounded-full bg-slate-100 p-1.5 text-slate-500 transition hover:bg-slate-200"
+            aria-label="MD 추천 취소"
+          >
+            <X className="h-4 w-4" />
+          </button>
+          <AiMdLoadingSpinner
+            message={recommendationLoadingMessage}
+            subMessage="잠시만 기다려 주세요."
+          />
+        </ModalBody>
+      </Modal>
+
+      <ExitConfirmModal
+        open={showRecommendCancelConfirm}
+        title="MD 추천을 취소하시겠습니까?"
+        description="추천 요청을 취소하고 이전 화면으로 돌아갑니다."
+        confirmText="추천 취소"
+        cancelText="계속 기다리기"
+        onConfirm={cancelRecommendationRequest}
+        onCancel={() => setShowRecommendCancelConfirm(false)}
+      />
+
       {!recommendLoading && mode === 'outfits' && outfits.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {outfits.map((outfit, index) => {
@@ -730,7 +931,7 @@ export default function AiMdRecommendations({
             return (
               <article
                 key={key}
-                className={`rounded-2xl border overflow-hidden bg-white transition ${
+                className={`relative rounded-2xl border overflow-hidden bg-white transition hover:-translate-y-0.5 hover:shadow-md ${
                   selected
                     ? 'border-[#111827] ring-2 ring-[#C4B5FD]'
                     : saved
@@ -740,9 +941,8 @@ export default function AiMdRecommendations({
               >
                 <button
                   type="button"
-                  disabled={saved || savingOutfits}
-                  onClick={() => toggleOutfit(key)}
-                  className="w-full text-left disabled:cursor-default"
+                  onClick={() => openOutfitDetail(outfit, key)}
+                  className="w-full text-left cursor-pointer"
                 >
                   <div className="relative grid grid-cols-2 h-48 bg-slate-100">
                     {items.slice(0, 4).map((item, itemIndex) => (
@@ -770,15 +970,6 @@ export default function AiMdRecommendations({
                         </span>
                       </div>
                     ))}
-                    <span className={`absolute top-2 right-2 min-w-8 h-8 px-2 rounded-full grid place-items-center text-[10px] font-black shadow ${
-                      saved
-                        ? 'bg-emerald-500 text-white'
-                        : selected
-                          ? 'bg-[#111827] text-white'
-                          : 'bg-white/90 text-slate-500'
-                    }`}>
-                      {saved ? '저장됨' : <Check className="w-4 h-4" />}
-                    </span>
                   </div>
                   <div className="p-4">
                     <div className="flex flex-wrap gap-1.5">
@@ -804,6 +995,25 @@ export default function AiMdRecommendations({
                       </p>
                     </div>
                   </div>
+                </button>
+                <button
+                  type="button"
+                  disabled={saved || savingOutfits}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    toggleOutfit(key)
+                  }}
+                  aria-pressed={selected || saved}
+                  aria-label={saved ? '저장된 코디' : selected ? '코디 선택 해제' : '코디 선택'}
+                  className={`absolute top-2 right-2 z-10 min-w-8 h-8 px-2 rounded-full grid place-items-center text-[10px] font-black shadow transition disabled:cursor-default ${
+                    saved
+                      ? 'bg-emerald-500 text-white'
+                      : selected
+                        ? 'bg-[#111827] text-white'
+                        : 'bg-white/90 text-slate-500 hover:bg-white hover:text-[#111827]'
+                  }`}
+                >
+                  {saved ? '저장됨' : <Check className="w-4 h-4" />}
                 </button>
               </article>
             )
