@@ -10,7 +10,7 @@ import {
 } from '@/components/icons'
 import { createFeedComment, fetchFeedComments } from '@/api/feed'
 import type { FeedComment, FeedPost } from '@/types/feed'
-import { countFeedComments, FEED_COMMENTS_POLL_MS } from '@/utils/feedComments'
+import { countFeedComments, FEED_COMMENTS_POLL_MS, canReplyToFeedComment, resolveReplyParentCommentId } from '@/utils/feedComments'
 
 function formatRelativeTime(value: string): string {
   const date = new Date(value)
@@ -128,14 +128,16 @@ export default function FeedPostCard({
     }
   }
 
-  const handleSubmitReply = async (parentId: number) => {
+  const handleSubmitReply = async (targetId: number) => {
     const content = replyDraft.trim()
     if (!content || replySubmitting) return
+    const parentCommentId = resolveReplyParentCommentId(comments, targetId)
+    if (parentCommentId == null) return
     setReplySubmitting(true)
     const prev = replyDraft
     setReplyDraft('')
     try {
-      await createFeedComment(post.feedPostId, { content, parentCommentId: parentId })
+      await createFeedComment(post.feedPostId, { content, parentCommentId })
       await refreshComments()
       setReplyingToId(null)
     } catch {
@@ -150,21 +152,21 @@ export default function FeedPostCard({
     setReplyDraft('')
   }
 
-  const replyInput = (parentId: number) =>
-    replyingToId === parentId ? (
+  const replyInput = (targetId: number) =>
+    replyingToId === targetId ? (
       <div className="ml-4 flex gap-2 border-l-2 border-slate-100 pl-3 pt-1">
         <input
           type="text"
           value={replyDraft}
           onChange={(e) => setReplyDraft(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter') void handleSubmitReply(parentId) }}
+          onKeyDown={(e) => { if (e.key === 'Enter') void handleSubmitReply(targetId) }}
           placeholder="댓글 달기…"
           autoFocus
           className="flex-1 rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-[#1E3A8A]"
         />
         <button
           type="button"
-          onClick={() => void handleSubmitReply(parentId)}
+          onClick={() => void handleSubmitReply(targetId)}
           disabled={replySubmitting || !replyDraft.trim()}
           className="shrink-0 rounded-xl bg-[#1E3A8A] px-3 py-1.5 text-xs font-black text-[#BBF7D0] cursor-pointer disabled:opacity-50"
         >
@@ -412,13 +414,13 @@ export default function FeedPostCard({
                     {renderAuthorName(c.author, 'font-black mr-1.5 inline')}
                     <span className="font-normal">{c.content}</span>
                   </div>
-                  {c.author.userId !== userId ? (
+                  {canReplyToFeedComment(c, userId, { allowOwnThreadReply: true }) ? (
                     <button
                       type="button"
                       onClick={() => openReply(c.feedCommentId)}
                       className={`shrink-0 text-[10px] font-black cursor-pointer ${replyingToId === c.feedCommentId ? 'text-[#1E3A8A]' : 'text-slate-400'}`}
                     >
-                      댓글
+                      답글
                     </button>
                   ) : null}
                 </div>
@@ -434,13 +436,13 @@ export default function FeedPostCard({
                             {renderAuthorName(r.author, 'font-black mr-1.5 inline')}
                             <span className="font-normal">{r.content}</span>
                           </div>
-                          {r.author.userId !== userId ? (
+                          {canReplyToFeedComment(r, userId) ? (
                             <button
                               type="button"
                               onClick={() => openReply(r.feedCommentId)}
                               className={`shrink-0 text-[10px] font-black cursor-pointer ${replyingToId === r.feedCommentId ? 'text-[#1E3A8A]' : 'text-slate-400'}`}
                             >
-                              댓글
+                              답글
                             </button>
                           ) : null}
                         </div>

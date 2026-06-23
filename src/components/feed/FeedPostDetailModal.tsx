@@ -23,7 +23,7 @@ import { resolveGarmentColorCode } from '@/data/garmentColors'
 import { CATEGORY_ITEM_TYPES } from '@/data/categoryItemTypes'
 import type { FeedComment, FeedPost } from '@/types/feed'
 import type { Garment } from '@/types'
-import { countFeedComments, FEED_COMMENTS_POLL_MS } from '@/utils/feedComments'
+import { countFeedComments, FEED_COMMENTS_POLL_MS, canReplyToFeedComment, resolveReplyParentCommentId } from '@/utils/feedComments'
 import { extractApiErrorMessage } from '@/utils/apiError'
 import {
   DUPLICATE_WISHLIST_MESSAGE,
@@ -190,22 +190,31 @@ function formatFeedDate(value: string): string {
 
 function InlineEditableComment({
   comment,
+  currentUserId,
   bgClassName,
   onSave,
   onDelete,
   onReply,
   onViewProfile,
+  allowOwnThreadReply = false,
 }: {
   comment: FeedComment
+  currentUserId: number
   bgClassName: string
   onSave: (commentId: number, content: string) => Promise<void>
   onDelete: (commentId: number) => void
   onReply?: () => void
   onViewProfile?: (userId: number) => void
+  allowOwnThreadReply?: boolean
 }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(comment.content)
   const [saving, setSaving] = useState(false)
+  const isMine = comment.author.userId === currentUserId
+  const showReply = Boolean(
+    onReply
+    && canReplyToFeedComment(comment, currentUserId, { allowOwnThreadReply }),
+  )
 
   const handleSave = async () => {
     const trimmed = draft.trim()
@@ -279,7 +288,7 @@ function InlineEditableComment({
         </div>
         {!editing ? (
           <div className="flex shrink-0 gap-1">
-            {comment.isOwner ? (
+            {isMine ? (
               <>
                 <button
                   type="button"
@@ -295,14 +304,23 @@ function InlineEditableComment({
                 >
                   삭제
                 </button>
+                {showReply ? (
+                  <button
+                    type="button"
+                    onClick={onReply}
+                    className="text-[10px] font-black text-[#1E3A8A] cursor-pointer"
+                  >
+                    답글
+                  </button>
+                ) : null}
               </>
-            ) : onReply ? (
+            ) : showReply ? (
               <button
                 type="button"
                 onClick={onReply}
                 className="text-[10px] font-black text-[#1E3A8A] cursor-pointer"
               >
-                댓글
+                답글
               </button>
             ) : null}
           </div>
@@ -314,15 +332,17 @@ function InlineEditableComment({
 
 function CommentItem({
   comment,
+  userId,
   onDelete,
   onSave,
   onSubmitReply,
   onViewProfile,
 }: {
   comment: FeedComment
+  userId: number
   onDelete: (commentId: number) => void
   onSave: (commentId: number, content: string) => Promise<void>
-  onSubmitReply: (parentCommentId: number, content: string) => Promise<void>
+  onSubmitReply: (targetCommentId: number, content: string) => Promise<void>
   onViewProfile?: (userId: number) => void
 }) {
   // 현재 인라인 입력이 열린 댓글 ID (null = 닫힘)
@@ -390,10 +410,12 @@ function CommentItem({
     <div className="space-y-2">
       <InlineEditableComment
         comment={comment}
+        currentUserId={userId}
         bgClassName="bg-slate-50"
         onSave={onSave}
         onDelete={onDelete}
         onReply={() => openReply(comment.feedCommentId)}
+        allowOwnThreadReply
         onViewProfile={onViewProfile}
       />
       {inlineInput(comment.feedCommentId)}
@@ -404,6 +426,7 @@ function CommentItem({
             <div key={reply.feedCommentId} className="space-y-2">
               <InlineEditableComment
                 comment={reply}
+                currentUserId={userId}
                 bgClassName="bg-white"
                 onSave={onSave}
                 onDelete={onDelete}
@@ -622,8 +645,10 @@ export default function FeedPostDetailModal({
     }
   }
 
-  const handleSubmitReply = async (parentCommentId: number, content: string) => {
+  const handleSubmitReply = async (targetCommentId: number, content: string) => {
     if (!post) return
+    const parentCommentId = resolveReplyParentCommentId(comments, targetCommentId)
+    if (parentCommentId == null) return
     syncPost({ ...post, commentCount: post.commentCount + 1 })
     try {
       await createFeedComment(post.feedPostId, { content, parentCommentId })
@@ -926,6 +951,7 @@ export default function FeedPostDetailModal({
                       <CommentItem
                         key={comment.feedCommentId}
                         comment={comment}
+                        userId={userId}
                         onDelete={handleDeleteComment}
                         onSave={handleSaveComment}
                         onSubmitReply={handleSubmitReply}
