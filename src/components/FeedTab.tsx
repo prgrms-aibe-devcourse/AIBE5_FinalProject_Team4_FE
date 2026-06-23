@@ -191,7 +191,9 @@ export default function FeedTab({
               onToggleLike={() => void handleToggleLike(post)}
               onToggleSave={() => void handleToggleSave(post)}
               onShare={() => void handleShare(post.feedPostId)}
-              onCommentAdded={() => updatePostInList({ ...post, commentCount: post.commentCount + 1 })}
+              onCommentCountChange={(commentCount) =>
+                updatePostInList({ ...post, commentCount })
+              }
               onViewProfile={onViewProfile}
               likeSubmitting={
                 submittingPostId === post.feedPostId && submittingAction === 'like'

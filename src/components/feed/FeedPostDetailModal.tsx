@@ -23,6 +23,7 @@ import { resolveGarmentColorCode } from '@/data/garmentColors'
 import { CATEGORY_ITEM_TYPES } from '@/data/categoryItemTypes'
 import type { FeedComment, FeedPost } from '@/types/feed'
 import type { Garment } from '@/types'
+import { countFeedComments, FEED_COMMENTS_POLL_MS } from '@/utils/feedComments'
 import { extractApiErrorMessage } from '@/utils/apiError'
 import {
   DUPLICATE_WISHLIST_MESSAGE,
@@ -480,17 +481,25 @@ export default function FeedPostDetailModal({
     }
   }, [])
 
-  const loadComments = useCallback(async (id: number) => {
-    setCommentsLoading(true)
+  const loadComments = useCallback(async (id: number, showLoading = true) => {
+    if (showLoading) setCommentsLoading(true)
     try {
       const data = await fetchFeedComments(id)
       setComments(data)
+      setPost((prev) => {
+        if (!prev) return prev
+        const nextCount = countFeedComments(data)
+        if (prev.commentCount === nextCount) return prev
+        const next = { ...prev, commentCount: nextCount }
+        onPostUpdated(next)
+        return next
+      })
     } catch {
-      setComments([])
+      if (showLoading) setComments([])
     } finally {
-      setCommentsLoading(false)
+      if (showLoading) setCommentsLoading(false)
     }
-  }, [])
+  }, [onPostUpdated])
 
   useEffect(() => {
     if (!open || postId == null) {
@@ -505,6 +514,14 @@ export default function FeedPostDetailModal({
     void loadDetail(postId)
     void loadComments(postId)
   }, [open, postId, loadDetail, loadComments])
+
+  useEffect(() => {
+    if (!open || postId == null) return
+    const intervalId = window.setInterval(() => {
+      void loadComments(postId, false)
+    }, FEED_COMMENTS_POLL_MS)
+    return () => window.clearInterval(intervalId)
+  }, [open, postId, loadComments])
 
   const syncPost = (next: FeedPost) => {
     setPost(next)

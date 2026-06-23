@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type MouseEvent } from 'react'
+import { useCallback, useEffect, useMemo, useState, type MouseEvent } from 'react'
 import AuthenticatedImage from '@/components/common/AuthenticatedImage'
 import {
   ChevronLeft,
@@ -10,6 +10,7 @@ import {
 } from '@/components/icons'
 import { createFeedComment, fetchFeedComments } from '@/api/feed'
 import type { FeedComment, FeedPost } from '@/types/feed'
+import { countFeedComments, FEED_COMMENTS_POLL_MS } from '@/utils/feedComments'
 
 function formatRelativeTime(value: string): string {
   const date = new Date(value)
@@ -36,7 +37,7 @@ interface FeedPostCardProps {
   onToggleLike: () => void
   onToggleSave: () => void
   onShare: () => void
-  onCommentAdded?: () => void
+  onCommentCountChange?: (commentCount: number) => void
   onViewProfile?: (userId: number) => void
   likeSubmitting?: boolean
   saveSubmitting?: boolean
@@ -49,7 +50,7 @@ export default function FeedPostCard({
   onToggleLike,
   onToggleSave,
   onShare,
-  onCommentAdded,
+  onCommentCountChange,
   onViewProfile,
   likeSubmitting = false,
   saveSubmitting = false,
@@ -58,7 +59,6 @@ export default function FeedPostCard({
   const [commentsOpen, setCommentsOpen] = useState(false)
   const [comments, setComments] = useState<FeedComment[]>([])
   const [commentsLoading, setCommentsLoading] = useState(false)
-  const [commentsFetched, setCommentsFetched] = useState(false)
   const [commentDraft, setCommentDraft] = useState('')
   const [commentSubmitting, setCommentSubmitting] = useState(false)
   const [replyingToId, setReplyingToId] = useState<number | null>(null)
@@ -74,30 +74,41 @@ export default function FeedPostCard({
     setImageIndex(0)
     setCommentsOpen(false)
     setComments([])
-    setCommentsFetched(false)
     setCommentDraft('')
     setReplyingToId(null)
     setReplyDraft('')
   }, [post.feedPostId])
 
+  const syncComments = useCallback(async (showLoading = false) => {
+    if (showLoading) setCommentsLoading(true)
+    try {
+      const data = await fetchFeedComments(post.feedPostId)
+      setComments(data)
+      onCommentCountChange?.(countFeedComments(data))
+    } finally {
+      if (showLoading) setCommentsLoading(false)
+    }
+  }, [post.feedPostId, onCommentCountChange])
+
+  useEffect(() => {
+    if (!commentsOpen) return
+    const intervalId = window.setInterval(() => {
+      void syncComments(false)
+    }, FEED_COMMENTS_POLL_MS)
+    return () => window.clearInterval(intervalId)
+  }, [commentsOpen, syncComments])
+
   const handleToggleComments = async (e: React.MouseEvent) => {
     e.stopPropagation()
-    if (!commentsOpen && !commentsFetched) {
-      setCommentsLoading(true)
-      try {
-        const data = await fetchFeedComments(post.feedPostId)
-        setComments(data)
-        setCommentsFetched(true)
-      } finally {
-        setCommentsLoading(false)
-      }
+    const willOpen = !commentsOpen
+    if (willOpen) {
+      await syncComments(true)
     }
-    setCommentsOpen((prev) => !prev)
+    setCommentsOpen(willOpen)
   }
 
   const refreshComments = async () => {
-    const data = await fetchFeedComments(post.feedPostId)
-    setComments(data)
+    await syncComments(false)
   }
 
   const handleSubmitComment = async (e: React.FormEvent) => {
@@ -110,7 +121,6 @@ export default function FeedPostCard({
     try {
       await createFeedComment(post.feedPostId, { content, parentCommentId: null })
       await refreshComments()
-      onCommentAdded?.()
     } catch {
       setCommentDraft(prev)
     } finally {
@@ -127,7 +137,6 @@ export default function FeedPostCard({
     try {
       await createFeedComment(post.feedPostId, { content, parentCommentId: parentId })
       await refreshComments()
-      onCommentAdded?.()
       setReplyingToId(null)
     } catch {
       setReplyDraft(prev)
