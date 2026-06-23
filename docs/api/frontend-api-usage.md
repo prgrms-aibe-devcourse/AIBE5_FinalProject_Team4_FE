@@ -82,7 +82,7 @@ fetch('/api/chat-gamyagi') // mock 경로 — 공통 api client·BE 계약 경�
 api.get('api/v1/categories')
 ```
 
-홈 추천은 라벨별로 다릅니다. OOTD(`RECO-001`), 취향 기반 추천(`RECO-002`), 유사 상품(`RECO-003`), AI MD(`RECO-006`), 어울리는 옷(`RECO-005`) 모두 실제 BE API를 호출합니다. 유사 상품(`RECO-003`)은 `src/api/similarProducts.ts`, AI MD(`RECO-006`)는 `src/api/aiMd.ts`, 나머지는 `src/api/recommendations.ts`를 통해 연동됩니다. `RECO-003`의 기준 옷은 `GET /api/v1/users/{userId}/clothes`에서 반환된 `OWNED`와 `WISHLIST` 옷을 모두 허용하며, 유사 상품 결과는 최대 50개 표시를 기준으로 합니다. `RECO-005`는 `limitPerCategory=50`을 기본값으로 사용합니다. BE 계약: `limitPerCategory` 기본 `5`, 허용 `1`~`50`. ([implementation-gaps.md](../frontend/implementation-gaps.md), [home-recommendation.md](../features/home-recommendation.md))
+홈 추천은 라벨별로 다릅니다. OOTD(`RECO-001`), 취향 기반 추천(`RECO-002`), 유사 상품(`RECO-003`), 어울리는 옷(`RECO-004`), AI MD(`RECO-005`) 모두 실제 BE API를 호출합니다. 유사 상품(`RECO-003`)은 `src/api/similarProducts.ts`, AI MD(`RECO-005`)는 `src/api/aiMd.ts`, 나머지는 `src/api/recommendations.ts`를 통해 연동됩니다. `RECO-003`의 기준 옷은 `GET /api/v1/users/{userId}/clothes`에서 반환된 `OWNED`와 `WISHLIST` 옷을 모두 허용하며, 유사 상품 결과는 최대 50개 표시를 기준으로 합니다. `RECO-004`는 `limitPerCategory=50`을 기본값으로 사용합니다. BE 계약: `limitPerCategory` 기본 `5`, 허용 `1`~`50`. ([implementation-gaps.md](../frontend/implementation-gaps.md), [home-recommendation.md](../features/home-recommendation.md))
 
 직접 `fetch`를 사용하는 경우에도 인증, 에러 처리, base URL 기준이 동일하게 적용되어야 하므로 공통 API 클라이언트로 옮기는 것을 우선합니다.
 
@@ -158,7 +158,7 @@ API를 호출하는 화면은 아래 상태를 구분합니다.
 | 탈퇴 계정 복구 | POST | `/api/v1/auth/restore-withdrawn` | 탈퇴 후 30일 이내 계정으로 OAuth 로그인을 시도한 경우, 사용자 확인 후 계정 복구와 인증 쿠키 발급 |
 | 내 프로필 | GET | `/api/v1/users/profile` | 로그인 사용자 본인의 마이페이지 정보와 편집 초기값 표시. 온보딩 완료 전 `nickname`, `birthDate`는 비어 있을 수 있음 |
 | 닉네임 중복 확인 | GET | `/api/v1/users/nickname/check` | 온보딩/마이페이지 편집에서 닉네임 규칙과 중복 여부 실시간 확인 |
-| 프로필 이미지 | POST | `/api/v1/users/profile/image` | 프로필 사진 파일을 업로드하고 반환된 `imageUrl`을 프로필 저장 요청에 사용 |
+| 프로필 이미지 | POST | `/api/v1/users/profile/image` | 룩피드 프로필 수정에서 프로필 사진 파일을 업로드하고 반환된 `imageUrl`을 프로필 저장 요청에 사용 |
 | 내 프로필 | PATCH | `/api/v1/users/profile` | 닉네임, 생년월일, 사용자 성별, 지역, 프로필 이미지, 자기소개, 외부 링크 저장 |
 | 온보딩 완료 | POST | `/api/v1/users/onboarding` | 가입 직후 프로필, 선호 스타일, 마케팅 정보 수신 동의 여부를 한 번에 저장 |
 | 선호 스타일 | POST | `/api/v1/users/styles` | 마이페이지 편집에서 선택한 선호 스타일 저장 |

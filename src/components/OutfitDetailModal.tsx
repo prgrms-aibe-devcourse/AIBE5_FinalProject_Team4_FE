@@ -32,9 +32,15 @@ interface OutfitDetailModalProps {
     bookId?: number
     title?: string
     description?: string
+    saveDisabledMessage?: string
+    saveOverride?: () => Promise<void>
+    saveSuccessMessage?: string
+    saveButtonLabel?: string
+    hideFavoriteAction?: boolean
   } | null
   onClose: () => void
   onSaved?: () => void
+  onFavoriteCreated?: (outfitId: number) => void
   userId?: number | null
   clothes?: Garment[]
 }
@@ -44,6 +50,7 @@ export default function OutfitDetailModal({
   combination,
   onClose,
   onSaved,
+  onFavoriteCreated,
   userId,
   clothes = []
 }: OutfitDetailModalProps) {
@@ -64,6 +71,9 @@ export default function OutfitDetailModal({
   const { showToast } = useToast()
   const [favLoading, setFavLoading] = useState(false)
   const [favorite, setFavorite] = useState<boolean | null>(null)
+  const saveDisabledMessage = editCombo?.saveDisabledMessage as string | undefined
+  const isSaveDisabled = Boolean(saveDisabledMessage)
+  const saveOverride = editCombo?.saveOverride as (() => Promise<void>) | undefined
 
   // 모달 닫힐 때 isDirty 초기화
   useEffect(() => {
@@ -87,6 +97,10 @@ export default function OutfitDetailModal({
   }
 
   const toggleFavorite = async () => {
+    if (isSaveDisabled) {
+      showToast('info', saveDisabledMessage!)
+      return
+    }
     if (!editCombo?.outfitId || !editCombo?.bookId) return
     const next = !favorite
     setFavLoading(true)
@@ -110,6 +124,26 @@ export default function OutfitDetailModal({
   }
 
   const createAndFavorite = async () => {
+    if (isSaveDisabled) {
+      showToast('info', saveDisabledMessage!)
+      return
+    }
+    if (saveOverride) {
+      setFavLoading(true)
+      try {
+        await saveOverride()
+        showToast('success', editCombo.saveSuccessMessage ?? '코디가 저장되었습니다.')
+        onSaved?.()
+        setIsDirty(false)
+        onClose()
+      } catch (err) {
+        console.error('Failed to save outfit with override', err)
+        showToast('error', '코디 저장에 실패했습니다.')
+      } finally {
+        setFavLoading(false)
+      }
+      return
+    }
     if (!editCombo?.bookId) { showToast('error', '코디북 정보를 불러오지 못했습니다.'); return }
     setFavLoading(true)
     try {
@@ -129,10 +163,14 @@ export default function OutfitDetailModal({
           .filter(it => it.item != null && it.item?.clothesId != null)
           .map(it => ({ clothesId: it.item!.clothesId as number, itemRole: it.itemRole, layerOrder: it.layerOrder })),
       }
-      await createOutfit(editCombo.bookId, payload)
+      const result = await createOutfit(editCombo.bookId, payload)
       setFavorite(true)
       showToast('success', '코디가 저장되고 좋아요가 되었습니다!')
-      onSaved?.()
+      if (onFavoriteCreated) {
+        onFavoriteCreated(result.outfitId)
+      } else {
+        onSaved?.()
+      }
       setIsDirty(false)
       onClose()
     } catch (err) {
@@ -168,6 +206,26 @@ export default function OutfitDetailModal({
   if (!open || !combination || !editCombo) return null
 
   const handleSave = async () => {
+    if (isSaveDisabled) {
+      showToast('info', saveDisabledMessage!)
+      return
+    }
+    if (saveOverride) {
+      setSaving(true)
+      try {
+        await saveOverride()
+        showToast('success', editCombo.saveSuccessMessage ?? '코디가 저장되었습니다.')
+        onSaved?.()
+        setIsDirty(false)
+        onClose()
+      } catch (err) {
+        console.error('Failed to save outfit with override', err)
+        showToast('error', '코디 저장에 실패했습니다.')
+      } finally {
+        setSaving(false)
+      }
+      return
+    }
     if (!editCombo.bookId) { showToast('error', '코디북 정보를 불러오지 못했습니다.'); return }
     setSaving(true)
     try {
@@ -248,6 +306,14 @@ export default function OutfitDetailModal({
   }
 
   const handleItemReplace = (category: string) => {
+    if (isSaveDisabled) {
+      showToast('info', saveDisabledMessage!)
+      return
+    }
+    if (saveOverride) {
+      showToast('info', 'AI MD 추천 코디는 상세에서 아이템을 변경하지 않고 저장해 주세요.')
+      return
+    }
     const labelMap: Record<string, string> = { TOP: '상의', BOTTOM: '하의', OUTER: '아우터', SHOES: '신발' }
     setShowSelectModal({ open: true, category, title: `${labelMap[category] || category} 변경` })
   }
@@ -282,7 +348,7 @@ export default function OutfitDetailModal({
           title={editCombo.outfitId ? '코디 편집' : '코디 상세'}
           titleId="outfit-detail-title"
           onClose={handleClose}
-          trailing={(
+          trailing={editCombo.hideFavoriteAction ? undefined : (
             <button
               type="button"
               onClick={(e) => {
@@ -350,8 +416,11 @@ export default function OutfitDetailModal({
                       )}
                     </div>
                     <button
+                      type="button"
                       onClick={() => handleItemReplace(role)}
-                      className="absolute inset-0 bg-black/40 opacity-0 group-hover/item:opacity-100 transition-opacity flex items-center justify-center rounded-xl"
+                      className={`absolute inset-0 bg-black/40 opacity-0 transition-opacity flex items-center justify-center rounded-xl ${
+                        isSaveDisabled || saveOverride ? 'cursor-default' : 'group-hover/item:opacity-100'
+                      }`}
                     >
                       <RefreshCw className="w-6 h-6 text-white" />
                     </button>
@@ -384,9 +453,13 @@ export default function OutfitDetailModal({
               type="button"
               onClick={handleSave}
               disabled={saving}
-              className="h-12 flex items-center justify-center rounded-2xl bg-[#111827] text-white text-sm font-black hover:bg-slate-800 transition-colors shadow-lg shadow-slate-200"
+              className={`h-12 flex items-center justify-center rounded-2xl text-sm font-black transition-colors shadow-lg shadow-slate-200 ${
+                isSaveDisabled
+                  ? 'bg-slate-200 text-slate-500 hover:bg-slate-200'
+                  : 'bg-[#111827] text-white hover:bg-slate-800'
+              }`}
             >
-              {saving ? '처리 중…' : editCombo.outfitId ? '코디 수정하기' : '코디 저장하기'}
+              {saving ? '처리 중…' : isSaveDisabled ? '선택 후 저장하기' : editCombo.saveButtonLabel ?? (editCombo.outfitId ? '코디 수정하기' : '코디 저장하기')}
             </button>
 
             {editCombo.outfitId ? (

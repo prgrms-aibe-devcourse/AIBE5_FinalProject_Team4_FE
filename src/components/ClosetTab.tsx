@@ -300,9 +300,11 @@ export default function ClosetTab({
 
         {/* Dynamic Floating Notification Toast */}
         {toastMessage && (
-            <div className="fixed bottom-24 left-1/2 transform -translate-x-1/2 z-50 bg-[#1E3A8A] text-[#BBF7D0] px-5 py-3 rounded-2xl shadow-xl text-xs font-black border border-emerald-400 flex items-center gap-2 animate-bounce">
-              <Sparkle className="w-4 h-4 text-emerald-300 animate-spin" />
-              <span>{toastMessage}</span>
+            <div className="pointer-events-none fixed inset-x-0 bottom-24 z-50 flex justify-center px-4">
+              <div className="pointer-events-auto flex max-w-full items-center gap-2 rounded-2xl border border-emerald-400 bg-[#1E3A8A] px-5 py-3 text-center text-xs font-black text-[#BBF7D0] shadow-xl animate-bounce">
+                <Sparkle className="w-4 h-4 shrink-0 text-emerald-300 animate-spin" />
+                <span className="truncate">{toastMessage}</span>
+              </div>
             </div>
         )}
 
