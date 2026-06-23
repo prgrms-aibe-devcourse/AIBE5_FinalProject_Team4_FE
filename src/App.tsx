@@ -57,6 +57,7 @@ import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/common/
 import LegalDocumentModal from "@/components/legal/LegalDocumentModal";
 import ExitConfirmModal from "@/components/common/ExitConfirmModal";
 import { formatNicknameInput, getNicknameValidationError, NICKNAME_RULE_MESSAGE } from "@/utils/nickname";
+import { parseFeedPostIdFromSearch } from "@/utils/feedShare";
 // 기존 상수 data ( TRIGGER_PRODUCTS 는 사용을 하지않아 우선 주석처리함 )
 // import { TRIGGER_PRODUCTS } from "@/data/triggerProducts";
 
@@ -434,6 +435,12 @@ export default function App() {
     setCurrentTab(pendingTab);
     setPendingTab(null);
   }, [isLoggedIn, pendingTab, profile.onboarded]);
+
+  useEffect(() => {
+    if (!authReady || !isLoggedIn || !profile.onboarded) return;
+    if (parseFeedPostIdFromSearch(window.location.search) == null) return;
+    setCurrentTab("feed");
+  }, [authReady, isLoggedIn, profile.onboarded]);
 
   useEffect(() => {
     if (authUserId == null || !profile.onboarded) {
