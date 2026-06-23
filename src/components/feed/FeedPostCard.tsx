@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type MouseEvent } from 'react'
 import AuthenticatedImage from '@/components/common/AuthenticatedImage'
 import {
   ChevronLeft,
@@ -174,6 +174,34 @@ export default function FeedPostCard({
   const currentImage = images[imageIndex]
   const hasMultipleImages = images.length > 1
 
+  const handleViewAuthorProfile = (
+    event: MouseEvent,
+    authorUserId: number,
+  ) => {
+    event.stopPropagation()
+    onViewProfile?.(authorUserId)
+  }
+
+  const renderAuthorName = (
+    author: FeedPost['author'],
+    className: string,
+  ) => {
+    if (!onViewProfile) {
+      return <span className={className}>{author.nickname}</span>
+    }
+
+    return (
+      <button
+        type="button"
+        onClick={(event) => handleViewAuthorProfile(event, author.userId)}
+        className={`${className} cursor-pointer hover:underline`}
+        aria-label={`${author.nickname} 프로필 보기`}
+      >
+        {author.nickname}
+      </button>
+    )
+  }
+
   const renderProfileAvatar = (size: 'sm' | 'md') => {
     const box = size === 'sm' ? 'h-6 w-6' : 'h-8 w-8'
     const initial = size === 'sm' ? 'text-[10px]' : 'text-xs'
@@ -208,17 +236,12 @@ export default function FeedPostCard({
 
   return (
     <article className="border-b border-slate-100 bg-white">
-      {/* 헤더 — 프로필 이미지만 프로필, 닉네임·나머지는 상세 */}
+      {/* 헤더 — 프로필 이미지·닉네임은 프로필, 나머지는 상세 */}
       <div className="flex items-center gap-2 px-3 py-2.5">
         {renderProfileAvatar('md')}
-        <button
-          type="button"
-          className="min-w-0 flex-1 text-left cursor-pointer"
-          onClick={onOpen}
-          aria-label={`${post.author.nickname} 피드 게시물 보기`}
-        >
-          <p className="truncate text-sm font-semibold text-slate-900">{post.author.nickname}</p>
-        </button>
+        <div className="min-w-0 flex-1">
+          {renderAuthorName(post.author, 'truncate text-sm font-semibold text-slate-900 block text-left w-full')}
+        </div>
       </div>
 
       {/* 이미지 — 클릭 시 모달 */}
@@ -343,14 +366,16 @@ export default function FeedPostCard({
         {post.caption ? (
           <div className="flex items-start gap-2">
             {renderProfileAvatar('sm')}
-            <button
-              type="button"
-              onClick={onOpen}
-              className="min-w-0 flex-1 text-left text-sm leading-snug text-slate-900 cursor-pointer"
-            >
-              <span className="mr-1.5 font-semibold">{post.author.nickname}</span>
-              <span className="font-normal">{post.caption}</span>
-            </button>
+            <div className="min-w-0 flex-1 text-sm leading-snug text-slate-900">
+              {renderAuthorName(post.author, 'mr-1.5 font-semibold inline')}
+              <button
+                type="button"
+                onClick={onOpen}
+                className="font-normal text-left cursor-pointer"
+              >
+                {post.caption}
+              </button>
+            </div>
           </div>
         ) : null}
         <button
@@ -375,7 +400,7 @@ export default function FeedPostCard({
                 {/* 댓글 */}
                 <div className="flex items-start justify-between gap-2">
                   <div className="text-xs text-slate-800 flex-1">
-                    <span className="font-black mr-1.5">{c.author.nickname}</span>
+                    {renderAuthorName(c.author, 'font-black mr-1.5 inline')}
                     <span className="font-normal">{c.content}</span>
                   </div>
                   {c.author.userId !== userId ? (
@@ -397,7 +422,7 @@ export default function FeedPostCard({
                       <div key={r.feedCommentId} className="space-y-1">
                         <div className="flex items-start justify-between gap-2">
                           <div className="text-xs text-slate-700 flex-1">
-                            <span className="font-black mr-1.5">{r.author.nickname}</span>
+                            {renderAuthorName(r.author, 'font-black mr-1.5 inline')}
                             <span className="font-normal">{r.content}</span>
                           </div>
                           {r.author.userId !== userId ? (

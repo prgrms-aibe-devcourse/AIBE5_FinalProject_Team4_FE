@@ -193,12 +193,14 @@ function InlineEditableComment({
   onSave,
   onDelete,
   onReply,
+  onViewProfile,
 }: {
   comment: FeedComment
   bgClassName: string
   onSave: (commentId: number, content: string) => Promise<void>
   onDelete: (commentId: number) => void
   onReply?: () => void
+  onViewProfile?: (userId: number) => void
 }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(comment.content)
@@ -225,7 +227,18 @@ function InlineEditableComment({
     <div className={`rounded-xl border border-slate-100 ${bgClassName} px-3 py-2.5`}>
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-black text-slate-900">{comment.author.nickname}</p>
+          {onViewProfile ? (
+            <button
+              type="button"
+              onClick={() => onViewProfile(comment.author.userId)}
+              className="text-xs font-black text-slate-900 cursor-pointer hover:underline"
+              aria-label={`${comment.author.nickname} 프로필 보기`}
+            >
+              {comment.author.nickname}
+            </button>
+          ) : (
+            <p className="text-xs font-black text-slate-900">{comment.author.nickname}</p>
+          )}
           {editing ? (
             <div className="mt-1 space-y-1.5">
               <textarea
@@ -303,11 +316,13 @@ function CommentItem({
   onDelete,
   onSave,
   onSubmitReply,
+  onViewProfile,
 }: {
   comment: FeedComment
   onDelete: (commentId: number) => void
   onSave: (commentId: number, content: string) => Promise<void>
   onSubmitReply: (parentCommentId: number, content: string) => Promise<void>
+  onViewProfile?: (userId: number) => void
 }) {
   // 현재 인라인 입력이 열린 댓글 ID (null = 닫힘)
   const [replyingToId, setReplyingToId] = useState<number | null>(null)
@@ -378,6 +393,7 @@ function CommentItem({
         onSave={onSave}
         onDelete={onDelete}
         onReply={() => openReply(comment.feedCommentId)}
+        onViewProfile={onViewProfile}
       />
       {inlineInput(comment.feedCommentId)}
 
@@ -391,6 +407,7 @@ function CommentItem({
                 onSave={onSave}
                 onDelete={onDelete}
                 onReply={() => openReply(reply.feedCommentId)}
+                onViewProfile={onViewProfile}
               />
               {inlineInput(reply.feedCommentId)}
             </div>
@@ -425,6 +442,13 @@ export default function FeedPostDetailModal({
   onViewProfile,
 }: FeedPostDetailModalProps) {
   const { showToast, showConfirm } = useToast()
+
+  const handleViewAuthorProfile = useCallback((targetUserId: number) => {
+    if (!onViewProfile) return
+    onClose()
+    onViewProfile(targetUserId)
+  }, [onClose, onViewProfile])
+
   const [post, setPost] = useState<FeedPost | null>(null)
   const [comments, setComments] = useState<FeedComment[]>([])
   const [loading, setLoading] = useState(false)
@@ -727,12 +751,7 @@ export default function FeedPostDetailModal({
                   <button
                     type="button"
                     className="shrink-0 cursor-pointer"
-                    onClick={() => {
-                      if (onViewProfile) {
-                        onClose()
-                        onViewProfile(post.author.userId)
-                      }
-                    }}
+                    onClick={() => handleViewAuthorProfile(post.author.userId)}
                     aria-label={`${post.author.nickname} 프로필 보기`}
                   >
                     <div className="rounded-full bg-gradient-to-tr from-[#f9ce34] via-[#ee2a7b] to-[#6228d7] p-[2px]">
@@ -752,7 +771,18 @@ export default function FeedPostDetailModal({
                     </div>
                   </button>
                   <div className="min-w-0">
-                    <p className="text-sm font-black text-slate-900">{post.author.nickname}</p>
+                    {onViewProfile ? (
+                      <button
+                        type="button"
+                        onClick={() => handleViewAuthorProfile(post.author.userId)}
+                        className="text-sm font-black text-slate-900 cursor-pointer hover:underline text-left"
+                        aria-label={`${post.author.nickname} 프로필 보기`}
+                      >
+                        {post.author.nickname}
+                      </button>
+                    ) : (
+                      <p className="text-sm font-black text-slate-900">{post.author.nickname}</p>
+                    )}
                     <p className="text-[10px] font-bold text-slate-400">
                       {formatFeedDate(post.createdAt)}
                     </p>
@@ -882,6 +912,7 @@ export default function FeedPostDetailModal({
                         onDelete={handleDeleteComment}
                         onSave={handleSaveComment}
                         onSubmitReply={handleSubmitReply}
+                        onViewProfile={onViewProfile ? handleViewAuthorProfile : undefined}
                       />
                     ))}
                   </div>
