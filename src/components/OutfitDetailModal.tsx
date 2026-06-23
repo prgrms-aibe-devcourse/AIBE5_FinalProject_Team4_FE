@@ -35,7 +35,7 @@ interface OutfitDetailModalProps {
   } | null
   onClose: () => void
   onSaved?: () => void
-  onFavoriteCreated?: () => void
+  onFavoriteCreated?: (outfitId: number) => void
   userId?: number | null
   clothes?: Garment[]
 }
@@ -131,11 +131,11 @@ export default function OutfitDetailModal({
           .filter(it => it.item != null && it.item?.clothesId != null)
           .map(it => ({ clothesId: it.item!.clothesId as number, itemRole: it.itemRole, layerOrder: it.layerOrder })),
       }
-      await createOutfit(editCombo.bookId, payload)
+      const result = await createOutfit(editCombo.bookId, payload)
       setFavorite(true)
       showToast('success', '코디가 저장되고 좋아요가 되었습니다!')
       if (onFavoriteCreated) {
-        onFavoriteCreated()
+        onFavoriteCreated(result.outfitId)
       } else {
         onSaved?.()
       }

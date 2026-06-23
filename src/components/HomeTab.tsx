@@ -1070,7 +1070,17 @@ export default function HomeTab({
           combination={selectedCombo}
           onClose={() => setSelectedCombo(null)}
           onSaved={handleRefreshExceptStyle}
-          onFavoriteCreated={handleRefreshWardrobeOnly}
+          onFavoriteCreated={(outfitId) => {
+            const updatedCombo = selectedCombo ? { ...selectedCombo, outfitId, favorite: true } : null
+            setOotdCombinations(prev => prev.map(c =>
+              c.id === selectedCombo?.id ? (updatedCombo as any) : c
+            ))
+            setOotdItems(prev => prev.map(item =>
+              item.id === selectedCombo?.id ? { ...item, outfitId } : item
+            ))
+            if (updatedCombo) setSelectedCombo(updatedCombo)
+            handleRefreshWardrobeOnly()
+          }}
           userId={userId}
       />
 
