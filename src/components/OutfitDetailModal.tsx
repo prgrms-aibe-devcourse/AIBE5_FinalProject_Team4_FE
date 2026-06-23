@@ -132,7 +132,6 @@ export default function OutfitDetailModal({
       await createOutfit(editCombo.bookId, payload)
       setFavorite(true)
       showToast('success', '코디가 저장되고 좋아요가 되었습니다!')
-      onSaved?.()
       setIsDirty(false)
       onClose()
     } catch (err) {

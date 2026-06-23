@@ -11,6 +11,7 @@ import {
 import { fetchWardrobeMeta } from '@/api/wardrobe'
 import { fetchWeather } from '@/api/weather'
 import { formatRecommendBrandLabel, getBrandLogoUrl } from '@/data/brandLogos'
+import { getItemTypeLabel } from '@/data/categoryItemTypes';
 import { Garment } from "@/types/index";
 import { extractApiErrorMessage } from "@/utils/apiError";
 import { useRecommendWishlistToggle } from "@/hooks/useRecommendWishlistToggle";
@@ -194,6 +195,7 @@ type RecommendItem = {
   category: "Top" | "Bottom" | "Outer" | "Shoes";
   brand?: string;
   style: string;
+  itemType?: string;
   color: string;
   colorHex?: string;
   price: string;
@@ -307,6 +309,19 @@ export default function HomeTab({
     setRefreshSignal(prev => prev + 1);
   }, [onRefreshWardrobe]);
 
+  const handleRefreshExceptStyle = useCallback(() => {
+    onRefreshWardrobe?.()
+    setOotdItems([])
+    setOotdLoading(true)
+    setMatchRecommendationGroups([])
+    setMatchLoading(true)
+    setRefreshSignal(prev => prev + 1)
+  }, [onRefreshWardrobe])
+
+  const handleRefreshWardrobeOnly = useCallback(() => {
+    onRefreshWardrobe?.()
+  }, [onRefreshWardrobe])
+
   const {
     isWishlisted,
     isSubmitting: isWishlistSubmitting,
@@ -316,7 +331,7 @@ export default function HomeTab({
   } = useRecommendWishlistToggle({
     userId,
     existingGarments: clothes,
-    onWishlistChanged: handleRefreshAll,
+    onWishlistChanged: handleRefreshWardrobeOnly,
   });
   // we don't use toastMessage directly here
 
@@ -481,6 +496,7 @@ export default function HomeTab({
                 title,
                 category: mainItem.category ? (mainItem.category === 'TOP' ? 'Top' : mainItem.category === 'BOTTOM' ? 'Bottom' : mainItem.category === 'OUTER' ? 'Outer' : 'Shoes') : 'Outer',
                 style: STYLE_LABELS[(item.styleCodes && item.styleCodes[0]) || item.style] ?? (item.style || '—'),
+                itemType: mainItem.itemType || '',
                 color: getGarmentColorLabel(item.primaryColor ?? ''),
                 colorHex: getGarmentColor(item.primaryColor ?? '')?.hex ?? '',
                 price: '',
@@ -521,6 +537,7 @@ export default function HomeTab({
               title: item.title,
               category: item.category ? (item.category === 'TOP' ? 'Top' : item.category === 'BOTTOM' ? 'Bottom' : item.category === 'OUTER' ? 'Outer' : 'Shoes') : 'Top',
               style: STYLE_LABELS[item.primaryStyle] ?? (item.primaryStyle ?? '—'),
+              itemType: item.itemType || '',
               color: item.primaryColorDisplay?.name ?? getGarmentColorLabel(item.primaryColor ?? ''),
               colorHex: item.primaryColorDisplay?.hex ?? getGarmentColor(item.primaryColor ?? '')?.hex ?? '',
               brand: item.brandName ?? '',
@@ -630,8 +647,8 @@ export default function HomeTab({
       brandLogoUrl: getBrandLogoUrl(item.brand ?? ''),
       category: item.category,
       categoryLabel: categoryLabelMap[item.category] ?? item.category,
-      itemTypeCode: '',
-      itemTypeLabel: '',
+      itemTypeCode: item.itemType || '',
+      itemTypeLabel: item.itemType ? getItemTypeLabel(item.category, item.itemType) : '',
       style: item.style,
       styles: [item.style].filter(Boolean),
       color: item.color,
@@ -766,15 +783,7 @@ export default function HomeTab({
           {activeLabel === 'style' && styleError && <p className="text-[10px] text-rose-500 font-bold max-w-[150px] text-right leading-tight">{styleError}</p>}
         </div>
 
-        {!hasRecommendationData && activeLabel === 'style' && (
-            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center mb-6">
-              <span className="text-4xl block mb-3">👗</span>
-              <p className="text-sm font-bold text-slate-700">아직 등록된 옷이 없어요</p>
-              <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-                옷을 등록하면 OOTD, 코디 추천이 시작돼요.
-              </p>
-            </div>
-        )}
+
 
         {hasRecommendationData && activeLabel === 'style' && styleLoading && (
             <div className="grid gap-4 grid-cols-2 lg:grid-cols-3 mb-6">
@@ -902,13 +911,6 @@ export default function HomeTab({
                       다시 시도
                     </button>
                   </div>
-              ) : selectedRecommendations.length === 0 ? (
-                  !styleLoading && (
-                      <div className="col-span-full rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-5 py-10 text-center">
-                        <p className="text-sm font-black text-slate-700">추천 결과가 없습니다.</p>
-                        <p className="text-xs text-slate-400 font-bold mt-2">옷장에 아이템을 더 등록하거나 나중에 다시 시도해 주세요.</p>
-                      </div>
-                  )
               ) : (
                   selectedRecommendations.map((item) => (
                       <article
@@ -921,27 +923,33 @@ export default function HomeTab({
                       >
                         <div className="h-44 sm:h-52 lg:h-72 bg-slate-100 relative overflow-hidden">
                           <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              toggleWishlist(toCardItem(item))
-                            }}
-                            disabled={isWishlistSubmitting(item.clothesId)}
-                            aria-label={isWishlisted(item.clothesId) ? '위시리스트에서 빼기' : '위시리스트에 추가'}
-                            className={`absolute top-1.5 right-1.5 z-10 p-1.5 rounded-full border bg-white/95 shadow-sm transition-colors cursor-pointer disabled:opacity-60 ${
-                              isWishlisted(item.clothesId)
-                                ? 'border-rose-200 text-rose-500 hover:bg-rose-50'
-                                : 'border-slate-200/90 text-slate-400 hover:text-rose-500 hover:border-rose-200 hover:bg-rose-50'
-                            }`}
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                toggleWishlist(toCardItem(item))
+                              }}
+                              disabled={isWishlistSubmitting(item.clothesId)}
+                              aria-label={isWishlisted(item.clothesId) ? '위시리스트에서 빼기' : '위시리스트에 추가'}
+                              className={`absolute top-1.5 right-1.5 z-10 p-1.5 rounded-full border bg-white/95 shadow-sm transition-colors cursor-pointer disabled:opacity-60 ${
+                                  isWishlisted(item.clothesId)
+                                      ? 'border-rose-200 text-rose-500 hover:bg-rose-50'
+                                      : 'border-slate-200/90 text-slate-400 hover:text-rose-500 hover:border-rose-200 hover:bg-rose-50'
+                              }`}
                           >
                             <Heart className={`w-3.5 h-3.5 ${isWishlisted(item.clothesId) ? 'text-rose-500 fill-rose-500' : ''}`} />
                           </button>
                           <AuthenticatedImage src={item.imageUrl} alt={item.title} className="w-full h-full object-cover object-top transition-transform duration-300 group-hover:scale-105" fallback={<div className="w-full h-full flex items-center justify-center bg-slate-200 text-slate-400 text-xs font-bold">이미지 없음</div>} />
                           <div className="absolute left-0 bottom-0 p-3 bg-gradient-to-t from-black/80 via-black/40 to-transparent text-white flex flex-col items-start max-w-[66%]">
-                              {item.brand ? <div className="text-[11px] font-bold text-white/90 uppercase tracking-wide truncate">{item.brand}</div> : null}
-                              <h3 className="text-sm md:text-base font-black truncate mt-1 leading-tight">{item.title}</h3>
-                              {item.price ? <div className="mt-1"><strong className="text-sm font-extrabold">{item.price}</strong></div> : null}
-                            </div>
+                            {item.itemType ? (
+                                <span className="text-[10px] font-bold text-slate-400 truncate">
+                {getItemTypeLabel(item.category, item.itemType)}
+              </span>
+                            ) : null}
+                            {item.brand ? <div className="text-[11px] font-bold text-white/90 uppercase tracking-wide truncate">{item.brand}</div> : null}
+                            <h3 className="text-sm md:text-base font-black truncate mt-1 leading-tight">{item.title}</h3>
+                            {item.price ? <div className="mt-1"><strong className="text-sm font-extrabold">{item.price}</strong></div> : null}
+                          </div>
                         </div>
                       </article>
                   ))
@@ -1056,7 +1064,7 @@ export default function HomeTab({
           open={selectedCombo != null}
           combination={selectedCombo}
           onClose={() => setSelectedCombo(null)}
-          onSaved={handleRefreshAll}
+          onSaved={handleRefreshExceptStyle}
           userId={userId}
       />
 
