@@ -14,11 +14,11 @@ import axios from "axios";
 import ClosetGarmentDetail from "@/components/ClosetGarmentDetail";
 import ClosetWardrobeMascot from "@/components/ClosetWardrobeMascot";
 import {
-  Heart,
   ShoppingBag,
   Flame,
   Award,
   HeartHandshake,
+  Star,
   Plus,
 } from "./icons";
 import { Garment } from "@/types/index";
@@ -340,7 +340,7 @@ export default function ClosetTab({
               </div>
               <div className="bg-white/85 p-3 rounded-2xl border border-white/40 text-left space-y-0.5">
                 <span className="text-[10px] md:text-[11px] text-slate-500 font-extrabold block leading-none">즐겨찾기</span>
-                <span className="text-lg md:text-xl font-black text-rose-600 block tabular-nums">{favoritesCount}벌</span>
+                <span className="text-lg md:text-xl font-black text-amber-600 block tabular-nums">{favoritesCount}벌</span>
               </div>
             </div>
           </div>
@@ -400,7 +400,7 @@ export default function ClosetTab({
                           : "text-slate-500 hover:text-slate-850"
                   }`}
               >
-                <Heart className={`w-4 h-4 shrink-0 ${closetTab === "favorites" ? "fill-rose-500 text-rose-500" : "text-slate-400"}`} />
+                <Star className={`w-4 h-4 shrink-0 ${closetTab === "favorites" ? "fill-amber-500 text-amber-500" : "text-slate-400"}`} />
                 <span className="truncate">즐겨찾기 ({favoritesCount})</span>
               </button>
             </div>

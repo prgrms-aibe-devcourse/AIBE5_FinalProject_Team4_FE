@@ -1,6 +1,6 @@
 import type { KeyboardEvent, MouseEvent, ReactNode } from 'react'
 import AuthenticatedImage from '@/components/common/AuthenticatedImage'
-import { Check, Heart } from '@/components/icons'
+import { Check, Star } from '@/components/icons'
 
 interface GarmentPickerGridCardProps {
   name: string
@@ -78,11 +78,11 @@ export default function GarmentPickerGridCard({
                 isMd ? 'p-2' : 'p-1.5'
               }`}
             >
-              <Heart
+              <Star
                 className={`${
                   isMd ? 'w-4 h-4' : 'w-3.5 h-3.5'
                 } ${
-                  favorite.active ? 'text-rose-500 fill-rose-500' : 'text-slate-400'
+                  favorite.active ? 'text-amber-500 fill-amber-500' : 'text-slate-400'
                 }`}
               />
             </button>
