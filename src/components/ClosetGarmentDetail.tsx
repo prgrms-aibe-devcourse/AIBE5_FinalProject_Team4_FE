@@ -72,7 +72,7 @@ export default function ClosetGarmentDetail({
   onGarmentDeleted,
   onToast,
 }: ClosetGarmentDetailProps) {
-  const { showConfirm } = useToast()
+  const { showConfirm, showToast } = useToast()
   const [detail, setDetail] = useState<Garment | null>(garment)
   const [loading, setLoading] = useState(false)
   const [editModalOpen, setEditModalOpen] = useState(false)
@@ -297,24 +297,24 @@ export default function ClosetGarmentDetail({
     }
   }
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (!detail || detail.isWishlist) return
-    const confirmed = window.confirm(
-      `"${detail.name}"을(를) 보유 옷장에서 삭제할까요?\n삭제 후에는 목록에서 제거됩니다.`,
-    )
-    if (!confirmed) return
 
-    try {
-      await deleteClothes(Number(detail.id))
-      onGarmentDeleted(detail.id)
-      onGarmentChange(null)
-      setDetail(null)
-      setEditModalOpen(false)
-      onToast('삭제되었습니다.')
-    } catch (err) {
-      console.error('[ClosetGarmentDetail] deleteClothes failed:', err)
-      onToast('삭제에 실패했습니다.')
-    }
+    showConfirm('보유 옷장에서 삭제할까요?', () => {
+      void (async () => {
+        try {
+          await deleteClothes(Number(detail.id))
+          onGarmentDeleted(detail.id)
+          onGarmentChange(null)
+          setDetail(null)
+          setEditModalOpen(false)
+          showToast('success', '삭제되었습니다.')
+        } catch (err) {
+          console.error('[ClosetGarmentDetail] deleteClothes failed:', err)
+          showToast('error', extractApiErrorMessage(err, '삭제에 실패했습니다.'))
+        }
+      })()
+    }, { confirmLabel: '삭제', variant: 'danger' })
   }
 
   const handleRemoveFromWishlist = async () => {
@@ -442,7 +442,7 @@ export default function ClosetGarmentDetail({
             </button>
             <button
               type="button"
-              onClick={() => void handleDelete()}
+              onClick={handleDelete}
               className="h-12 rounded-xl text-sm font-black bg-rose-100 text-rose-800 border border-rose-200 cursor-pointer transition hover:bg-rose-200 active:scale-[0.98]"
             >
               삭제
