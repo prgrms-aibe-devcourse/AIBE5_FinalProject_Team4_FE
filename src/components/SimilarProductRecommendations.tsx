@@ -46,6 +46,7 @@ interface SimilarProductRecommendationsProps {
 }
 
 type BaseClothesFilter = 'all' | 'owned' | 'wishlist'
+type BaseClothesCategoryFilter = 'all' | UiCategory
 
 const seasonOptions = [
   { code: '', label: '선택 안 함' },
@@ -67,7 +68,7 @@ const isAlreadySavedError = (reason: unknown) =>
   axios.isAxiosError(reason) && reason.response?.status === 409
 
 const baseClothesStatusLabel = (item: ClothesResponse) =>
-  item.ownershipStatus === 'OWNED' ? '보유' : '미보유'
+  item.ownershipStatus === 'OWNED' ? '보유' : '위시리스트'
 
 function inferProductCategory(product: NaverShoppingProduct): BeCategoryCode {
   const text = [
@@ -193,6 +194,8 @@ export default function SimilarProductRecommendations({
   const [clothesPickerOpen, setClothesPickerOpen] = useState(false)
   const [baseClothesFilter, setBaseClothesFilter] =
     useState<BaseClothesFilter>('all')
+  const [baseClothesCategoryFilter, setBaseClothesCategoryFilter] =
+    useState<BaseClothesCategoryFilter>('all')
   const [detailProduct, setDetailProduct] =
     useState<NaverShoppingProduct | null>(null)
   const [saveForm, setSaveForm] = useState<SimilarProductSaveForm | null>(null)
@@ -377,24 +380,19 @@ export default function SimilarProductRecommendations({
     return mapSimilarProductToCard(product, styleLabels, colorChip, secondaryColors)
   }
 
-  const baseClothesCounts = useMemo(
-    () => ({
-      all: baseClothes.length,
-      owned: baseClothes.filter((item) => item.ownershipStatus === 'OWNED').length,
-      wishlist: baseClothes.filter((item) => item.ownershipStatus === 'WISHLIST')
-        .length,
-    }),
-    [baseClothes],
-  )
-
   const filteredBaseClothes = useMemo(() => {
-    if (baseClothesFilter === 'all') return baseClothes
-    return baseClothes.filter((item) =>
-      baseClothesFilter === 'owned'
-        ? item.ownershipStatus === 'OWNED'
-        : item.ownershipStatus === 'WISHLIST',
-    )
-  }, [baseClothes, baseClothesFilter])
+    return baseClothes.filter((item) => {
+      const matchesOwnership =
+        baseClothesFilter === 'all' ||
+        (baseClothesFilter === 'owned'
+          ? item.ownershipStatus === 'OWNED'
+          : item.ownershipStatus === 'WISHLIST')
+      const matchesCategory =
+        baseClothesCategoryFilter === 'all' ||
+        resolveUiCategory(item.category) === baseClothesCategoryFilter
+      return matchesOwnership && matchesCategory
+    })
+  }, [baseClothes, baseClothesCategoryFilter, baseClothesFilter])
 
   const selectBaseClothes = (clothesId: number) => {
     setClothesPickerOpen(false)
@@ -514,7 +512,7 @@ export default function SimilarProductRecommendations({
       failedCount ? 'error' : 'success',
       failedCount
         ? `${successCount}개 저장, ${failedCount}개는 저장하지 못했어요.`
-        : `${successCount}개 상품을 미보유 옷으로 저장했어요.`,
+        : `${successCount}개 상품을 위시리스트로 저장했어요.`,
     )
     if (successCount > 0) onWishlistAdded?.()
   }
@@ -548,7 +546,7 @@ export default function SimilarProductRecommendations({
     return (
       <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-5 py-10 text-center">
         <p className="text-sm font-black text-slate-700">
-          유사한 상품을 찾으려면 먼저 보유 옷이나 미보유 옷을 추가해 주세요.
+          유사한 상품을 찾으려면 먼저 보유 옷이나 위시리스트를 추가해 주세요.
         </p>
         <button
           type="button"
@@ -765,16 +763,15 @@ export default function SimilarProductRecommendations({
       >
         <ModalHeader
           title="기준 옷 선택"
-          subtitle={`보유 ${baseClothesCounts.owned}개 · 미보유 ${baseClothesCounts.wishlist}개`}
           onClose={() => setClothesPickerOpen(false)}
         />
         <ModalBody className="p-4 sm:p-6">
-          <div className="mb-4 grid grid-cols-3 gap-2 rounded-2xl bg-slate-100 p-1">
+          <div className="grid grid-cols-3 gap-2 rounded-2xl bg-slate-100 p-1">
             {[
-              ['all', '전체', baseClothesCounts.all],
-              ['owned', '보유', baseClothesCounts.owned],
-              ['wishlist', '미보유', baseClothesCounts.wishlist],
-            ].map(([value, label, count]) => {
+              ['all', '전체'],
+              ['owned', '보유'],
+              ['wishlist', '위시리스트'],
+            ].map(([value, label]) => {
               const active = baseClothesFilter === value
               return (
                 <button
@@ -788,7 +785,34 @@ export default function SimilarProductRecommendations({
                   }`}
                   aria-pressed={active}
                 >
-                  {label} {count}
+                  {label}
+                </button>
+              )
+            })}
+          </div>
+          <div className="mt-3 mb-4 flex flex-wrap gap-1.5">
+            {(['all', 'Top', 'Bottom', 'Outer', 'Shoes'] as const).map((category) => {
+              const labels: Record<BaseClothesCategoryFilter, string> = {
+                all: '전체',
+                Top: '상의',
+                Bottom: '하의',
+                Outer: '아우터',
+                Shoes: '신발',
+              }
+              const active = baseClothesCategoryFilter === category
+              return (
+                <button
+                  key={category}
+                  type="button"
+                  onClick={() => setBaseClothesCategoryFilter(category)}
+                  aria-pressed={active}
+                  className={`h-8 px-3 rounded-lg text-[11px] font-bold border transition cursor-pointer ${
+                    active
+                      ? 'bg-[#BBF7D0] text-[#1E3A8A] border-[#BBF7D0]'
+                      : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'
+                  }`}
+                >
+                  {labels[category]}
                 </button>
               )
             })}
@@ -834,7 +858,7 @@ export default function SimilarProductRecommendations({
                           : 'bg-orange-500 text-white'
                       }`}
                     >
-                      {owned ? '보유' : '미보유'}
+                      {owned ? '보유' : '위시리스트'}
                     </span>
                   </div>
                   <p className="mt-1.5 text-[11px] font-black text-slate-800 truncate">
@@ -1007,7 +1031,7 @@ export default function SimilarProductRecommendations({
             onClick={() => void saveSelectedProducts()}
             className="w-full h-11 rounded-xl bg-[#111827] text-white text-sm font-black disabled:opacity-40"
           >
-            {saving ? '저장 중…' : `${selectedItems.length}개 미보유 옷으로 저장`}
+            {saving ? '저장 중…' : `${selectedItems.length}개 위시리스트로 저장`}
           </button>
         </ModalFooter>
       </Modal>

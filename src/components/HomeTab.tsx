@@ -591,12 +591,22 @@ export default function HomeTab({
     const target = labelSectionRef.current;
     if (!target) return;
     const root = document.getElementById("app-viewport");
-    const observer = new IntersectionObserver(
-        ([entry]) => { setShowStickyLabels(!entry.isIntersecting); },
-        { root, rootMargin: "-80px 0px 0px 0px", threshold: 0 },
-    );
-    observer.observe(target);
-    return () => observer.disconnect();
+
+    const updateStickyLabels = () => {
+      const targetRect = target.getBoundingClientRect();
+      const rootTop = root?.getBoundingClientRect().top ?? 0;
+      const stickyLine = rootTop + 72;
+      setShowStickyLabels(targetRect.top < stickyLine);
+    };
+
+    updateStickyLabels();
+    root?.addEventListener("scroll", updateStickyLabels, { passive: true });
+    window.addEventListener("resize", updateStickyLabels);
+
+    return () => {
+      root?.removeEventListener("scroll", updateStickyLabels);
+      window.removeEventListener("resize", updateStickyLabels);
+    };
   }, []);
 
   useEffect(() => {
@@ -720,7 +730,7 @@ export default function HomeTab({
         </section>
 
         {showStickyLabels && (
-            <div className="fixed top-[72px] left-0 right-0 z-20 bg-white/95 backdrop-blur-md border-b border-slate-100 px-4 py-2 shadow-sm">
+            <div className="fixed top-[72px] left-0 right-0 z-20 bg-white/95 backdrop-blur-md border-b border-slate-100 px-1 py-2 shadow-sm">
               <div className="flex gap-1.5 overflow-x-auto scrollbar-none">
                 {labelKeys.map((label) => {
                   const config = labelConfig[label];
@@ -880,6 +890,13 @@ export default function HomeTab({
                 gender={gender}
                 existingGarments={clothes}
                 onWishlistAdded={handleRefreshAll}
+                onOutfitOpen={(combination) => {
+                  setSelectedCombo({
+                    ...combination,
+                    bookId,
+                  });
+                  setSelectedItem(null);
+                }}
             />
         ) : (
             <div className="grid gap-4 grid-cols-2 lg:grid-cols-3">
@@ -1058,6 +1075,7 @@ export default function HomeTab({
           onClose={() => setSelectedCombo(null)}
           onSaved={handleRefreshAll}
           userId={userId}
+          clothes={clothes}
       />
 
         {tourOpen && (
