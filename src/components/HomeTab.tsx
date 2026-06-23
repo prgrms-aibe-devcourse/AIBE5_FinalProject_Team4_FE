@@ -379,9 +379,6 @@ export default function HomeTab({
       () => matchEligibleOwnedClothes.find((item) => item.id === anchorClothesId) ?? null,
       [matchEligibleOwnedClothes, anchorClothesId],
   );
-  const matchPickerCounts = useMemo(() => ({
-    all: matchEligibleOwnedClothes.length,
-  }), [matchEligibleOwnedClothes]);
   const filteredMatchPickerClothes = useMemo(() => {
     let list = matchEligibleOwnedClothes;
     if (matchCategoryFilter !== 'all') list = list.filter((item) => item.category === matchCategoryFilter);
@@ -826,7 +823,6 @@ export default function HomeTab({
                     <div className="w-14 h-14 rounded-xl bg-slate-100 grid place-items-center text-xl shrink-0">+</div>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-black text-slate-900">어울리는 코디를 찾을 옷을 선택해 주세요</p>
-                      <p className="mt-1 text-[11px] font-bold text-slate-400">보유 {matchPickerCounts.all}개</p>
                     </div>
                     <span className="shrink-0 h-8 px-3 rounded-full bg-[#111827] text-white text-[11px] font-black grid place-items-center">옷 선택</span>
                   </>
@@ -959,7 +955,6 @@ export default function HomeTab({
       >
         <ModalHeader
             title="기준 옷 선택"
-            subtitle={`보유 ${matchPickerCounts.all}개`}
             onClose={() => setMatchPickerOpen(false)}
         />
         <ModalBody className="p-4 sm:p-6">
