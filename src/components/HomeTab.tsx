@@ -911,6 +911,11 @@ export default function HomeTab({
                       다시 시도
                     </button>
                   </div>
+              ) : selectedRecommendations.length === 0 ? (
+                <div className="col-span-full rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-5 py-10 text-center">
+                  <p className="text-sm font-black text-slate-700">추천 결과가 없습니다.</p>
+                  <p className="text-xs text-slate-400 font-bold mt-2">옷장에 아이템을 더 등록하거나 나중에 다시 시도해 주세요.</p>
+                </div>
               ) : (
                   selectedRecommendations.map((item) => (
                       <article
@@ -923,33 +928,33 @@ export default function HomeTab({
                       >
                         <div className="h-44 sm:h-52 lg:h-72 bg-slate-100 relative overflow-hidden">
                           <button
-                              type="button"
-                              onClick={(e) => {
-                                e.preventDefault()
-                                e.stopPropagation()
-                                toggleWishlist(toCardItem(item))
-                              }}
-                              disabled={isWishlistSubmitting(item.clothesId)}
-                              aria-label={isWishlisted(item.clothesId) ? '위시리스트에서 빼기' : '위시리스트에 추가'}
-                              className={`absolute top-1.5 right-1.5 z-10 p-1.5 rounded-full border bg-white/95 shadow-sm transition-colors cursor-pointer disabled:opacity-60 ${
-                                  isWishlisted(item.clothesId)
-                                      ? 'border-rose-200 text-rose-500 hover:bg-rose-50'
-                                      : 'border-slate-200/90 text-slate-400 hover:text-rose-500 hover:border-rose-200 hover:bg-rose-50'
-                              }`}
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              toggleWishlist(toCardItem(item))
+                            }}
+                            disabled={isWishlistSubmitting(item.clothesId)}
+                            aria-label={isWishlisted(item.clothesId) ? '위시리스트에서 빼기' : '위시리스트에 추가'}
+                            className={`absolute top-1.5 right-1.5 z-10 p-1.5 rounded-full border bg-white/95 shadow-sm transition-colors cursor-pointer disabled:opacity-60 ${
+                              isWishlisted(item.clothesId)
+                                ? 'border-rose-200 text-rose-500 hover:bg-rose-50'
+                                : 'border-slate-200/90 text-slate-400 hover:text-rose-500 hover:border-rose-200 hover:bg-rose-50'
+                            }`}
                           >
                             <Heart className={`w-3.5 h-3.5 ${isWishlisted(item.clothesId) ? 'text-rose-500 fill-rose-500' : ''}`} />
                           </button>
                           <AuthenticatedImage src={item.imageUrl} alt={item.title} className="w-full h-full object-cover object-top transition-transform duration-300 group-hover:scale-105" fallback={<div className="w-full h-full flex items-center justify-center bg-slate-200 text-slate-400 text-xs font-bold">이미지 없음</div>} />
                           <div className="absolute left-0 bottom-0 p-3 bg-gradient-to-t from-black/80 via-black/40 to-transparent text-white flex flex-col items-start max-w-[66%]">
-                            {item.itemType ? (
+                              {item.itemType ? (
                                 <span className="text-[10px] font-bold text-slate-400 truncate">
-                {getItemTypeLabel(item.category, item.itemType)}
-              </span>
-                            ) : null}
-                            {item.brand ? <div className="text-[11px] font-bold text-white/90 uppercase tracking-wide truncate">{item.brand}</div> : null}
-                            <h3 className="text-sm md:text-base font-black truncate mt-1 leading-tight">{item.title}</h3>
-                            {item.price ? <div className="mt-1"><strong className="text-sm font-extrabold">{item.price}</strong></div> : null}
-                          </div>
+                                  {getItemTypeLabel(item.category, item.itemType)}
+                                </span>
+                              ) : null}
+                              {item.brand ? <div className="text-[11px] font-bold text-white/90 uppercase tracking-wide truncate">{item.brand}</div> : null}
+                              <h3 className="text-sm md:text-base font-black truncate mt-1 leading-tight">{item.title}</h3>
+                              {item.price ? <div className="mt-1"><strong className="text-sm font-extrabold">{item.price}</strong></div> : null}
+                            </div>
                         </div>
                       </article>
                   ))
@@ -1065,6 +1070,7 @@ export default function HomeTab({
           combination={selectedCombo}
           onClose={() => setSelectedCombo(null)}
           onSaved={handleRefreshExceptStyle}
+          onFavoriteCreated={handleRefreshWardrobeOnly}
           userId={userId}
       />
 
