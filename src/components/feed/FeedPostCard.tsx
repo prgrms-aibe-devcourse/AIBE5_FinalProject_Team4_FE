@@ -213,9 +213,7 @@ export default function FeedPostCard({
     )
   }
 
-  const renderProfileAvatar = (size: 'sm' | 'md') => {
-    const box = size === 'sm' ? 'h-6 w-6' : 'h-8 w-8'
-    const initial = size === 'sm' ? 'text-[10px]' : 'text-xs'
+  const renderProfileAvatar = () => {
     return (
       <button
         type="button"
@@ -226,7 +224,7 @@ export default function FeedPostCard({
         }}
         aria-label={`${post.author.nickname} 프로필 보기`}
       >
-        <div className={`flex ${box} shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-100 ring-1 ring-slate-200`}>
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-100 ring-1 ring-slate-200">
           {post.author.profileImageUrl ? (
             <AuthenticatedImage
               src={post.author.profileImageUrl}
@@ -234,7 +232,7 @@ export default function FeedPostCard({
               className="h-full w-full object-cover"
             />
           ) : (
-            <span className={`${initial} font-black text-[#1E3A8A]`}>
+            <span className="text-xs font-black text-[#1E3A8A]">
               {(post.author.nickname || '?').slice(0, 1)}
             </span>
           )}
@@ -245,12 +243,18 @@ export default function FeedPostCard({
 
   return (
     <article className="border-b border-slate-100 bg-white">
-      {/* 헤더 — 프로필 이미지·닉네임은 프로필, 나머지는 상세 */}
-      <div className="flex items-center gap-2 px-3 py-2.5">
-        {renderProfileAvatar('md')}
-        <div className="min-w-0 flex-1">
-          {renderAuthorName(post.author, 'truncate text-sm font-semibold text-slate-900 block text-left w-full')}
+      {/* 헤더 — 프로필·닉네임만 프로필, 나머지 영역은 상세 */}
+      <div className="flex items-stretch gap-2 px-3 py-2.5">
+        <div className="flex min-w-0 shrink-0 items-center gap-2">
+          {renderProfileAvatar()}
+          {renderAuthorName(post.author, 'truncate text-sm font-semibold text-slate-900')}
         </div>
+        <button
+          type="button"
+          onClick={onOpen}
+          className="min-w-0 flex-1 cursor-pointer"
+          aria-label="피드 상세 보기"
+        />
       </div>
 
       {/* 이미지 — 클릭 시 모달 */}
@@ -327,9 +331,12 @@ export default function FeedPostCard({
             type="button"
             onClick={(e) => void handleToggleComments(e)}
             aria-label="댓글"
-            className={`cursor-pointer transition-colors ${commentsOpen ? 'text-[#1E3A8A]' : 'text-slate-900'}`}
+            className={`inline-flex items-center gap-1 cursor-pointer transition-colors ${commentsOpen ? 'text-[#1E3A8A]' : 'text-slate-900'}`}
           >
             <MessageSquare className="h-6 w-6" />
+            {post.commentCount > 0 ? (
+              <span className="text-sm font-semibold tabular-nums">{post.commentCount.toLocaleString()}</span>
+            ) : null}
           </button>
           <button
             type="button"
@@ -352,7 +359,7 @@ export default function FeedPostCard({
         </button>
       </div>
 
-      {/* 본문 — 프로필 이미지만 프로필, 나머지는 상세 */}
+      {/* 본문 — 닉네임만 프로필, 나머지는 상세 */}
       <div className="space-y-1 px-3 pb-3">
         {post.likeCount > 0 ? (
           <button
@@ -363,29 +370,17 @@ export default function FeedPostCard({
             좋아요 {post.likeCount.toLocaleString()}개
           </button>
         ) : null}
-        {!commentsOpen ? (
-          <button
-            type="button"
-            onClick={(e) => void handleToggleComments(e)}
-            className="block text-sm text-slate-400 cursor-pointer hover:text-slate-600 transition-colors text-left"
-          >
-            댓글 모두보기
-          </button>
-        ) : null}
         {post.caption ? (
-          <div className="flex items-start gap-2">
-            {renderProfileAvatar('sm')}
-            <div className="min-w-0 flex-1 text-sm leading-snug text-slate-900">
-              {renderAuthorName(post.author, 'mr-1.5 font-semibold inline')}
-              <button
-                type="button"
-                onClick={onOpen}
-                className="font-normal text-left cursor-pointer"
-              >
-                {post.caption}
-              </button>
-            </div>
-          </div>
+          <p className="text-sm leading-snug text-slate-900">
+            {renderAuthorName(post.author, 'mr-1.5 font-semibold inline')}
+            <button
+              type="button"
+              onClick={onOpen}
+              className="font-normal text-left cursor-pointer inline"
+            >
+              {post.caption}
+            </button>
+          </p>
         ) : null}
         <button
           type="button"
