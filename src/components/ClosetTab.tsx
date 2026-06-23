@@ -68,6 +68,7 @@ export default function ClosetTab({
   const tabRef = useRef<HTMLDivElement>(null);
   const filterRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
+  const detailSectionRef = useRef<HTMLDivElement>(null);
   const [tourOpen, setTourOpen] = useState(!guideTourCompleted && !isRegisterOpen);
   const [promotingGarmentId, setPromotingGarmentId] = useState<string | null>(null);
 
@@ -80,6 +81,15 @@ export default function ClosetTab({
   useEffect(() => {
     selectedRef.current = selectedGarment;
   }, [selectedGarment]);
+
+  const selectGarment = useCallback((item: Garment) => {
+    setSelectedGarment(item);
+    if (window.matchMedia("(max-width: 1023px)").matches) {
+      window.requestAnimationFrame(() => {
+        detailSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    }
+  }, [setSelectedGarment]);
 
   const refreshWardrobeStats = useCallback(async () => {
     try {
@@ -464,7 +474,7 @@ export default function ClosetTab({
                     owned={!item.isWishlist}
                     showOwnershipBadge={false}
                     size="md"
-                    onClick={() => setSelectedGarment(item)}
+                    onClick={() => selectGarment(item)}
                     favorite={{
                       active: item.isFavorite,
                       onToggle: (event) => toggleFavorite(item.id, event),
@@ -541,6 +551,7 @@ export default function ClosetTab({
               )}
             </div>
 
+            <div ref={detailSectionRef} id="closet-garment-detail" className="space-y-4 scroll-mt-24">
             <h3 className="text-lg font-black text-slate-900 tracking-tight">
               의상 상세
             </h3>
@@ -553,6 +564,7 @@ export default function ClosetTab({
                 onGarmentDeleted={handleGarmentDeleted}
                 onToast={(message) => showToast("info", message)}
             />
+            </div>
           </aside>
 
         </div>
