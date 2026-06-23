@@ -257,6 +257,7 @@ export default function HomeTab({
   const [showStickyLabels, setShowStickyLabels] = useState(false);
   const [anchorClothesId, setAnchorClothesId] = useState<string | null>(null);
   const [matchPickerOpen, setMatchPickerOpen] = useState(false);
+  const [matchOwnershipFilter, setMatchOwnershipFilter] = useState<'all' | 'owned' | 'wishlist'>('all');
   const [matchCategoryFilter, setMatchCategoryFilter] = useState<'all' | 'Top' | 'Bottom' | 'Outer' | 'Shoes'>('all');
   const [matchRecommendationGroups, setMatchRecommendationGroups] = useState<RecommendCategoryGroup[]>([]);
   const [matchLoading, setMatchLoading] = useState(false);
@@ -382,23 +383,25 @@ export default function HomeTab({
   }, [activeLabel, styleItems, uniqueItems, clothes]);
 
   const ownedClothes = useMemo(() => clothes.filter((item) => !item.isWishlist), [clothes]);
-  const matchEligibleOwnedClothes = useMemo(
-      () => ownedClothes.filter((item) => parseBeClothesId(item.id) != null),
-      [ownedClothes],
+  const matchEligibleClothes = useMemo(
+      () => clothes.filter((item) => parseBeClothesId(item.id) != null),
+      [clothes],
   );
   const anchorClothesIdNumeric = useMemo(
       () => (anchorClothesId ? parseBeClothesId(anchorClothesId) : null),
       [anchorClothesId],
   );
   const selectedAnchorClothes = useMemo(
-      () => matchEligibleOwnedClothes.find((item) => item.id === anchorClothesId) ?? null,
-      [matchEligibleOwnedClothes, anchorClothesId],
+      () => matchEligibleClothes.find((item) => item.id === anchorClothesId) ?? null,
+      [matchEligibleClothes, anchorClothesId],
   );
   const filteredMatchPickerClothes = useMemo(() => {
-    let list = matchEligibleOwnedClothes;
+    let list = matchEligibleClothes;
+    if (matchOwnershipFilter === 'owned') list = list.filter((item) => !item.isWishlist);
+    else if (matchOwnershipFilter === 'wishlist') list = list.filter((item) => item.isWishlist);
     if (matchCategoryFilter !== 'all') list = list.filter((item) => item.category === matchCategoryFilter);
     return list;
-  }, [matchEligibleOwnedClothes, matchCategoryFilter]);
+  }, [matchEligibleClothes, matchOwnershipFilter, matchCategoryFilter]);
   const registeredCount = ownedClothes.length;
   const hasRecommendationData = registeredCount > 0;
 
@@ -410,10 +413,10 @@ export default function HomeTab({
 
   useEffect(() => {
     if (!anchorClothesId) return;
-    if (!matchEligibleOwnedClothes.some((item) => item.id === anchorClothesId)) {
+    if (!matchEligibleClothes.some((item) => item.id === anchorClothesId)) {
       setAnchorClothesId(null);
     }
-  }, [matchEligibleOwnedClothes, anchorClothesId]);
+  }, [matchEligibleClothes, anchorClothesId]);
 
   useEffect(() => {
     if (!userId || !authReady) return;
@@ -800,18 +803,18 @@ export default function HomeTab({
             </div>
         )}
 
-        {activeLabel === "match" && wardrobeLoading && matchEligibleOwnedClothes.length === 0 && (
+        {activeLabel === "match" && wardrobeLoading && matchEligibleClothes.length === 0 && (
             <div className="mb-5 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-10 text-center">
               <p className="text-sm font-black text-slate-500">옷장 데이터를 불러오는 중…</p>
             </div>
         )}
-        {activeLabel === "match" && !wardrobeLoading && matchEligibleOwnedClothes.length === 0 && (
+        {activeLabel === "match" && !wardrobeLoading && matchEligibleClothes.length === 0 && (
             <div className="mb-5 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center">
               <p className="text-sm font-black text-slate-600">보유 옷을 등록하면 어울리는 옷 추천을 받을 수 있어요</p>
               <p className="text-xs text-slate-400 font-bold mt-2">옷장 탭에서 사진·구매내역 등록 후 다시 시도해 주세요.</p>
             </div>
         )}
-        {activeLabel === "match" && matchEligibleOwnedClothes.length > 0 && (
+        {activeLabel === "match" && matchEligibleClothes.length > 0 && (
             <div className="mb-5 space-y-3">
               <button
                 type="button"
@@ -866,21 +869,21 @@ export default function HomeTab({
             </div>
         )}
 
-        {activeLabel === "match" && matchEligibleOwnedClothes.length > 0 && !anchorClothesId ? (
+        {activeLabel === "match" && matchEligibleClothes.length > 0 && !anchorClothesId ? (
             <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center">
               <p className="text-sm font-black text-slate-600">위 버튼으로 옷을 선택해 주세요</p>
               <p className="text-xs text-slate-400 font-bold mt-2">선택한 옷과 어울리는 코디가 아래에 표시됩니다.</p>
             </div>
-        ) : activeLabel === "match" && matchEligibleOwnedClothes.length > 0 && matchLoading ? (
+        ) : activeLabel === "match" && matchEligibleClothes.length > 0 && matchLoading ? (
             <div className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-10 text-center">
               <p className="text-sm font-black text-slate-500">추천 코디를 불러오는 중…</p>
             </div>
-        ) : activeLabel === "match" && matchEligibleOwnedClothes.length > 0 && matchRecommendationCount === 0 ? (
+        ) : activeLabel === "match" && matchEligibleClothes.length > 0 && matchRecommendationCount === 0 ? (
             <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center">
               <p className="text-sm font-black text-slate-600">어울리는 옷을 찾지 못했어요</p>
               <p className="text-xs text-slate-400 font-bold mt-2">다른 옷을 선택하거나 옷장에 아이템을 더 등록해 보세요.</p>
             </div>
-        ) : activeLabel === "match" && matchEligibleOwnedClothes.length > 0 ? (
+        ) : activeLabel === "match" && matchEligibleClothes.length > 0 ? (
             <MatchRecommendationByCategory groups={matchRecommendationGroups} userId={userId} existingGarments={clothes} onWishlistAdded={handleRefreshAll} />
         ) : activeLabel === "similar" ? (
             <SimilarProductRecommendations
@@ -988,7 +991,31 @@ export default function HomeTab({
             onClose={() => setMatchPickerOpen(false)}
         />
         <ModalBody className="p-4 sm:p-6">
-          <div className="mb-4 flex flex-wrap gap-1.5">
+          <div className="grid grid-cols-3 gap-2 rounded-2xl bg-slate-100 p-1">
+            {([
+              ['all', '전체'],
+              ['owned', '보유'],
+              ['wishlist', '미보유'],
+            ] as const).map(([value, label]) => {
+              const active = matchOwnershipFilter === value;
+              return (
+                  <button
+                      key={value}
+                      type="button"
+                      onClick={() => setMatchOwnershipFilter(value)}
+                      aria-pressed={active}
+                      className={`h-10 rounded-xl text-[12px] font-black transition ${
+                          active
+                              ? 'bg-white text-slate-950 shadow-sm'
+                              : 'text-slate-500 hover:text-slate-800'
+                      }`}
+                  >
+                    {label}
+                  </button>
+              );
+            })}
+          </div>
+          <div className="mt-3 mb-4 flex flex-wrap gap-1.5">
             {(['all', 'Top', 'Bottom', 'Outer', 'Shoes'] as const).map((cat) => {
               const labels: Record<string, string> = { all: '전체', Top: '상의', Bottom: '하의', Outer: '아우터', Shoes: '신발' };
               const active = matchCategoryFilter === cat;
@@ -1012,6 +1039,7 @@ export default function HomeTab({
           <div className="grid grid-cols-3 sm:grid-cols-5 gap-x-2.5 gap-y-4">
             {filteredMatchPickerClothes.map((item) => {
               const selected = anchorClothesId === item.id;
+              const owned = !item.isWishlist;
               const imgSrc = resolveClothesDisplayImageUrl({ userImageUrl: item.userImageUrl, imageUrl: item.be?.imageUrl ?? item.thumbnailUrl }) || fallbackImages[item.category];
               return (
                   <button
@@ -1033,6 +1061,15 @@ export default function HomeTab({
                             <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg>
                           </span>
                       )}
+                      <span
+                        className={`absolute left-1.5 bottom-1.5 h-5 px-2 rounded-full text-[10px] font-black shadow-sm ${
+                          owned
+                            ? 'bg-emerald-500 text-white'
+                            : 'bg-orange-500 text-white'
+                        }`}
+                      >
+                        {owned ? '보유' : '위시리스트'}
+                      </span>
                     </div>
                     <p className="mt-1.5 text-[11px] font-black text-slate-800 truncate">{item.name}</p>
                     <p className="text-[10px] font-bold text-slate-400 truncate">{item.be?.brandName || item.category}</p>
@@ -1042,7 +1079,7 @@ export default function HomeTab({
           </div>
           {filteredMatchPickerClothes.length === 0 && (
               <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-5 py-8 text-center">
-                <p className="text-sm font-black text-slate-600">해당 카테고리의 보유 옷이 없습니다.</p>
+                <p className="text-sm font-black text-slate-600">조건에 맞는 옷이 없습니다.</p>
               </div>
           )}
         </ModalBody>
