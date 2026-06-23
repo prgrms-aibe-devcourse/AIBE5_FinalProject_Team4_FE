@@ -152,13 +152,11 @@ function OotdCanvas({ top, bottom, outer, shoes }: {
 
     // useEffect 반환값에 cleanup 추가
     return () => {
-      // blob URL 해제는 개별 loadImage 내에서 처리 어려우므로
-      // canvas만 초기화
-      if (canvasRef.current) {
-        const ctx = canvasRef.current.getContext('2d');
-        ctx?.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+      if (canvas) {
+        const cleanupCtx = canvas.getContext('2d')
+        cleanupCtx?.clearRect(0, 0, canvas.width, canvas.height)
       }
-    };
+    }
   }, [top, bottom, outer, shoes]);
 
   return <canvas ref={canvasRef} className="w-full h-full" style={{ display: 'block' }} />;
@@ -250,7 +248,7 @@ export default function HomeTab({
                                   onAddWishlistItem,
                                   onGoToCloset,
                                   region = '서울',
-                                  onLoginRequired,
+                                  onLoginRequired: _onLoginRequired,
     guideTourCompleted,
     onGuideTourComplete,
                                 }: HomeTabProps) {

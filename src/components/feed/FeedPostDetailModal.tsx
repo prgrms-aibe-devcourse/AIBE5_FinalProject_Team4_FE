@@ -68,10 +68,8 @@ function ClothesDetailSheet({
     setSubmitting(true)
     try {
       if (wishlisted) {
-        const removeId =
-          linkedWishlistId
-          ?? Number(findWishlistGarmentForFeedClothes(clothes.clothesId, existingGarments)?.id)
-          ?? clothes.clothesId
+        const linked = findWishlistGarmentForFeedClothes(clothes.clothesId, existingGarments)
+        const removeId = linkedWishlistId ?? Number(linked?.id ?? clothes.clothesId)
         await deleteClothes(removeId)
         setWishlisted(false)
         setLinkedWishlistId(null)

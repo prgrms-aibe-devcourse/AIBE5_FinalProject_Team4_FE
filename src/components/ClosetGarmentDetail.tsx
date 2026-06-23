@@ -5,7 +5,6 @@ import GarmentEditModal, { type GarmentEditDraft } from '@/components/GarmentEdi
 import { useToast } from '@/components/Toast'
 import { formatRecommendBrandLabel, getBrandLogoUrl } from '@/data/brandLogos'
 import type { Garment } from '@/types'
-import { UI_CATEGORY_TO_BE } from '@/data/categoryItemTypes'
 import { uploadGarmentPhoto } from '@/api/photoRegistration'
 import {
   fetchClothesDetail,

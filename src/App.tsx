@@ -300,8 +300,6 @@ export default function App() {
     selectedGarment, setSelectedGarment,
     isMethodSelectOpen,
     handleAddWishlistItem,
-    toggleFavorite,
-    moveToOwnedCloset,
     openGarmentRegister,
     closeGarmentRegisterMethod,
   } = useCloset();
@@ -428,6 +426,7 @@ export default function App() {
           setAuthUserId(null);
           setAuthReady(true);
         });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only auth bootstrap
   }, []);
 
   useEffect(() => {
@@ -596,9 +595,9 @@ export default function App() {
     setIsProfileEditOpen(true);
   };
 
-  const updateProfileEditDraft = (patch: Partial<ProfileEditDraft>) => {
+  const updateProfileEditDraft = useCallback((patch: Partial<ProfileEditDraft>) => {
     setProfileEditDraft((current) => (current ? { ...current, ...patch } : current));
-  };
+  }, []);
 
   const updateProfileBirthdayPart = (part: "year" | "month" | "day", value: string) => {
     setProfileEditDraft((current) => {
@@ -697,7 +696,7 @@ export default function App() {
       active = false;
       window.clearTimeout(timer);
     };
-  }, [isProfileEditOpen, profileEditMode, profileEditDraft?.nickname]);
+  }, [isProfileEditOpen, profileEditMode, profileEditDraft, profile.nickname, updateProfileEditDraft]);
 
   const toggleProfileEditStyle = (styleCode: string) => {
     setProfileEditDraft((current) => {

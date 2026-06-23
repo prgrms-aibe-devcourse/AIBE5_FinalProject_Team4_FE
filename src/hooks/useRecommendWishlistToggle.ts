@@ -105,7 +105,7 @@ export function useRecommendWishlistToggle({
         setSubmittingClothesId(null)
       }
     },
-    [existingGarments, onWishlistChanged, submittingClothesId, triggerToast, userId],
+    [existingGarments, isWishlisted, onWishlistChanged, submittingClothesId, triggerToast, userId],
   )
 
   const isFeedbackSubmitting = useCallback(
