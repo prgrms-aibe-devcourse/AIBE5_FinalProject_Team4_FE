@@ -18,7 +18,7 @@ import Spinner from '@/components/common/Spinner'
 import { Heart, LayoutGrid, MessageSquare, User, X } from '@/components/icons'
 import { useToast } from '@/components/Toast'
 import type { ClothesResponse } from '@/types/be'
-import { addExistingClothesToWishlist, createWishlistClothes } from '@/api/wardrobe'
+import { addExistingClothesToWishlist, createWishlistClothes, deleteClothes } from '@/api/wardrobe'
 import { resolveGarmentColorCode } from '@/data/garmentColors'
 import { CATEGORY_ITEM_TYPES } from '@/data/categoryItemTypes'
 import type { FeedComment, FeedPost } from '@/types/feed'
@@ -53,24 +53,43 @@ function ClothesDetailSheet({
   const { showToast } = useToast()
   const displayImageUrl = resolveClothesDisplayImageUrl(clothes)
   const [wishlisted, setWishlisted] = useState(false)
+  const [linkedWishlistId, setLinkedWishlistId] = useState<number | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
-    setWishlisted(findWishlistGarmentForFeedClothes(clothes.clothesId, existingGarments) != null)
+    const linked = findWishlistGarmentForFeedClothes(clothes.clothesId, existingGarments)
+    setWishlisted(linked != null)
+    setLinkedWishlistId(linked ? Number(linked.id) : null)
   }, [clothes.clothesId, existingGarments])
 
-  const handleAddToWishlist = async () => {
-    if (isMine || wishlisted || submitting) return
-    const imageUrl = resolveClothesDisplayImageUrl(clothes) ?? ''
-    if (!imageUrl.startsWith('http')) {
-      showToast('error', '이미지 URL이 없어 추가할 수 없습니다.')
-      return
-    }
+  const handleToggleWishlist = async () => {
+    if (isMine || submitting) return
+
     setSubmitting(true)
     try {
+      if (wishlisted) {
+        const removeId =
+          linkedWishlistId
+          ?? Number(findWishlistGarmentForFeedClothes(clothes.clothesId, existingGarments)?.id)
+          ?? clothes.clothesId
+        await deleteClothes(removeId)
+        setWishlisted(false)
+        setLinkedWishlistId(null)
+        showToast('success', '위시리스트에서 제거했어요.')
+        onWishlistChanged?.()
+        return
+      }
+
+      const imageUrl = resolveClothesDisplayImageUrl(clothes) ?? ''
+      if (!imageUrl.startsWith('http')) {
+        showToast('error', '이미지 URL이 없어 추가할 수 없습니다.')
+        return
+      }
+
+      let createdGarment: Garment | null = null
       // 1순위: EXTERNAL_SHOPPING 마스터 연결 시도
       try {
-        await addExistingClothesToWishlist(userId, clothes.clothesId)
+        createdGarment = await addExistingClothesToWishlist(userId, clothes.clothesId)
       } catch {
         // EXTERNAL_SHOPPING 이 아닌 옷(PHOTO/PURCHASE 등)은 새 위시리스트 항목 생성
         const beCategory = clothes.category as 'TOP' | 'BOTTOM' | 'OUTER' | 'SHOES'
@@ -83,7 +102,7 @@ function ClothesDetailSheet({
             ? rawUrl
             : `https://search.shopping.naver.com/search/all?query=${encodeURIComponent(clothes.name)}`
 
-        await createWishlistClothes(userId, {
+        createdGarment = await createWishlistClothes(userId, {
           name: clothes.name,
           brandName: (clothes.brandName?.trim() || 'UNKNOWN').slice(0, 100),
           productCode: feedWishlistProductCode(clothes.clothesId),
@@ -101,12 +120,13 @@ function ClothesDetailSheet({
         })
       }
       setWishlisted(true)
-      showToast('success', '미보유 옷에 추가했어요.')
+      setLinkedWishlistId(Number(createdGarment.id))
+      showToast('success', '위시리스트에 추가했어요.')
       onWishlistChanged?.()
     } catch (err) {
       const message =
         normalizeDuplicateRegisterError(extractApiErrorMessage(err)) ??
-        extractApiErrorMessage(err, '미보유 옷 추가에 실패했습니다.')
+        extractApiErrorMessage(err, wishlisted ? '위시리스트 제거에 실패했습니다.' : '위시리스트 추가에 실패했습니다.')
       if (message === DUPLICATE_WISHLIST_MESSAGE) {
         setWishlisted(true)
         onWishlistChanged?.()
@@ -132,10 +152,16 @@ function ClothesDetailSheet({
             {!isMine ? (
               <button
                 type="button"
-                onClick={() => void handleAddToWishlist()}
-                disabled={wishlisted || submitting}
-                title={wishlisted ? '미보유 옷에 추가됨' : '미보유 옷으로 추가'}
-                className="p-1.5 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                onClick={() => void handleToggleWishlist()}
+                disabled={submitting}
+                aria-pressed={wishlisted}
+                title={wishlisted ? '위시리스트에서 제거' : '위시리스트에 추가'}
+                aria-label={wishlisted ? '위시리스트에서 제거' : '위시리스트에 추가'}
+                className={`p-1.5 rounded-full transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+                  wishlisted
+                    ? 'bg-rose-50 text-rose-500 hover:bg-rose-100'
+                    : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                }`}
               >
                 <Heart className={`w-4 h-4 ${wishlisted ? 'fill-rose-500 text-rose-500' : ''}`} />
               </button>
