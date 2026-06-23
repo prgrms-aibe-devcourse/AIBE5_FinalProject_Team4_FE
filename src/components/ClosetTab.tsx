@@ -19,11 +19,11 @@ import {
   Flame,
   Award,
   HeartHandshake,
-  Sparkle,
   Plus,
 } from "./icons";
 import { Garment } from "@/types/index";
 import { extractApiErrorMessage } from "@/utils/apiError";
+import { useToast } from "@/components/Toast";
 import {
   isUsableClothesImageUrl,
   normalizeClothesImageUrlForApi,
@@ -60,7 +60,7 @@ export default function ClosetTab({
                                   }: ClosetTabProps) {
   const [closetTab, setClosetTab] = useState<ClosetTabView>("owned");
   const [closetFilter, setClosetFilter] = useState<string>("All");
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const { showToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [wardrobeStats, setWardrobeStats] = useState<WardrobeStatisticsResponse | null>(null);
@@ -77,15 +77,9 @@ export default function ClosetTab({
     }
   }, [isRegisterOpen, guideTourCompleted]);
 
-  // selectedRef 동기화 — loadWardrobe/upsertGarment에서 현재 선택 의상 보존에 사용
   useEffect(() => {
     selectedRef.current = selectedGarment;
   }, [selectedGarment]);
-
-  const triggerToast = useCallback((msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3000);
-  }, []);
 
   const refreshWardrobeStats = useCallback(async () => {
     try {
@@ -118,10 +112,10 @@ export default function ClosetTab({
       setSelectedGarment(preserved ?? garments[0] ?? null);
 
       if (partialErrors?.wishlist) {
-        triggerToast("위시리스트를 불러오지 못했습니다. 보유 옷만 표시합니다.");
+        showToast("info", "위시리스트를 불러오지 못했습니다. 보유 옷만 표시합니다.");
       }
       if (partialErrors?.owned) {
-        triggerToast("보유 옷을 불러오지 못했습니다. 위시리스트만 표시합니다.");
+        showToast("info", "보유 옷을 불러오지 못했습니다. 위시리스트만 표시합니다.");
       }
     } catch (err) {
       const isNetwork =
@@ -140,7 +134,7 @@ export default function ClosetTab({
     } finally {
       setLoading(false);
     }
-  }, [userId, setClothes, setSelectedGarment, triggerToast]);
+  }, [userId, setClothes, setSelectedGarment, showToast]);
 
   useEffect(() => {
     loadWardrobe();
@@ -240,16 +234,17 @@ export default function ClosetTab({
     try {
       const updated = await updateClothesFavorite(Number(id), nextFavorite);
       upsertGarment(updated);
-      triggerToast(
+      showToast(
+          "success",
           nextFavorite
-              ? "❤️ 즐겨찾기에 등록되었습니다."
-              : "💔 즐겨찾기에서 해제되었습니다.",
+              ? "즐겨찾기에 등록되었습니다."
+              : "즐겨찾기에서 해제되었습니다.",
       );
     } catch {
       setClothes((prev) =>
           prev.map((c) => (c.id === id ? { ...c, isFavorite: item.isFavorite } : c)),
       );
-      triggerToast("즐겨찾기 변경에 실패했습니다.");
+      showToast("error", "즐겨찾기 변경에 실패했습니다.");
     }
   };
 
@@ -258,13 +253,13 @@ export default function ClosetTab({
 
     const rawImageUrl = resolveGarmentImageUrl(item);
     if (!isUsableClothesImageUrl(rawImageUrl)) {
-      triggerToast("보유 전환에 필요한 이미지 URL이 없습니다.");
+      showToast("error", "보유 전환에 필요한 이미지 URL이 없습니다.");
       return;
     }
 
     const clothesId = Number(item.id);
     if (!Number.isFinite(clothesId)) {
-      triggerToast("옷 정보가 올바르지 않습니다. 다시 시도해 주세요.");
+      showToast("error", "옷 정보가 올바르지 않습니다. 다시 시도해 주세요.");
       return;
     }
 
@@ -282,9 +277,9 @@ export default function ClosetTab({
       setSelectedGarment(ownedGarment);
       setClosetTab("owned");
       void refreshWardrobeStats();
-      triggerToast(`🛍️ "${item.name}" 이(가) 보유 옷장으로 이동했습니다!`);
+      showToast("success", "보유 옷장으로 이동했습니다.");
     } catch (error) {
-      triggerToast(extractApiErrorMessage(error, "보유 옷장 전환에 실패했습니다."));
+      showToast("error", extractApiErrorMessage(error, "보유 옷장 전환에 실패했습니다."));
     } finally {
       setPromotingGarmentId(null);
     }
@@ -308,16 +303,6 @@ export default function ClosetTab({
 
   return (
       <div className="space-y-6 animate-fade-in font-sans">
-
-        {/* Dynamic Floating Notification Toast */}
-        {toastMessage && (
-            <div className="pointer-events-none fixed inset-x-0 bottom-24 z-50 flex justify-center px-4">
-              <div className="pointer-events-auto flex max-w-full items-center gap-2 rounded-2xl border border-emerald-400 bg-[#1E3A8A] px-5 py-3 text-center text-xs font-black text-[#BBF7D0] shadow-xl animate-bounce">
-                <Sparkle className="w-4 h-4 shrink-0 text-emerald-300 animate-spin" />
-                <span className="truncate">{toastMessage}</span>
-              </div>
-            </div>
-        )}
 
         {/* ========================================================================= */}
         {/* 1. HERO BANNER: WARM COSMOS SUNSET COZY CONTAINER */}
@@ -566,7 +551,7 @@ export default function ClosetTab({
                 onGarmentChange={setSelectedGarment}
                 onGarmentUpdated={upsertGarment}
                 onGarmentDeleted={handleGarmentDeleted}
-                onToast={triggerToast}
+                onToast={(message) => showToast("info", message)}
             />
           </aside>
 
