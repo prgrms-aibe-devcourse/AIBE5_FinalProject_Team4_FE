@@ -812,6 +812,15 @@ export default function HomeTab({
             <div className="mb-5 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center">
               <p className="text-sm font-black text-slate-600">보유 옷을 등록하면 어울리는 옷 추천을 받을 수 있어요</p>
               <p className="text-xs text-slate-400 font-bold mt-2">옷장 탭에서 사진·구매내역 등록 후 다시 시도해 주세요.</p>
+              {onGoToCloset && (
+                <button
+                  type="button"
+                  onClick={onGoToCloset}
+                  className="mt-4 h-9 px-4 rounded-full bg-[#111827] text-white text-xs font-black"
+                >
+                  옷 등록하러 가기
+                </button>
+              )}
             </div>
         )}
         {activeLabel === "match" && matchEligibleClothes.length > 0 && (
