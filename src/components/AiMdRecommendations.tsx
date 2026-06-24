@@ -1104,7 +1104,7 @@ export default function AiMdRecommendations({
               return (
                 <article
                   key={key}
-                  className="group relative rounded-[24px] border overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:rotate-[0.5deg] hover:shadow-xl active:scale-[0.99] cursor-pointer border-slate-100 bg-slate-50"
+                  className="group relative rounded-[24px] border overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:rotate-[0.5deg] active:scale-[0.99] cursor-pointer border-slate-100 bg-slate-50"
                 >
                   <button
                     type="button"

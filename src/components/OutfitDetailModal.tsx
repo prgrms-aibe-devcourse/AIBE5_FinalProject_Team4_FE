@@ -4,10 +4,14 @@ import AuthenticatedImage from '@/components/common/AuthenticatedImage'
 import { createOutfit, updateOutfit, deleteOutfit } from '@/api/outfits'
 import { postRecommendationFeedback } from '@/api/recommendations'
 import { useToast } from './Toast'
-import { Shirt, CloudRain, Sparkles, Trash2, RefreshCw } from '@/components/icons'
+import { Shirt, CloudRain, Sparkles, Trash2, RefreshCw, Search } from '@/components/icons'
 import ClothesSelectModal from './ClothesSelectModal'
+import RecommendProductDetailModal from './RecommendProductDetailModal'
 import ExitConfirmModal from '@/components/common/ExitConfirmModal'
 import { Garment } from '@/types'
+import { RecommendCardItem } from '@/utils/recommendationMapper'
+import { getGarmentColorLabel, getGarmentColor } from '@/data/garmentColors'
+import { getItemTypeLabel, resolveUiCategory } from '@/data/categoryItemTypes'
 
 export interface OutfitModalItem {
   clothesId?: number
@@ -68,13 +72,16 @@ export default function OutfitDetailModal({
     category: '',
     title: ''
   })
+  const [showProductDetail, setShowProductDetail] = useState<{ open: boolean; item: RecommendCardItem | null; onSelect?: () => void }>({
+    open: false,
+    item: null
+  })
 
   const { showToast } = useToast()
   const saveDisabledMessage = editCombo?.saveDisabledMessage as string | undefined
   const isSaveDisabled = Boolean(saveDisabledMessage)
   const saveOverride = editCombo?.saveOverride as (() => Promise<void>) | undefined
 
-  // 모달 닫힐 때 isDirty, isEditing 초기화
   useEffect(() => {
     if (!open) {
       setIsDirty(false)
@@ -82,7 +89,6 @@ export default function OutfitDetailModal({
     }
   }, [open])
 
-  // 닫기 핸들러 - isDirty 체크
   const handleClose = () => {
     if (isDirty) {
       setShowExitConfirm(true)
@@ -91,7 +97,6 @@ export default function OutfitDetailModal({
     }
   }
 
-  // editCombo 초기화
   useEffect(() => {
     if (open && combination) {
       const augmentItem = (item: any) => {
@@ -246,10 +251,64 @@ export default function OutfitDetailModal({
     }))
   }
 
-  const handleItemClick = (category: string, _item: OutfitModalItem | null | undefined) => {
-    if (!(isSaveDisabled || saveOverride)) {
-      handleItemReplace(category)
+  const handleItemClick = (category: string, item: OutfitModalItem | null | undefined) => {
+    // 코디북 편집 모드: 바로 교체 모달
+    if (editCombo.outfitId && isEditing) {
+      if (!(isSaveDisabled || saveOverride)) {
+        handleItemReplace(category)
+      }
+      return
     }
+
+    // 아이템 없으면 교체 모달 바로 오픈
+    if (!item || !item.clothesId) {
+      if (!(isSaveDisabled || saveOverride)) {
+        handleItemReplace(category)
+      }
+      return
+    }
+
+    // OOTD 또는 코디북 비편집: 상품 상세 먼저
+    const canReplace = !(isSaveDisabled || saveOverride) && !editCombo.outfitId
+
+    // 아이템 있으면 상품 상세 먼저
+    const matched = clothes.find(c => Number(c.id) === Number(item.clothesId))
+    const be = matched?.be
+    const uiCategory = resolveUiCategory(item.category || matched?.category)
+
+    const card: RecommendCardItem = {
+      id: String(item.clothesId),
+      clothesId: item.clothesId,
+      title: item.name || matched?.name || '정보 없음',
+      brandLabel: item.brand || be?.brandName || '',
+      brandLogoUrl: null,
+      category: uiCategory,
+      categoryLabel: { Top: '상의', Bottom: '하의', Outer: '아우터', Shoes: '신발' }[uiCategory as 'Top' | 'Bottom' | 'Outer' | 'Shoes'] || uiCategory,
+      itemTypeCode: be?.itemTypeCode || '',
+      itemTypeLabel: getItemTypeLabel(uiCategory, be?.itemTypeCode || ''),
+      style: be?.styleCodes?.[0] || '',
+      styles: be?.styleCodes || [],
+      color: be?.primaryColorCode ? getGarmentColorLabel(be.primaryColorCode) : '',
+      colorHex: be?.primaryColorCode ? getGarmentColor(be.primaryColorCode)?.hex : undefined,
+      secondaryColors: be?.secondaryColorCodes ? be.secondaryColorCodes.map((code: string) => {
+        const gc = getGarmentColor(code)
+        return { label: gc?.name || code, hex: gc?.hex }
+      }) : [],
+      matchRate: 0,
+      imageUrl: item.imageUrl || item.userImageUrl || be?.imageUrl || matched?.thumbnailUrl || '',
+      reason: '',
+      purchaseUrl: '',
+      hasDirectPurchaseUrl: false
+    }
+
+    setShowProductDetail({
+      open: true,
+      item: card,
+      onSelect: canReplace ? () => {
+        setShowProductDetail(prev => ({ ...prev, open: false }))
+        handleItemReplace(category)
+      } : undefined
+    })
   }
 
   const WeatherIcon = (() => {
@@ -320,7 +379,11 @@ export default function OutfitDetailModal({
                             onClick={() => handleItemClick(role, item)}
                             className="absolute inset-0 bg-black/40 opacity-0 group-hover/item:opacity-100 transition-opacity flex items-center justify-center rounded-xl cursor-pointer"
                         >
-                          <RefreshCw className="w-6 h-6 text-white" />
+                          {/* OOTD 또는 편집 모드: 교체 아이콘 / 코디북 비편집: 돋보기 아이콘 */}
+                          {(!editCombo.outfitId || isEditing)
+                              ? <RefreshCw className="w-6 h-6 text-white" />
+                              : <Search className="w-6 h-6 text-white" />
+                          }
                         </button>
                       </div>
                       <p className="text-sm font-black text-slate-900 truncate px-1">{item?.name ?? '—'}</p>
@@ -400,6 +463,15 @@ export default function OutfitDetailModal({
             title={showSelectModal.title}
             clothes={clothes}
             onSelect={onSelectClothes}
+            zIndex={120}
+        />
+
+        <RecommendProductDetailModal
+            open={showProductDetail.open}
+            item={showProductDetail.item}
+            onClose={() => setShowProductDetail({ ...showProductDetail, open: false })}
+            userId={userId || null}
+            onSelect={showProductDetail.onSelect}
             zIndex={120}
         />
 
