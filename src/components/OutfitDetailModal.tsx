@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Modal, ModalBody, ModalFooter, ModalHeader } from '@/components/common/Modal'
 import AuthenticatedImage from '@/components/common/AuthenticatedImage'
 import { createOutfit, updateOutfit, deleteOutfit } from '@/api/outfits'
@@ -65,6 +65,40 @@ export default function OutfitDetailModal({
   const [isDirty, setIsDirty] = useState(false)
   const [showExitConfirm, setShowExitConfirm] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
+
+  const sliderRef = useRef<HTMLDivElement>(null)
+  const isDragging = useRef(false)
+  const startX = useRef(0)
+  const scrollLeftPos = useRef(0)
+  const moved = useRef(false)
+
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    isDragging.current = true
+    moved.current = false
+    startX.current = e.pageX - (e.currentTarget.offsetLeft)
+    scrollLeftPos.current = e.currentTarget.scrollLeft
+    e.currentTarget.style.cursor = 'grabbing'
+  }
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isDragging.current) return
+    e.preventDefault()
+    const x = e.pageX - (e.currentTarget.offsetLeft)
+    const walk = (x - startX.current) * 1.5
+    
+    if (Math.abs(x - startX.current) > 5) {
+      moved.current = true
+    }
+    
+    e.currentTarget.scrollLeft = scrollLeftPos.current - walk
+  }
+  const handleMouseUp = (e: React.MouseEvent<HTMLDivElement>) => {
+    isDragging.current = false
+    e.currentTarget.style.cursor = 'grab'
+  }
+  const handleMouseLeave = (e: React.MouseEvent<HTMLDivElement>) => {
+    isDragging.current = false
+    e.currentTarget.style.cursor = 'grab'
+  }
 
   const [editCombo, setEditCombo] = useState<any>(null)
   const [showSelectModal, setShowSelectModal] = useState<{ open: boolean; category: string; title: string }>({
@@ -344,7 +378,15 @@ export default function OutfitDetailModal({
                   </div>
               )}
 
-              <div className="flex items-center gap-3 overflow-x-auto pb-2 scrollbar-hide">
+              <div 
+                ref={sliderRef}
+                className="flex items-center gap-3 overflow-x-auto pb-2 scrollbar-hide"
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseLeave}
+                style={{ cursor: 'grab' }}
+              >
                 {[
                   { role: 'TOP', label: '상의', item: editCombo.top },
                   { role: 'BOTTOM', label: '하의', item: editCombo.bottom },
@@ -376,7 +418,13 @@ export default function OutfitDetailModal({
                         </div>
                         <button
                             type="button"
-                            onClick={() => handleItemClick(role, item)}
+                            onClick={(e) => {
+                              if (moved.current) {
+                                e.stopPropagation()
+                                return
+                              }
+                              handleItemClick(role, item)
+                            }}
                             className="absolute inset-0 bg-black/40 opacity-0 group-hover/item:opacity-100 transition-opacity flex items-center justify-center rounded-xl cursor-pointer"
                         >
                           {/* OOTD 또는 편집 모드: 교체 아이콘 / 코디북 비편집: 돋보기 아이콘 */}
