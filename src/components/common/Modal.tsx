@@ -5,7 +5,7 @@ import { X } from '@/components/icons'
 export type ModalSize = 'sm' | 'md' | 'lg'
 export type ModalPlacement = 'center' | 'sheet'
 /** App 고정 UI(header z-30, FAB z-40)보다 위. toast는 z-[130]으로 모달 위에 표시 */
-export type ModalZIndex = 100 | 110 | 120
+export type ModalZIndex = 100 | 110 | 120 | 130
 
 const SIZE_CLASS: Record<ModalSize, string> = {
   sm: 'sm:max-w-md',
@@ -17,6 +17,7 @@ const Z_INDEX_CLASS: Record<ModalZIndex, string> = {
   100: 'z-[100]',
   110: 'z-[110]',
   120: 'z-[120]',
+  130: 'z-[130]',
 }
 
 interface ModalProps {
@@ -102,7 +103,7 @@ export function Modal({
   return createPortal(
     <div
       id={id}
-      className={`fixed inset-0 flex justify-center bg-slate-900/50 backdrop-blur-xs animate-fade-in ${Z_INDEX_CLASS[zIndex]} ${placementClass} ${overlayClassName} ${overlayPropsClassName ?? ''}`}
+      className={`fixed inset-0 flex justify-center bg-slate-900/60 backdrop-blur-sm animate-fade-in ${Z_INDEX_CLASS[zIndex]} ${placementClass} ${overlayClassName} ${overlayPropsClassName ?? ''}`}
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}

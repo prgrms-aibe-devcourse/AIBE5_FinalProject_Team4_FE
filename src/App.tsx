@@ -487,9 +487,17 @@ export default function App() {
   };
 
   const handleHomeNavigation = () => {
-    setCurrentTab("home");
-    setHomeResetSignal((signal) => signal + 1);
-    window.setTimeout(scrollAppToTop, 0);
+    if (currentTab === "home") {
+      const viewport = document.getElementById("app-viewport");
+      if (viewport) {
+        viewport.scrollTo({ top: 0, behavior: "smooth" });
+      } else {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    } else {
+      setCurrentTab("home");
+      setHomeResetSignal((signal) => signal + 1);
+    }
   };
 
   const handleSocialLogin = async (platform: OAuthProvider) => {
@@ -1205,7 +1213,18 @@ export default function App() {
               {/* Logo / Left */}
               <div
                 className="flex items-center gap-2 cursor-pointer selection:bg-transparent group/logo"
-                onClick={() => setCurrentTab("home")}
+                onClick={() => {
+                  if (currentTab === "home") {
+                    const viewport = document.getElementById("app-viewport");
+                    if (viewport) {
+                      viewport.scrollTo({ top: 0, behavior: "smooth" });
+                    } else {
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }
+                  } else {
+                    setCurrentTab("home");
+                  }
+                }}
               >
                 <svg className="brand-symbol-image" viewBox="0 0 64 64" fill="none" aria-hidden="true">
                   <path d="M16 49V20.5c0-3.6 2.9-6.5 6.5-6.5h1.6C25.5 9.9 28.3 8 32 8s6.5 1.9 7.9 6h1.6c3.6 0 6.5 2.9 6.5 6.5V49H16Z" fill="white" stroke="#111827" strokeWidth="3.1" strokeLinejoin="round" />

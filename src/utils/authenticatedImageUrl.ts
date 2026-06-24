@@ -5,17 +5,22 @@ const PROTECTED_IMAGE_PATH =
   /\/api\/v1\/images\/(clothes|purchase-captures)\//i
 
 function normalizeImagePathname(url: string): string {
-  const raw = url.startsWith('http')
-    ? new URL(url).pathname
-    : url.startsWith('/')
-      ? url
-      : `/${url}`
-  return raw.split(/[?#]/)[0]
+  if (!url) return ''
+  try {
+    const raw = url.startsWith('http')
+      ? new URL(url).pathname
+      : url.startsWith('/')
+        ? url
+        : `/${url}`
+    return raw.split(/[?#]/)[0]
+  } catch {
+    return url
+  }
 }
 
 /** BE 로컬/운영 저장 이미지 URL인지 확인 (clothes·purchase-captures는 인증 fetch 필요) */
-export function isProtectedStorageImageUrl(url: string): boolean {
-  if (url.startsWith('blob:') || url.startsWith('data:')) return false
+export function isProtectedStorageImageUrl(url: string | null | undefined): boolean {
+  if (!url || url.startsWith('blob:') || url.startsWith('data:')) return false
   try {
     return PROTECTED_IMAGE_PATH.test(normalizeImagePathname(url))
   } catch {
@@ -24,7 +29,8 @@ export function isProtectedStorageImageUrl(url: string): boolean {
 }
 
 /** axios 요청용 상대 경로로 정규화 (dev Vite 프록시 호환) */
-export function toProxiedImageRequestPath(url: string): string {
+export function toProxiedImageRequestPath(url: string | null | undefined): string {
+  if (!url) return ''
   if (url.startsWith('/api/')) return url
   try {
     const parsed = new URL(url)
@@ -36,8 +42,9 @@ export function toProxiedImageRequestPath(url: string): string {
 }
 
 export async function fetchAuthenticatedImageObjectUrl(
-  url: string,
+  url: string | null | undefined,
 ): Promise<string | null> {
+  if (!url) return null
   if (!isProtectedStorageImageUrl(url)) return url
 
   try {
