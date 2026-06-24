@@ -34,7 +34,7 @@ interface OutfitBookTabProps {
 }
 
 export default function OutfitBookTab({
-                                        userId,
+                                        userId: _userId,
                                         clothes,
                                         guideTourCompleted,
                                         onGuideTourComplete,
@@ -170,7 +170,7 @@ export default function OutfitBookTab({
                           aria-label="toggle-favorite"
                           className="absolute right-3 top-3 z-10 p-1 rounded-full bg-white/80 hover:bg-white"
                       >
-                        <Heart className={`${outfit.favorite ? 'text-red-500' : 'text-slate-300'} w-5 h-5`} />
+                        <Heart className={`${outfit.favorite ? 'text-rose-500 fill-rose-500' : 'text-slate-300'} w-5 h-5`} />
                       </button>
 
                       <div className="aspect-square bg-slate-50 rounded-2xl overflow-hidden border border-slate-50 flex items-center justify-center">

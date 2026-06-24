@@ -14,7 +14,7 @@ function AiAnalyzing({ photoId }: AiAnalyzingProps) {
             if(response.data) return setIsCompleted(true);
             }, 2000);
         return () => clearInterval(interval);
-    }, [])
+    }, [photoId])
 
     if (!isCompleted) return <div>"AI가 분석중입니다..."</div>
     return <div>"분석완료!"</div>

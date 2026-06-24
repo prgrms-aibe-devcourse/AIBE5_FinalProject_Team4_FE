@@ -52,7 +52,7 @@ last_updated: 2026-06-22
 | `WARDROBE-011`~`WARDROBE-030`, 옷 수정 | 옷 등록/수정 modal | `PhotoGarmentRegisterModal.tsx`, `PurchaseGarmentRegisterModal.tsx`, `GarmentEditModal.tsx` | [garment-registration.md](../features/garment-registration.md), [domain-types.md](domain-types.md) | 등록/수정 API 연동 자체가 아니라, 옷 대상 성별 UI 노출과 `season` 수정 payload/검증 주석 확인 필요 |
 | `RECO-001` | `home` tab 상단 고정 OOTD 섹션 | `HomeTab.tsx` | [home-recommendation.md](../features/home-recommendation.md) | BE `GET /api/v1/ootd/{wardrobeId}` 연동. `RecommendationLabel`에서 `ootd` 라벨 제거 후 탭과 별개로 항상 로드 |
 | `RECO-002` | `home` tab `style` 라벨 | `HomeTab.tsx` | [home-recommendation.md](../features/home-recommendation.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | BE `GET /api/v1/recommendations/{wardrobeId}` 연동 |
-| `RECO-004` | `home` tab `match` 라벨 | `HomeTab.tsx`, `MatchRecommendationByCategory.tsx`, `src/api/recommendations.ts` | [home-recommendation.md](../features/home-recommendation.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | BE recommendations API 연동. 기본 `limitPerCategory=50` (BE 허용 `1`~`50`). 추천 피드백 API와 별개로 동작 |
+| `RECO-004` | `home` tab `match` 라벨 | `HomeTab.tsx`, `MatchRecommendationByCategory.tsx`, `src/api/recommendations.ts` | [home-recommendation.md](../features/home-recommendation.md), [frontend-api-usage.md](../api/frontend-api-usage.md), [api-contract-reco004-anchor.md](../api/api-contract-reco004-anchor.md) | BE recommendations API 연동. 기준 옷 `OWNED`/`WISHLIST` 허용. 기본 `limitPerCategory=50` (BE 허용 `1`~`50`). 추천 피드백 API와 별개로 동작 |
 | `RECO-012`~`RECO-013` | 추천 카드 액션 | `HomeTab.tsx`, `MatchRecommendationByCategory.tsx`, `RecommendProductDetailModal.tsx`, `OutfitDetailModal.tsx` | [home-recommendation.md](../features/home-recommendation.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | 싫어요/추천 제외와 일부 저장 액션은 피드백 API에 연결. 외부 상품 저장/AI MD 등 세부 액션의 피드백 기록 범위 확인 필요 |
 | `FEED-001` | `lookfeed-profile` view | `App.tsx` lookfeed profile section, `src/api/feed.ts` | [feature-index.md](../requirements/feature-index.md), [routing.md](routing.md), [frontend-api-usage.md](../api/frontend-api-usage.md) | 게시한 피드·좋아요한 피드·프로필 통계 API 연동. 코디 업로드(`FeedWriteModal`) 연동. 남은 gap: grid 페이지네이션 |
 | `FEED-008` | `feed` tab 상세 모달 팔로우 버튼 | `FeedPostDetailModal.tsx`, `src/types/feed.ts` | [frontend-api-usage.md](../api/frontend-api-usage.md), [domain-types.md](domain-types.md) | `FeedAuthor.followedByMe`가 BE 응답에 없으면 팔로우 버튼 미표시. BE PR #128 `FeedAuthorResponse`에 필드 추가 후 FE 타입 필수로 전환 필요 |
@@ -67,6 +67,19 @@ last_updated: 2026-06-22
 
 - AI MD 채팅(`RECO-005`): `/api/chat-gamyagi` mock 경로 사용 중. `/api/v1/users/{userId}/recommendations/ai-md/personas/{personaId}/chat` 계약으로 전환 필요
 - AI MD 상품/코디 저장, 외부 상품 저장처럼 추천과 연결되는 세부 액션이 `RECO-012`~`RECO-013` 피드백으로도 기록되어야 하는지 기준 확인 필요
+- `RECO-004` 기준 옷(`clothesId`): FE는 `OWNED`/`WISHLIST` 모두 허용. BE [api-contract.md](https://github.com/prgrms-aibe-devcourse/AIBE5_FinalProject_Team4_BE/blob/develop/docs/api/api-contract.md) 「옷장 기반 어울리는 옷 추천」 절과 서버 검증이 아직 `OWNED`만 명시·허용할 수 있음. [api-contract-reco004-anchor.md](../api/api-contract-reco004-anchor.md) 문구로 BE 계약·검증 동기화 필요
+
+### `RECO-004` 기준 옷 — BE 계약·검증 동기화
+
+FE `HomeTab` `match` 탭은 기준 옷 후보에 `OWNED`와 `WISHLIST`를 모두 포함하고, 선택한 `clothesId`를 `GET /api/v1/users/{userId}/clothes/{clothesId}/recommendations`에 그대로 전달합니다.
+
+| 구분 | FE 기준 (현재 구현) | BE 동기화 필요 여부 |
+| --- | --- | --- |
+| 기준 옷 후보 | 옷장 전체 (`OWNED` + `WISHLIST`) | FE 문서 반영 완료 |
+| path `clothesId` 허용 범위 | 활성 옷장 항목, `OWNED` 또는 `WISHLIST` | BE `api-contract.md` 및 컨트롤러 검증이 `OWNED`만 허용하면 `WISHLIST` 선택 시 `400`/`404` 가능 |
+| 동기화 목표 문구 | [api-contract-reco004-anchor.md](../api/api-contract-reco004-anchor.md) | BE PR에서 「옷장 기반 어울리는 옷 추천」 절 업데이트 |
+
+`RECO-003` 유사 상품과 동일한 기준 옷 범위를 사용합니다.
 
 ### `RECO-004` 추천 상세 — 구매 후 보유 옷장 등록 피드백 범위
 
