@@ -4,10 +4,6 @@ import BrandDisplay from '@/components/common/BrandDisplay'
 import { Modal, ModalBody, ModalFooter, ModalHeader } from '@/components/common/Modal'
 import { Heart } from '@/components/icons'
 import type { RecommendCardItem, RecommendColorChip } from '@/utils/recommendationMapper'
-import { useToast } from './Toast'
-import { postRecommendationFeedback, RecommendationFeedbackType } from '@/api/recommendations'
-import { createWishlistClothes } from '@/api/wardrobe'
-import { buildWishlistPayloadFromRecommendedItem } from '@/utils/recommendWishlistPayload'
 
 
 interface RecommendProductDetailModalProps {
@@ -55,22 +51,21 @@ export default function RecommendProductDetailModal({
                                                         open,
                                                         item,
                                                         onClose,
-                                                        userId,
+                                                        userId: _userId,
                                                         wishlisted = false,
                                                         wishlistSubmitting = false,
                                                         onWishlistToggle,
-                                                        onExclude,
+                                                        onExclude: _onExclude,
                                                         onDislike,
                                                         dislikeSubmitting = false,
                                                         onPurchaseConfirm,
                                                         purchaseConfirmSubmitting = false,
                                                     }: RecommendProductDetailModalProps) {
-    const { showToast } = useToast()
     const [purchaseOpened, setPurchaseOpened] = useState(false)
 
     useEffect(() => {
         if (!open || !item) setPurchaseOpened(false)
-    }, [open, item?.id])
+    }, [open, item])
 
     if (!open || !item) return null
 
@@ -90,40 +85,6 @@ export default function RecommendProductDetailModal({
     const hasStyles = styles.length > 0
     const hasColors = allColors.length > 0
     const canToggleWishlist = !item.isAnchor && Boolean(onWishlistToggle)
-
-    const handleFeedback = async (type: RecommendationFeedbackType) => {
-        const uid = userId
-        if (!uid) {
-            showToast('error', '로그인이 필요한 작업입니다.')
-            return
-        }
-        try {
-            if (type === 'SAVED') {
-                if (onWishlistToggle) {
-                    await onWishlistToggle()
-                } else {
-                    if (!item.source) {
-                        await postRecommendationFeedback(uid, { feedbackType: type, clothesId: item.clothesId ?? undefined })
-                        showToast('success', '추천을 저장했습니다.')
-                    } else {
-                        await createWishlistClothes(uid, buildWishlistPayloadFromRecommendedItem(item.source))
-                        showToast('success', '위시리스트에 저장했습니다.')
-                    }
-                }
-                if (!onWishlistToggle) onClose()
-            } else if (type === 'EXCLUDE') {
-                if (onExclude) {
-                    await onExclude()
-                } else {
-                    await postRecommendationFeedback(uid, { feedbackType: type, clothesId: item.clothesId ?? undefined })
-                    showToast('success', '해당 상품을 추천에서 제외했습니다.')
-                }
-                onClose()
-            }
-        } catch {
-            showToast('error', '요청에 실패했습니다.')
-        }
-    }
 
     const handlePurchaseClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
         e.preventDefault()

@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import AuthenticatedImage from "@/components/common/AuthenticatedImage";
 import RecommendProductDetailModal from "@/components/RecommendProductDetailModal";
-import { ChevronRight, Heart, Sparkle, ThumbsDown } from "@/components/icons";
-import { postRecommendationFeedback } from "@/api/recommendations";
+import { ChevronRight, Heart } from "@/components/icons";
 import { useRecommendWishlistToggle } from "@/hooks/useRecommendWishlistToggle";
 import type { Garment } from "@/types";
 import type {
@@ -270,7 +269,6 @@ export default function MatchRecommendationByCategory({
     new Set(),
   );
   const [selectedItem, setSelectedItem] = useState<RecommendCardItem | null>(null);
-  const [isDisliking, setIsDisliking] = useState(false);
 
   useEffect(() => {
     setExpandedCategories(new Set());

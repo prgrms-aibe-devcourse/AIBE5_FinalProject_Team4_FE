@@ -34,7 +34,7 @@ interface OutfitBookTabProps {
 }
 
 export default function OutfitBookTab({
-                                        userId,
+                                        userId: _userId,
                                         clothes,
                                         guideTourCompleted,
                                         onGuideTourComplete,

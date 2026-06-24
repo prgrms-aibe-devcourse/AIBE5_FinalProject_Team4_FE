@@ -4,7 +4,7 @@ import type { RegionCode } from "@/types/index";
 import { REGIONS } from '@/data/regions';
 import { checkNicknameAvailability } from "@/api/users";
 import LegalConsentGroup from "@/components/legal/LegalConsentGroup";
-import { Check, ChevronRight, X } from "@/components/icons";
+import { ChevronRight, X } from "@/components/icons";
 import { formatNicknameInput, getNicknameValidationError, NICKNAME_RULE_MESSAGE } from "@/utils/nickname";
 
 export type OnboardingStyleOption = {

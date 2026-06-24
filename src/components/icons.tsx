@@ -47,6 +47,12 @@ export const Heart = (props: IconProps) => (
   </Icon>
 );
 
+export const Star = (props: IconProps) => (
+  <Icon {...props}>
+    <path d="M12 3.5 14.2 9l5.8.9-4.2 4.1 1 5.7L12 17.8 7.2 19.7l1-5.7-4.2-4.1 5.8-.9L12 3.5Z" />
+  </Icon>
+);
+
 export const Home = (props: IconProps) => (
   <Icon {...props}>
     <path d="m3 11 9-8 9 8" />

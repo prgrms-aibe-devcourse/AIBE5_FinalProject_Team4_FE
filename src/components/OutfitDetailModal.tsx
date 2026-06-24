@@ -85,7 +85,7 @@ export default function OutfitDetailModal({
     if (!open || !editCombo) { setFavorite(null); return }
     if (!editCombo.outfitId || !editCombo.bookId) { setFavorite(null); return }
     setFavorite(editCombo.favorite !== undefined ? Boolean(editCombo.favorite) : null)
-  }, [open, editCombo?.outfitId, editCombo?.bookId, editCombo?.favorite])
+  }, [open, editCombo])
 
   // 닫기 핸들러 - isDirty 체크
   const handleClose = () => {
@@ -201,7 +201,7 @@ export default function OutfitDetailModal({
       })
       setIsDirty(false)
     }
-  }, [open, combination?.outfitId, combination?.bookId])
+  }, [open, combination, clothes])
 
   if (!open || !combination || !editCombo) return null
 

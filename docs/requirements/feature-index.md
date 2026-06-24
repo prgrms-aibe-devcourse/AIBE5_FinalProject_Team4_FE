@@ -31,7 +31,7 @@ last_updated: 2026-06-22
 | `RECO-001` | 추천 | OOTD 코디 | 사용자 기준 코디 추천. 날씨, 계절, 체감온도는 보조 조건으로 반영 | `GET /api/v1/ootd/{wardrobeId}`, `WeatherCompatibilityTable` | 추천 메인 |
 | `RECO-002` | 추천 | 취향 분석/스타일 기반 추천 | 사용자 취향, 옷장, 지역, 날씨 등 데이터를 추천 근거로 활용 | `GET /api/v1/recommendations/{wardrobeId}`, `USER_STYLES`, `RECOMMENDATION_FEEDBACKS` | 추천 메인 |
 | `RECO-003` | 추천 | 유사 상품 탐색 | 선택한 상품이나 옷과 유사한 상품을 이미지, 카테고리, 색상, 스타일 기준으로 탐색 | `GET /api/v1/users/{userId}/clothes/{clothesId}/similar-products` | 옷 상세, 추천 상세 |
-| `RECO-004` | 추천 | 어울리는 옷 추천 | 사용자 옷장 데이터를 기준으로 함께 입기 좋은 상의, 하의, 아우터, 신발 추천 (`limitPerCategory` query, 기본 `5`, 허용 `1`~`50`) | `GET /api/v1/users/{userId}/clothes/{clothesId}/recommendations` | 추천 상세 |
+| `RECO-004` | 추천 | 어울리는 옷 추천 | 사용자 옷장(`OWNED`/`WISHLIST`) 데이터를 기준으로 함께 입기 좋은 상의, 하의, 아우터, 신발 추천 (`limitPerCategory` query, 기본 `5`, 허용 `1`~`50`) | `GET /api/v1/users/{userId}/clothes/{clothesId}/recommendations` | 추천 상세 |
 | `RECO-005` | 추천 | AI MD 추천 | AI가 TPO/드레스코드 코디를 추천하고 이유와 스타일링 설명 제공 | `/api/v1/users/{userId}/recommendations/ai-md/**`, `OUTFITS`, `OUTFIT_ITEMS`, Gemini, 네이버쇼핑 | 추천 상세, 코디북 |
 | `RECO-006` | 추천 | 외부 API 오류 안내 | 날씨, 상품, AI 등 외부 API 오류 시 기본 추천 또는 대체 행동 안내 | 날씨 API, 네이버쇼핑, Gemini, 공통 에러 응답 | 추천 메인, 추천 상세 |
 | `RECO-007`~`RECO-011` | 추천 상세 | 추천 결과 상세/액션 | 추천 상품/코디 상세, 코디 저장, 미보유 저장, 구매 링크 | `OUTFITS`, `OUTFIT_ITEMS`, `POST /api/users/{userId}/wishlist-clothes` | 추천 상세 |

@@ -10,6 +10,7 @@ import { Plus } from '@/components/icons'
 import type { FeedPost } from '@/types/feed'
 import type { Garment } from '@/types'
 import { extractApiErrorMessage } from '@/utils/apiError'
+import { buildFeedPostShareUrl, consumeFeedPostIdFromUrl } from '@/utils/feedShare'
 import GuideTour from '@/components/common/GuideTour'
 
 interface FeedTabProps {
@@ -32,9 +33,8 @@ export default function FeedTab({
   const { showToast } = useToast()
 
   const handleShare = async (postId: number) => {
-    const url = `${window.location.origin}${window.location.pathname}?post=${postId}`
     try {
-      await navigator.clipboard.writeText(url)
+      await navigator.clipboard.writeText(buildFeedPostShareUrl(postId))
       showToast('success', '링크 복사됨')
     } catch {
       showToast('error', '링크 복사 실패')
@@ -82,6 +82,13 @@ export default function FeedTab({
   useEffect(() => {
     void loadPosts(0, false)
   }, [loadPosts, userId])
+
+  useEffect(() => {
+    const postId = consumeFeedPostIdFromUrl()
+    if (postId != null) {
+      setDetailPostId(postId)
+    }
+  }, [])
 
   const updatePostInList = (updated: FeedPost) => {
     setPosts((prev) =>
@@ -191,7 +198,9 @@ export default function FeedTab({
               onToggleLike={() => void handleToggleLike(post)}
               onToggleSave={() => void handleToggleSave(post)}
               onShare={() => void handleShare(post.feedPostId)}
-              onCommentAdded={() => updatePostInList({ ...post, commentCount: post.commentCount + 1 })}
+              onCommentCountChange={(commentCount) =>
+                updatePostInList({ ...post, commentCount })
+              }
               onViewProfile={onViewProfile}
               likeSubmitting={
                 submittingPostId === post.feedPostId && submittingAction === 'like'
