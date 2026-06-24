@@ -824,8 +824,10 @@ export default function HomeTab({
       <section ref={recommendationListRef} id="recommendation-list" className="bg-white border border-slate-100 rounded-[28px] p-4 md:p-5 shadow-sm text-left scroll-mt-28">
         <div className="flex items-end justify-between gap-3 mb-4">
           <div>
-            <span className="text-[11px] font-black text-[#111827] uppercase tracking-wider">{activeConfig.icon} Recommendation</span>
-            <h2 className="text-xl md:text-2xl font-black text-slate-950 mt-1">{activeConfig.title}</h2>
+            <h2 className="text-xl md:text-2xl font-black text-slate-950 mt-1">
+              <span className="mr-2">{activeConfig.icon}</span>
+              {activeConfig.title}
+            </h2>
           </div>
           {activeLabel === 'style' && styleError && <p className="text-[10px] text-rose-500 font-bold max-w-[150px] text-right leading-tight">{styleError}</p>}
         </div>
