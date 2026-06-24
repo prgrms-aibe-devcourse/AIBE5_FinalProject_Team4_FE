@@ -531,6 +531,13 @@ export default function SimilarProductRecommendations({
     return (
       <div className="rounded-2xl border border-red-100 bg-red-50 px-5 py-10 text-center">
         <p className="text-sm font-black text-red-700">{baseClothesError}</p>
+        <button
+          type="button"
+          onClick={() => void loadBaseClothes()}
+          className="mt-4 h-9 px-4 rounded-full bg-[#111827] text-white text-xs font-black"
+        >
+          다시 시도
+        </button>
       </div>
     )
   }
@@ -633,6 +640,25 @@ export default function SimilarProductRecommendations({
       {recommendError && !recommendLoading && (
         <div className="rounded-2xl border border-red-100 bg-red-50 px-5 py-10 text-center">
           <p className="text-sm font-black text-red-700">{recommendError}</p>
+          <div className="mt-4 flex justify-center gap-2">
+            <button
+              type="button"
+              onClick={() => void loadBaseClothes()}
+              className="h-9 px-4 rounded-full border border-slate-200 bg-white text-xs font-black"
+            >
+              옷 목록 새로고침
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                selectedClothesId != null &&
+                void requestSimilarProducts(selectedClothesId)
+              }
+              className="h-9 px-4 rounded-full bg-[#111827] text-white text-xs font-black"
+            >
+              추천 다시 시도
+            </button>
+          </div>
         </div>
       )}
 

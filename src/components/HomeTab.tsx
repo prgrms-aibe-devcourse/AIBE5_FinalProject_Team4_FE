@@ -734,6 +734,13 @@ export default function HomeTab({
           ) : ootdError ? (
             <div className="rounded-2xl border border-red-100 bg-red-50 px-5 py-8 text-center">
               <p className="text-sm font-black text-red-700">{ootdError}</p>
+              <button
+                type="button"
+                onClick={() => setRefreshSignal(p => p + 1)}
+                className="mt-3 h-8 px-4 rounded-full bg-[#111827] text-white text-[10px] font-black"
+              >
+                다시 시도
+              </button>
             </div>
           ) : ootdItems.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-5 py-8 text-center">
@@ -894,6 +901,16 @@ export default function HomeTab({
               {matchError && (
                 <div className="flex items-center gap-2">
                   <p className="text-xs text-red-600 font-bold">{matchError}</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMatchError(null);
+                      setRefreshSignal(prev => prev + 1);
+                    }}
+                    className="text-[10px] font-black underline text-slate-900"
+                  >
+                    다시 시도
+                  </button>
                 </div>
               )}
             </div>
@@ -949,6 +966,17 @@ export default function HomeTab({
               ) : styleError ? (
                   <div className="col-span-full rounded-2xl border border-red-100 bg-red-50 px-5 py-10 text-center">
                     <p className="text-sm font-black text-red-700">{styleError}</p>
+                    <button
+                        type="button"
+                        onClick={() => {
+                          setStyleError(null);
+                          setRefreshSignal(prev => prev + 1);
+                          onRefreshWardrobe?.();
+                        }}
+                        className="mt-4 h-9 px-4 rounded-full bg-[#111827] text-white text-xs font-black"
+                    >
+                      다시 시도
+                    </button>
                   </div>
               ) : selectedRecommendations.length === 0 ? (
                 <div className="col-span-full rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-5 py-10 text-center">
