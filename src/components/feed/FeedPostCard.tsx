@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type MouseEvent } from 'react'
+import { useCallback, useEffect, useMemo, useState, type MouseEvent, type RefObject } from 'react'
 import AuthenticatedImage from '@/components/common/AuthenticatedImage'
 import {
   ChevronLeft,
@@ -42,6 +42,8 @@ interface FeedPostCardProps {
   onViewProfile?: (userId: number) => void
   likeSubmitting?: boolean
   saveSubmitting?: boolean
+  containerRef?: RefObject<HTMLElement>
+  actionRef?: RefObject<HTMLDivElement>
 }
 
 export default function FeedPostCard({
@@ -56,6 +58,8 @@ export default function FeedPostCard({
   onViewProfile,
   likeSubmitting = false,
   saveSubmitting = false,
+  containerRef,
+  actionRef,
 }: FeedPostCardProps) {
   const [imageIndex, setImageIndex] = useState(0)
   const [commentsOpen, setCommentsOpen] = useState(false)
@@ -251,7 +255,7 @@ export default function FeedPostCard({
   }
 
   return (
-    <article className="border-b border-slate-100 bg-white">
+    <article ref={containerRef} className="border-b border-slate-100 bg-white">
       {/* 헤더 — 프로필·닉네임만 프로필, 나머지 영역은 상세 */}
       <div className="flex items-stretch gap-2 px-3 py-2.5">
         <div className="flex min-w-0 shrink-0 items-center gap-2">
@@ -324,7 +328,7 @@ export default function FeedPostCard({
       </div>
 
       {/* 액션 */}
-      <div className="flex items-center justify-between px-3 py-2.5">
+      <div ref={actionRef} className="flex items-center justify-between px-3 py-2.5">
         <div className="flex items-center gap-4">
           <button
             type="button"
