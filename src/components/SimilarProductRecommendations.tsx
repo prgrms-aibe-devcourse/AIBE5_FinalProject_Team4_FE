@@ -96,8 +96,6 @@ function mapSimilarProductToCard(
   const brandLabel = product.brand || product.mallName || (
     product.candidateSource === 'INTERNAL' ? '서비스 상품' : '네이버쇼핑'
   )
-  const showProductMetadata = product.candidateSource !== 'NAVER'
-
   return {
     id: productKey(product),
     clothesId: product.clothesId,
@@ -114,11 +112,11 @@ function mapSimilarProductToCard(
           : '신발',
     itemTypeCode: product.category4 || product.category3 || CATEGORY_ITEM_TYPES[uiCategory][0].code,
     itemTypeLabel,
-    style: showProductMetadata ? styles[0] ?? '—' : '—',
-    styles: showProductMetadata ? styles : [],
-    color: showProductMetadata ? color?.label ?? '—' : '—',
-    colorHex: showProductMetadata ? color?.hex : undefined,
-    secondaryColors: showProductMetadata ? secondaryColors : [],
+    style: styles[0] ?? '—',
+    styles,
+    color: color?.label ?? '—',
+    colorHex: color?.hex,
+    secondaryColors,
     matchRate: 0,
     imageUrl: product.image,
     reason: product.candidateSource === 'INTERNAL'
@@ -705,7 +703,7 @@ export default function SimilarProductRecommendations({
                             className="w-full h-full object-cover object-top transition-transform duration-300 group-hover:scale-105"
                             fallback={<div className="w-full h-full flex items-center justify-center bg-slate-200 text-slate-400 text-xs font-bold">이미지 없음</div>}
                           />
-                          <div className="absolute left-0 bottom-0 p-3 bg-gradient-to-t from-black/80 via-black/40 to-transparent text-white flex flex-col items-start max-w-[66%]">
+                          <div className="absolute left-0 bottom-0 right-0 p-3 bg-gradient-to-t from-black/80 via-black/40 to-transparent text-white flex flex-col items-start">
                             {card.brandLabel ? <div className="text-[11px] font-bold text-white/90 uppercase tracking-wide truncate">{card.brandLabel}</div> : null}
                             <h3 className="text-sm md:text-base font-black truncate mt-1 leading-tight">{card.title}</h3>
                           </div>

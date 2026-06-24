@@ -2,10 +2,9 @@ import React, { useState, useMemo, useEffect, useCallback, useRef } from "react"
 import Spinner from "@/components/common/Spinner";
 import AuthenticatedImage from "@/components/common/AuthenticatedImage";
 import {
-  Search,
   ChevronRight,
   LayoutGrid,
-  Heart,
+  Search,
 } from "./icons";
 import { Garment } from "@/types";
 import { fetchMyOutfitBook, updateOutfit, type OutfitResponse } from "@/api/outfits";
@@ -97,13 +96,14 @@ export default function OutfitBookTab({
         season: outfit.season || 'ALL_SEASON',
         favorite: next,
       });
-      showToast('success', next ? '좋아요가 되었습니다!' : '좋아요가 취소되었습니다!')
+      showToast('success', next ? '즐겨찾기에 추가되었습니다!' : '즐겨찾기에서 해제되었습니다!')
     } catch (err) {
       console.error('Failed to toggle favorite', err);
       setOutfits((prev) => prev.map((o) => (o.outfitId === outfit.outfitId ? { ...o, favorite: outfit.favorite } : o)));
-      showToast('error', '좋아요 처리에 실패했습니다.')
+      showToast('error', '즐겨찾기 처리에 실패했습니다.')
     }
   };
+
 
   return (
       <div className="space-y-6 animate-fade-in text-left">
@@ -170,31 +170,41 @@ export default function OutfitBookTab({
                       <button
                           onClick={(e) => toggleFavorite(e, outfit)}
                           aria-label="toggle-favorite"
-                          className="absolute right-3 top-3 z-10 p-1 rounded-full bg-white/80 hover:bg-white"
+                          className={`absolute right-3 top-3 z-10 p-1.5 rounded-full border transition-colors ${
+                              outfit.favorite
+                                  ? 'border-amber-200 bg-amber-50 text-amber-500 hover:bg-amber-100 hover:border-amber-300 shadow-sm'
+                                  : 'border-slate-100 bg-white/90 text-slate-300 hover:text-amber-400 hover:border-amber-100 hover:bg-white shadow-3xs'
+                          }`}
                       >
-                        <Heart className={`${outfit.favorite ? 'text-rose-500 fill-rose-500' : 'text-slate-300'} w-5 h-5`} />
+                        <div className={`w-4 h-4 flex items-center justify-center ${outfit.favorite ? 'text-amber-500' : 'text-slate-300'}`}>
+                          {outfit.favorite ? '★' : '☆'}
+                        </div>
                       </button>
 
                       <div className="aspect-square bg-slate-50 rounded-2xl overflow-hidden border border-slate-50 flex items-center justify-center">
                         {hasTop && hasBottom ? (
                             <div className="w-full h-full flex">
-                              <div className="w-1/2 h-full border-r border-slate-100 flex items-center justify-center p-1 bg-white">
+                              <div
+                                  className="w-1/2 h-full border-r border-slate-100 flex items-center justify-center p-1 bg-white hover:bg-slate-50 transition-colors"
+                              >
                                 {top?.imageUrl || top?.userImageUrl ? (
                                     <AuthenticatedImage
                                         src={(top.userImageUrl || top.imageUrl) as string}
                                         alt="top"
-                                        className="w-full h-full object-cover"
+                                        className="w-full h-full object-cover rounded-lg"
                                     />
                                 ) : (
                                     <span className="text-xl">👕</span>
                                 )}
                               </div>
-                              <div className="w-1/2 h-full flex items-center justify-center p-1 bg-white">
+                              <div
+                                  className="w-1/2 h-full flex items-center justify-center p-1 bg-white hover:bg-slate-50 transition-colors"
+                              >
                                 {bottom?.imageUrl || bottom?.userImageUrl ? (
                                     <AuthenticatedImage
                                         src={(bottom.userImageUrl || bottom.imageUrl) as string}
                                         alt="bottom"
-                                        className="w-full h-full object-cover"
+                                        className="w-full h-full object-cover rounded-lg"
                                     />
                                 ) : (
                                     <span className="text-xl">👖</span>
@@ -203,9 +213,14 @@ export default function OutfitBookTab({
                             </div>
                         ) : (
                             (() => {
-                              const img = top?.imageUrl || top?.userImageUrl || bottom?.imageUrl || bottom?.userImageUrl
+                              const targetItem = top || bottom
+                              const img = targetItem?.imageUrl || targetItem?.userImageUrl
                               return img ? (
-                                  <AuthenticatedImage src={img as string} alt={outfit.title} className="w-full h-full object-cover" />
+                                  <AuthenticatedImage
+                                      src={img as string}
+                                      alt={outfit.title}
+                                      className="w-full h-full object-cover hover:opacity-80 transition-opacity"
+                                  />
                               ) : (
                                   <div className="text-2xl">👗</div>
                               )
