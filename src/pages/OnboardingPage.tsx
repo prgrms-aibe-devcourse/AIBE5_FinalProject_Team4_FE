@@ -40,15 +40,17 @@ const normalizeTwoDigitDatePart = (value: string) => {
     return String(numberValue).padStart(2, "0").slice(0, 2);
 };
 
+const CURRENT_YEAR = new Date().getFullYear();
+
 const buildBirthday = (year: string, month: string, day: string) => {
     if (year.length !== 4 || month.length === 0 || day.length === 0) return "";
+    const yearNumber = Number(year);
+    if (yearNumber < 1900 || yearNumber > CURRENT_YEAR) return "";
     const monthNumber = Number(month);
     const dayNumber = Number(day);
     if (monthNumber < 1 || monthNumber > 12 || dayNumber < 1 || dayNumber > 31) return "";
     return `${year}-${String(monthNumber).padStart(2, "0")}-${String(dayNumber).padStart(2, "0")}`;
 };
-
-const CURRENT_YEAR = new Date().getFullYear();
 
 const validateBirthdayFields = (
     year: string,
