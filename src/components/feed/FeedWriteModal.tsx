@@ -6,6 +6,7 @@ import type { OutfitResponse } from '@/api/outfits'
 import AuthenticatedImage from '@/components/common/AuthenticatedImage'
 import { Modal, ModalBody, ModalHeader } from '@/components/common/Modal'
 import { Camera, Plus, Upload, X } from '@/components/icons'
+import { useToast } from '@/components/Toast'
 import type { Garment } from '@/types'
 import type { FeedPost } from '@/types/feed'
 import { extractApiErrorMessage } from '@/utils/apiError'
@@ -54,6 +55,7 @@ export default function FeedWriteModal({
   onClose,
   onCreated,
 }: FeedWriteModalProps) {
+  const { showToast } = useToast()
   const [caption, setCaption] = useState('')
   const [sourceMode, setSourceMode] = useState<OutfitSourceMode>('book')
   const [bookId, setBookId] = useState<number | null>(null)
@@ -183,7 +185,9 @@ export default function FeedWriteModal({
       const uploaded = await Promise.all(targets.map((file) => uploadFeedImage(file)))
       setImageUrls((prev) => [...prev, ...uploaded])
     } catch (uploadError) {
-      setError(extractApiErrorMessage(uploadError, '이미지 업로드에 실패했습니다.'))
+      const message = extractApiErrorMessage(uploadError, '이미지 업로드에 실패했습니다.')
+      setError(message)
+      showToast('error', message)
     } finally {
       setUploading(false)
     }
@@ -279,9 +283,12 @@ export default function FeedWriteModal({
         imageUrls: feedImageUrls,
       })
       onCreated(created)
+      showToast('success', '피드에 업로드했어요.')
       onClose()
     } catch (submitError) {
-      setError(extractApiErrorMessage(submitError, '피드 업로드에 실패했습니다.'))
+      const message = extractApiErrorMessage(submitError, '피드 업로드에 실패했습니다.')
+      setError(message)
+      showToast('error', message)
     } finally {
       setSubmitting(false)
     }

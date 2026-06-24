@@ -10,6 +10,7 @@ import type {
 } from '@/types/aiMd'
 
 const AI_REQUEST_TIMEOUT = 120_000
+const SKIP_REDIRECT_HEADER = { 'X-Skip-Global-Error-Redirect': 'true' }
 
 async function unwrap<T>(
   promise: Promise<{ data: BeApiResponse<T | null> }>,
@@ -37,7 +38,7 @@ export function fetchAiMdOutfits(
     api.post<BeApiResponse<AiMdOutfitRecommendationData>>(
       `/api/v1/users/${userId}/recommendations/ai-md/${mdId}/outfits`,
       undefined,
-      { timeout: AI_REQUEST_TIMEOUT },
+      { timeout: AI_REQUEST_TIMEOUT, headers: SKIP_REDIRECT_HEADER },
     ),
   )
 }
@@ -49,7 +50,7 @@ export function fetchAiMdProducts(
   return unwrap(
     api.get<BeApiResponse<AiMdProductRecommendationData>>(
       `/api/v1/users/${userId}/recommendations/ai-md/${mdId}/products`,
-      { timeout: AI_REQUEST_TIMEOUT },
+      { timeout: AI_REQUEST_TIMEOUT, headers: SKIP_REDIRECT_HEADER },
     ),
   )
 }
@@ -85,7 +86,7 @@ export function saveAiMdOutfit(
     api.post<BeApiResponse<unknown>>(
       `/api/v1/users/${userId}/recommendations/ai-md/${mdId}/outfits/save`,
       request,
-      { timeout: AI_REQUEST_TIMEOUT },
+      { timeout: AI_REQUEST_TIMEOUT, headers: SKIP_REDIRECT_HEADER },
     ),
   )
 }

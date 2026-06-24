@@ -1,21 +1,8 @@
-﻿import { useEffect, useRef, useState } from 'react'
+﻿import { useRef } from 'react'
 import AuthenticatedImage from '@/components/common/AuthenticatedImage'
 import { Modal, ModalBody, ModalFooter, ModalHeader } from '@/components/common/Modal'
 import {
-  CATEGORY_ITEM_TYPES,
-  resolveItemTypeForCategory,
-  type UiCategory,
-} from '@/data/categoryItemTypes'
-import {
-  GARMENT_COLORS,
-  getGarmentColor,
-  isGarmentColorCode,
-  needsLightColorBorder,
-} from '@/data/garmentColors'
-import { GARMENT_STYLES } from '@/data/garmentStyles'
-import {
   GARMENT_NAME_MAX_LENGTH,
-  BRAND_NAME_MAX_LENGTH,
   GARMENT_SIZE_MAX_LENGTH,
   getSizeOptionsByCategory,
   getGarmentSeasonLabel,
@@ -59,21 +46,6 @@ export default function GarmentEditModal({
   onClose,
 }: GarmentEditModalProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const [subCategoryOpen, setSubCategoryOpen] = useState(true)
-  const [mainColorOpen, setMainColorOpen] = useState(false)
-  const [secondaryColorOpen, setSecondaryColorOpen] = useState(false)
-  const [mainStyleOpen, setMainStyleOpen] = useState(false)
-  const [secondaryStyleOpen, setSecondaryStyleOpen] = useState(false)
-
-  useEffect(() => {
-    if (open) {
-      setSubCategoryOpen(true)
-      setMainColorOpen(false)
-      setSecondaryColorOpen(false)
-      setMainStyleOpen(false)
-      setSecondaryStyleOpen(false)
-    }
-  }, [open, draft.category])
 
   return (
     <Modal

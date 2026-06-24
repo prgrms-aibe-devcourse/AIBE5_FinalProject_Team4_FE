@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, type MouseEvent } from 'react'
 import AuthenticatedImage from '@/components/common/AuthenticatedImage'
 import {
   ChevronLeft,
@@ -10,6 +10,7 @@ import {
 } from '@/components/icons'
 import { createFeedComment, fetchFeedComments } from '@/api/feed'
 import type { FeedComment, FeedPost } from '@/types/feed'
+import { countFeedComments, FEED_COMMENTS_POLL_MS, canReplyToFeedComment, resolveReplyParentCommentId } from '@/utils/feedComments'
 
 function formatRelativeTime(value: string): string {
   const date = new Date(value)
@@ -36,7 +37,7 @@ interface FeedPostCardProps {
   onToggleLike: () => void
   onToggleSave: () => void
   onShare: () => void
-  onCommentAdded?: () => void
+  onCommentCountChange?: (commentCount: number) => void
   onViewProfile?: (userId: number) => void
   likeSubmitting?: boolean
   saveSubmitting?: boolean
@@ -49,7 +50,7 @@ export default function FeedPostCard({
   onToggleLike,
   onToggleSave,
   onShare,
-  onCommentAdded,
+  onCommentCountChange,
   onViewProfile,
   likeSubmitting = false,
   saveSubmitting = false,
@@ -58,7 +59,6 @@ export default function FeedPostCard({
   const [commentsOpen, setCommentsOpen] = useState(false)
   const [comments, setComments] = useState<FeedComment[]>([])
   const [commentsLoading, setCommentsLoading] = useState(false)
-  const [commentsFetched, setCommentsFetched] = useState(false)
   const [commentDraft, setCommentDraft] = useState('')
   const [commentSubmitting, setCommentSubmitting] = useState(false)
   const [replyingToId, setReplyingToId] = useState<number | null>(null)
@@ -74,30 +74,41 @@ export default function FeedPostCard({
     setImageIndex(0)
     setCommentsOpen(false)
     setComments([])
-    setCommentsFetched(false)
     setCommentDraft('')
     setReplyingToId(null)
     setReplyDraft('')
   }, [post.feedPostId])
 
+  const syncComments = useCallback(async (showLoading = false) => {
+    if (showLoading) setCommentsLoading(true)
+    try {
+      const data = await fetchFeedComments(post.feedPostId)
+      setComments(data)
+      onCommentCountChange?.(countFeedComments(data))
+    } finally {
+      if (showLoading) setCommentsLoading(false)
+    }
+  }, [post.feedPostId, onCommentCountChange])
+
+  useEffect(() => {
+    if (!commentsOpen) return
+    const intervalId = window.setInterval(() => {
+      void syncComments(false)
+    }, FEED_COMMENTS_POLL_MS)
+    return () => window.clearInterval(intervalId)
+  }, [commentsOpen, syncComments])
+
   const handleToggleComments = async (e: React.MouseEvent) => {
     e.stopPropagation()
-    if (!commentsOpen && !commentsFetched) {
-      setCommentsLoading(true)
-      try {
-        const data = await fetchFeedComments(post.feedPostId)
-        setComments(data)
-        setCommentsFetched(true)
-      } finally {
-        setCommentsLoading(false)
-      }
+    const willOpen = !commentsOpen
+    if (willOpen) {
+      await syncComments(true)
     }
-    setCommentsOpen((prev) => !prev)
+    setCommentsOpen(willOpen)
   }
 
   const refreshComments = async () => {
-    const data = await fetchFeedComments(post.feedPostId)
-    setComments(data)
+    await syncComments(false)
   }
 
   const handleSubmitComment = async (e: React.FormEvent) => {
@@ -110,7 +121,6 @@ export default function FeedPostCard({
     try {
       await createFeedComment(post.feedPostId, { content, parentCommentId: null })
       await refreshComments()
-      onCommentAdded?.()
     } catch {
       setCommentDraft(prev)
     } finally {
@@ -118,16 +128,17 @@ export default function FeedPostCard({
     }
   }
 
-  const handleSubmitReply = async (parentId: number) => {
+  const handleSubmitReply = async (targetId: number) => {
     const content = replyDraft.trim()
     if (!content || replySubmitting) return
+    const parentCommentId = resolveReplyParentCommentId(comments, targetId)
+    if (parentCommentId == null) return
     setReplySubmitting(true)
     const prev = replyDraft
     setReplyDraft('')
     try {
-      await createFeedComment(post.feedPostId, { content, parentCommentId: parentId })
+      await createFeedComment(post.feedPostId, { content, parentCommentId })
       await refreshComments()
-      onCommentAdded?.()
       setReplyingToId(null)
     } catch {
       setReplyDraft(prev)
@@ -141,21 +152,21 @@ export default function FeedPostCard({
     setReplyDraft('')
   }
 
-  const replyInput = (parentId: number) =>
-    replyingToId === parentId ? (
+  const replyInput = (targetId: number) =>
+    replyingToId === targetId ? (
       <div className="ml-4 flex gap-2 border-l-2 border-slate-100 pl-3 pt-1">
         <input
           type="text"
           value={replyDraft}
           onChange={(e) => setReplyDraft(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter') void handleSubmitReply(parentId) }}
+          onKeyDown={(e) => { if (e.key === 'Enter') void handleSubmitReply(targetId) }}
           placeholder="댓글 달기…"
           autoFocus
           className="flex-1 rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-[#1E3A8A]"
         />
         <button
           type="button"
-          onClick={() => void handleSubmitReply(parentId)}
+          onClick={() => void handleSubmitReply(targetId)}
           disabled={replySubmitting || !replyDraft.trim()}
           className="shrink-0 rounded-xl bg-[#1E3A8A] px-3 py-1.5 text-xs font-black text-[#BBF7D0] cursor-pointer disabled:opacity-50"
         >
@@ -174,9 +185,35 @@ export default function FeedPostCard({
   const currentImage = images[imageIndex]
   const hasMultipleImages = images.length > 1
 
-  const renderProfileAvatar = (size: 'sm' | 'md') => {
-    const box = size === 'sm' ? 'h-6 w-6' : 'h-8 w-8'
-    const initial = size === 'sm' ? 'text-[10px]' : 'text-xs'
+  const handleViewAuthorProfile = (
+    event: MouseEvent,
+    authorUserId: number,
+  ) => {
+    event.stopPropagation()
+    onViewProfile?.(authorUserId)
+  }
+
+  const renderAuthorName = (
+    author: FeedPost['author'],
+    className: string,
+  ) => {
+    if (!onViewProfile) {
+      return <span className={className}>{author.nickname}</span>
+    }
+
+    return (
+      <button
+        type="button"
+        onClick={(event) => handleViewAuthorProfile(event, author.userId)}
+        className={`${className} cursor-pointer hover:underline`}
+        aria-label={`${author.nickname} 프로필 보기`}
+      >
+        {author.nickname}
+      </button>
+    )
+  }
+
+  const renderProfileAvatar = () => {
     return (
       <button
         type="button"
@@ -187,20 +224,18 @@ export default function FeedPostCard({
         }}
         aria-label={`${post.author.nickname} 프로필 보기`}
       >
-        <div className="rounded-full bg-gradient-to-tr from-[#f9ce34] via-[#ee2a7b] to-[#6228d7] p-[2px]">
-          <div className={`flex ${box} items-center justify-center overflow-hidden rounded-full bg-white`}>
-            {post.author.profileImageUrl ? (
-              <AuthenticatedImage
-                src={post.author.profileImageUrl}
-                alt={post.author.nickname}
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <span className={`${initial} font-black text-[#1E3A8A]`}>
-                {(post.author.nickname || '?').slice(0, 1)}
-              </span>
-            )}
-          </div>
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-100 ring-1 ring-slate-200">
+          {post.author.profileImageUrl ? (
+            <AuthenticatedImage
+              src={post.author.profileImageUrl}
+              alt={post.author.nickname}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <span className="text-xs font-black text-[#1E3A8A]">
+              {(post.author.nickname || '?').slice(0, 1)}
+            </span>
+          )}
         </div>
       </button>
     )
@@ -208,17 +243,18 @@ export default function FeedPostCard({
 
   return (
     <article className="border-b border-slate-100 bg-white">
-      {/* 헤더 — 프로필 이미지만 프로필, 닉네임·나머지는 상세 */}
-      <div className="flex items-center gap-2 px-3 py-2.5">
-        {renderProfileAvatar('md')}
+      {/* 헤더 — 프로필·닉네임만 프로필, 나머지 영역은 상세 */}
+      <div className="flex items-stretch gap-2 px-3 py-2.5">
+        <div className="flex min-w-0 shrink-0 items-center gap-2">
+          {renderProfileAvatar()}
+          {renderAuthorName(post.author, 'truncate text-sm font-semibold text-slate-900')}
+        </div>
         <button
           type="button"
-          className="min-w-0 flex-1 text-left cursor-pointer"
           onClick={onOpen}
-          aria-label={`${post.author.nickname} 피드 게시물 보기`}
-        >
-          <p className="truncate text-sm font-semibold text-slate-900">{post.author.nickname}</p>
-        </button>
+          className="min-w-0 flex-1 cursor-pointer"
+          aria-label="피드 상세 보기"
+        />
       </div>
 
       {/* 이미지 — 클릭 시 모달 */}
@@ -295,9 +331,12 @@ export default function FeedPostCard({
             type="button"
             onClick={(e) => void handleToggleComments(e)}
             aria-label="댓글"
-            className={`cursor-pointer transition-colors ${commentsOpen ? 'text-[#1E3A8A]' : 'text-slate-900'}`}
+            className={`inline-flex items-center gap-1 cursor-pointer transition-colors ${commentsOpen ? 'text-[#1E3A8A]' : 'text-slate-900'}`}
           >
             <MessageSquare className="h-6 w-6" />
+            {post.commentCount > 0 ? (
+              <span className="text-sm font-semibold tabular-nums">{post.commentCount.toLocaleString()}</span>
+            ) : null}
           </button>
           <button
             type="button"
@@ -320,7 +359,7 @@ export default function FeedPostCard({
         </button>
       </div>
 
-      {/* 본문 — 프로필 이미지만 프로필, 나머지는 상세 */}
+      {/* 본문 — 닉네임만 프로필, 나머지는 상세 */}
       <div className="space-y-1 px-3 pb-3">
         {post.likeCount > 0 ? (
           <button
@@ -331,27 +370,17 @@ export default function FeedPostCard({
             좋아요 {post.likeCount.toLocaleString()}개
           </button>
         ) : null}
-        {!commentsOpen ? (
-          <button
-            type="button"
-            onClick={(e) => void handleToggleComments(e)}
-            className="block text-sm text-slate-400 cursor-pointer hover:text-slate-600 transition-colors text-left"
-          >
-            댓글 모두보기
-          </button>
-        ) : null}
         {post.caption ? (
-          <div className="flex items-start gap-2">
-            {renderProfileAvatar('sm')}
+          <p className="text-sm leading-snug text-slate-900">
+            {renderAuthorName(post.author, 'mr-1.5 font-semibold inline')}
             <button
               type="button"
               onClick={onOpen}
-              className="min-w-0 flex-1 text-left text-sm leading-snug text-slate-900 cursor-pointer"
+              className="font-normal text-left cursor-pointer inline"
             >
-              <span className="mr-1.5 font-semibold">{post.author.nickname}</span>
-              <span className="font-normal">{post.caption}</span>
+              {post.caption}
             </button>
-          </div>
+          </p>
         ) : null}
         <button
           type="button"
@@ -375,16 +404,16 @@ export default function FeedPostCard({
                 {/* 댓글 */}
                 <div className="flex items-start justify-between gap-2">
                   <div className="text-xs text-slate-800 flex-1">
-                    <span className="font-black mr-1.5">{c.author.nickname}</span>
+                    {renderAuthorName(c.author, 'font-black mr-1.5 inline')}
                     <span className="font-normal">{c.content}</span>
                   </div>
-                  {c.author.userId !== userId ? (
+                  {canReplyToFeedComment(c, userId, { allowOwnThreadReply: true }) ? (
                     <button
                       type="button"
                       onClick={() => openReply(c.feedCommentId)}
                       className={`shrink-0 text-[10px] font-black cursor-pointer ${replyingToId === c.feedCommentId ? 'text-[#1E3A8A]' : 'text-slate-400'}`}
                     >
-                      댓글
+                      답글
                     </button>
                   ) : null}
                 </div>
@@ -397,16 +426,16 @@ export default function FeedPostCard({
                       <div key={r.feedCommentId} className="space-y-1">
                         <div className="flex items-start justify-between gap-2">
                           <div className="text-xs text-slate-700 flex-1">
-                            <span className="font-black mr-1.5">{r.author.nickname}</span>
+                            {renderAuthorName(r.author, 'font-black mr-1.5 inline')}
                             <span className="font-normal">{r.content}</span>
                           </div>
-                          {r.author.userId !== userId ? (
+                          {canReplyToFeedComment(r, userId) ? (
                             <button
                               type="button"
                               onClick={() => openReply(r.feedCommentId)}
                               className={`shrink-0 text-[10px] font-black cursor-pointer ${replyingToId === r.feedCommentId ? 'text-[#1E3A8A]' : 'text-slate-400'}`}
                             >
-                              댓글
+                              답글
                             </button>
                           ) : null}
                         </div>

@@ -3,7 +3,7 @@ import {
   isUiCategory,
   type UiCategory,
 } from '@/data/categoryItemTypes'
-import { resolveClothesGender, isClothesGender, type ClothesGender } from '@/data/garmentGender'
+import { isClothesGender, type ClothesGender } from '@/data/garmentGender'
 import { isGarmentColorCode } from '@/data/garmentColors'
 import { isGarmentStyleCode } from '@/data/garmentStyles'
 

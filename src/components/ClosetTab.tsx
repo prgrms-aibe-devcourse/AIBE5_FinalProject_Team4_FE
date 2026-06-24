@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import Spinner from "@/components/common/Spinner";
-import AuthenticatedImage from "@/components/common/AuthenticatedImage";
+import GarmentPickerGridCard from "@/components/common/GarmentPickerGridCard";
 import {
   fetchWardrobeGarments,
   fetchWardrobeStatistics,
@@ -14,15 +14,22 @@ import axios from "axios";
 import ClosetGarmentDetail from "@/components/ClosetGarmentDetail";
 import ClosetWardrobeMascot from "@/components/ClosetWardrobeMascot";
 import {
-  Heart,
   ShoppingBag,
   Flame,
   Award,
   HeartHandshake,
-  Sparkle,
+  Star,
   Plus,
 } from "./icons";
 import { Garment } from "@/types/index";
+import { extractApiErrorMessage } from "@/utils/apiError";
+import { useToast } from "@/components/Toast";
+import {
+  isUsableClothesImageUrl,
+  normalizeClothesImageUrlForApi,
+  resolveGarmentImageUrl,
+} from "@/utils/clothesImageUrl";
+import { recommendationWishlistProductCode } from "@/utils/recommendWishlistPayload";
 import GuideTour from "@/components/common/GuideTour"
 
 type ClosetTabView = "owned" | "wishlist" | "favorites";
@@ -47,7 +54,7 @@ export default function ClosetTab({
                                   }: ClosetTabProps) {
   const [closetTab, setClosetTab] = useState<ClosetTabView>("owned");
   const [closetFilter, setClosetFilter] = useState<string>("All");
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const { showToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [wardrobeStats, setWardrobeStats] = useState<WardrobeStatisticsResponse | null>(null);
@@ -55,7 +62,9 @@ export default function ClosetTab({
   const tabRef = useRef<HTMLDivElement>(null);
   const filterRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
+  const detailSectionRef = useRef<HTMLDivElement>(null);
   const [tourOpen, setTourOpen] = useState(!guideTourCompleted && !isRegisterOpen);
+  const [promotingGarmentId, setPromotingGarmentId] = useState<string | null>(null);
 
   useEffect(() => {
     if(!isRegisterOpen && !guideTourCompleted) {
@@ -63,15 +72,18 @@ export default function ClosetTab({
     }
   }, [isRegisterOpen, guideTourCompleted]);
 
-  // selectedRef 동기화 — loadWardrobe/upsertGarment에서 현재 선택 의상 보존에 사용
   useEffect(() => {
     selectedRef.current = selectedGarment;
   }, [selectedGarment]);
 
-  const triggerToast = useCallback((msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3000);
-  }, []);
+  const selectGarment = useCallback((item: Garment) => {
+    setSelectedGarment(item);
+    if (window.matchMedia("(max-width: 1023px)").matches) {
+      window.requestAnimationFrame(() => {
+        detailSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    }
+  }, [setSelectedGarment]);
 
   const refreshWardrobeStats = useCallback(async () => {
     try {
@@ -104,10 +116,10 @@ export default function ClosetTab({
       setSelectedGarment(preserved ?? garments[0] ?? null);
 
       if (partialErrors?.wishlist) {
-        triggerToast("위시리스트를 불러오지 못했습니다. 보유 옷만 표시합니다.");
+        showToast("info", "위시리스트를 불러오지 못했습니다. 보유 옷만 표시합니다.");
       }
       if (partialErrors?.owned) {
-        triggerToast("보유 옷을 불러오지 못했습니다. 위시리스트만 표시합니다.");
+        showToast("info", "보유 옷을 불러오지 못했습니다. 위시리스트만 표시합니다.");
       }
     } catch (err) {
       const isNetwork =
@@ -126,7 +138,7 @@ export default function ClosetTab({
     } finally {
       setLoading(false);
     }
-  }, [userId, setClothes, setSelectedGarment, triggerToast]);
+  }, [userId, setClothes, setSelectedGarment, showToast]);
 
   useEffect(() => {
     loadWardrobe();
@@ -226,50 +238,54 @@ export default function ClosetTab({
     try {
       const updated = await updateClothesFavorite(Number(id), nextFavorite);
       upsertGarment(updated);
-      triggerToast(
+      showToast(
+          "success",
           nextFavorite
-              ? "❤️ 즐겨찾기에 등록되었습니다."
-              : "💔 즐겨찾기에서 해제되었습니다.",
+              ? "즐겨찾기에 등록되었습니다."
+              : "즐겨찾기에서 해제되었습니다.",
       );
     } catch {
       setClothes((prev) =>
           prev.map((c) => (c.id === id ? { ...c, isFavorite: item.isFavorite } : c)),
       );
-      triggerToast("즐겨찾기 변경에 실패했습니다.");
+      showToast("error", "즐겨찾기 변경에 실패했습니다.");
     }
   };
 
   const handlePromoteToOwned = async (item: Garment) => {
-    const imageUrl = item.userImageUrl ?? item.thumbnailUrl;
-    if (!imageUrl?.startsWith("http")) {
-      triggerToast("보유 전환에 필요한 이미지 URL이 없습니다.");
+    if (promotingGarmentId === item.id) return;
+
+    const rawImageUrl = resolveGarmentImageUrl(item);
+    if (!isUsableClothesImageUrl(rawImageUrl)) {
+      showToast("error", "보유 전환에 필요한 이미지 URL이 없습니다.");
       return;
     }
 
-    // 낙관적 업데이트: API 응답 전에 즉시 UI 반영
-    setClothes((prev) =>
-      prev.map((c) => c.id === item.id ? { ...c, isWishlist: false } : c)
-    );
-    setClosetTab("owned");
+    const clothesId = Number(item.id);
+    if (!Number.isFinite(clothesId)) {
+      showToast("error", "옷 정보가 올바르지 않습니다. 다시 시도해 주세요.");
+      return;
+    }
+
+    setPromotingGarmentId(item.id);
 
     try {
-      const updated = await convertWishlistToOwned(Number(item.id), {
-        productCode: item.productCode ?? "UNKNOWN",
+      const updated = await convertWishlistToOwned(clothesId, {
+        productCode: item.productCode ?? recommendationWishlistProductCode(clothesId),
         size: item.size ?? "FREE",
-        userImageUrl: imageUrl,
+        userImageUrl: normalizeClothesImageUrlForApi(rawImageUrl),
         isVerified: false,
       });
-      // 서버 응답으로 최종 상태 확정
-      upsertGarment(updated);
+      const ownedGarment = { ...updated, isWishlist: false };
+      upsertGarment(ownedGarment);
+      setSelectedGarment(ownedGarment);
+      setClosetTab("owned");
       void refreshWardrobeStats();
-      triggerToast(`🛍️ "${item.name}" 이(가) 보유 옷장으로 이동했습니다!`);
-    } catch {
-      // 실패 시 롤백
-      setClothes((prev) =>
-        prev.map((c) => c.id === item.id ? { ...c, isWishlist: true } : c)
-      );
-      setClosetTab("wishlist");
-      triggerToast("보유 옷장 전환에 실패했습니다.");
+      showToast("success", "보유 옷장으로 이동했습니다.");
+    } catch (error) {
+      showToast("error", extractApiErrorMessage(error, "보유 옷장 전환에 실패했습니다."));
+    } finally {
+      setPromotingGarmentId(null);
     }
   };
 
@@ -291,14 +307,6 @@ export default function ClosetTab({
 
   return (
       <div className="space-y-6 animate-fade-in font-sans">
-
-        {/* Dynamic Floating Notification Toast */}
-        {toastMessage && (
-            <div className="fixed bottom-24 left-1/2 transform -translate-x-1/2 z-50 bg-[#1E3A8A] text-[#BBF7D0] px-5 py-3 rounded-2xl shadow-xl text-xs font-black border border-emerald-400 flex items-center gap-2 animate-bounce">
-              <Sparkle className="w-4 h-4 text-emerald-300 animate-spin" />
-              <span>{toastMessage}</span>
-            </div>
-        )}
 
         {/* ========================================================================= */}
         {/* 1. HERO BANNER: WARM COSMOS SUNSET COZY CONTAINER */}
@@ -336,7 +344,7 @@ export default function ClosetTab({
               </div>
               <div className="bg-white/85 p-3 rounded-2xl border border-white/40 text-left space-y-0.5">
                 <span className="text-[10px] md:text-[11px] text-slate-500 font-extrabold block leading-none">즐겨찾기</span>
-                <span className="text-lg md:text-xl font-black text-rose-600 block tabular-nums">{favoritesCount}벌</span>
+                <span className="text-lg md:text-xl font-black text-amber-600 block tabular-nums">{favoritesCount}벌</span>
               </div>
             </div>
           </div>
@@ -396,7 +404,7 @@ export default function ClosetTab({
                           : "text-slate-500 hover:text-slate-850"
                   }`}
               >
-                <Heart className={`w-4 h-4 shrink-0 ${closetTab === "favorites" ? "fill-rose-500 text-rose-500" : "text-slate-400"}`} />
+                <Star className={`w-4 h-4 shrink-0 ${closetTab === "favorites" ? "fill-amber-500 text-amber-500" : "text-slate-400"}`} />
                 <span className="truncate">즐겨찾기 ({favoritesCount})</span>
               </button>
             </div>
@@ -445,89 +453,41 @@ export default function ClosetTab({
               </h2>
             </div>
 
-            <div ref={gridRef} className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div ref={gridRef} className="grid grid-cols-2 gap-4 sm:gap-5">
               {filteredClothes.map((item) => {
                 const isSelected = selectedGarment?.id === item.id;
-
-                // Custom pastel colors to map nicely
-                let cardBg = "from-sky-50 to-white";
-                if (item.category === "Top") cardBg = "from-[#ECF5FD] to-white";
-                else if (item.category === "Bottom") cardBg = "from-[#EAF9F5] to-white";
-                else if (item.category === "Outer") cardBg = "from-[#FFF5F3] to-white";
-                else if (item.category === "Shoes") cardBg = "from-[#FFFDF0] to-white";
+                const imgSrc = resolveGarmentImageUrl(item);
 
                 return (
-                    <div
-                        key={item.id}
-                        onClick={() => setSelectedGarment(item)}
-                        className={`aspect-square bg-gradient-to-tr ${cardBg} rounded-[24px] border-2 transition-all duration-300 relative p-3 text-left cursor-pointer group hover:scale-101 flex flex-col overflow-hidden ${
-                            isSelected
-                                ? "border-[#1E3A8A] ring-4 ring-[#1E3A8A]/10 shadow-md"
-                                : "border-slate-100 hover:border-slate-300 shadow-3xs"
-                        }`}
-                    >
-
-                      {/* Absolute category badge hanger icon floating left */}
-                      <div className="absolute top-2 left-2 bg-white/95 px-2 py-1 rounded-lg border border-slate-150/40 text-[9px] font-extrabold text-slate-500 font-mono tracking-tight shadow-3xs z-5 flex items-center gap-1">
-                    <span>
-                      {item.category === "Top" && "👕"}
-                      {item.category === "Bottom" && "👖"}
-                      {item.category === "Outer" && "🧥"}
-                      {item.category === "Shoes" && "👟"}
-                    </span>
-                        <span>{item.category}</span>
-                      </div>
-
-                      {/* Top Heart favorite picker button */}
+                  <GarmentPickerGridCard
+                    key={item.id}
+                    name={item.name}
+                    imageUrl={imgSrc}
+                    subtitle={item.be?.brandName || item.category}
+                    selected={isSelected}
+                    owned={!item.isWishlist}
+                    showOwnershipBadge={false}
+                    size="md"
+                    onClick={() => selectGarment(item)}
+                    favorite={{
+                      active: item.isFavorite,
+                      onToggle: (event) => toggleFavorite(item.id, event),
+                    }}
+                    footer={item.isWishlist ? (
                       <button
-                          onClick={(e) => toggleFavorite(item.id, e)}
-                          className="absolute top-2 right-2 p-1.5 rounded-full bg-white/95 hover:bg-white text-rose-500 border border-slate-100 shadow-3xs transition-transform duration-200 active:scale-90 cursor-pointer z-5 hover:rotate-3"
-                          title="즐겨찾기"
+                        type="button"
+                        disabled={promotingGarmentId === item.id}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          void handlePromoteToOwned(item);
+                        }}
+                        className="mt-2 w-full h-8 text-xs font-black rounded-lg bg-orange-100 text-orange-900 border border-orange-200 hover:bg-orange-200 transition flex items-center justify-center gap-1 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                       >
-                        <Heart className={`w-3.5 h-3.5 transition-colors ${item.isFavorite ? "fill-rose-500 text-rose-500" : "text-slate-350"}`} />
+                        <HeartHandshake className="w-3 h-3 text-orange-700" />
+                        <span>{promotingGarmentId === item.id ? '옷장입고 중…' : '옷장입고'}</span>
                       </button>
-
-                      {/* Apparel Display visual slot */}
-                      <div className="flex-1 min-h-0 mt-5 bg-[#F8FAFC]/55 rounded-2xl flex items-center justify-center overflow-hidden border border-slate-50 relative select-none">
-                        {item.thumbnailUrl ? (
-                            <AuthenticatedImage
-                                src={item.thumbnailUrl}
-                                alt={item.name}
-                                className="w-full h-full object-contain p-2 transition-transform duration-500 group-hover:scale-105"
-                                fallback={
-                                  <span className="text-4xl filter drop-shadow-sm select-none">👚</span>
-                                }
-                            />
-                        ) : (
-                            <span className="text-4xl filter drop-shadow-sm select-none">👚</span>
-                        )}
-                      </div>
-
-                      {/* Descriptions texts */}
-                      <div className="shrink-0 pt-2 space-y-1">
-                        <h4 className="text-[12px] sm:text-[13px] font-black text-slate-800 tracking-tight leading-snug line-clamp-1 group-hover:text-[#1E3A8A] transition">{item.name}</h4>
-
-                        <div className="flex items-center gap-1 flex-wrap text-[9px] text-slate-400 font-bold select-none">
-                          <span className="bg-slate-100 hover:bg-slate-200/60 px-1.5 py-0.5 rounded-md text-slate-500 transition">{item.color}</span>
-                          <span className="bg-slate-100 hover:bg-slate-200/60 px-1.5 py-0.5 rounded-md text-slate-500 transition line-clamp-1 truncate max-w-[72px]">{item.fitType}</span>
-                        </div>
-
-                        {/* Specialized wishlist Promotion button */}
-                        {item.isWishlist && (
-                            <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handlePromoteToOwned(item);
-                                }}
-                                className="w-full mt-1 h-7 text-[9px] font-black rounded-lg bg-orange-100 text-orange-900 border border-orange-250 hover:bg-orange-200 transition-all duration-200 flex items-center justify-center space-x-1 shadow-3xs cursor-pointer focus:ring-2 focus:ring-orange-300 active:scale-95"
-                            >
-                              <HeartHandshake className="w-3 h-3 text-orange-700 animate-pulse" />
-                              <span>옷장입고</span>
-                            </button>
-                        )}
-                      </div>
-
-                    </div>
+                    ) : undefined}
+                  />
                 );
               })}
 
@@ -585,6 +545,7 @@ export default function ClosetTab({
               )}
             </div>
 
+            <div ref={detailSectionRef} id="closet-garment-detail" className="space-y-4 scroll-mt-24">
             <h3 className="text-lg font-black text-slate-900 tracking-tight">
               의상 상세
             </h3>
@@ -595,8 +556,9 @@ export default function ClosetTab({
                 onGarmentChange={setSelectedGarment}
                 onGarmentUpdated={upsertGarment}
                 onGarmentDeleted={handleGarmentDeleted}
-                onToast={triggerToast}
+                onToast={(message) => showToast("info", message)}
             />
+            </div>
           </aside>
 
         </div>

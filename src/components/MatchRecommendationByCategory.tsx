@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import AuthenticatedImage from "@/components/common/AuthenticatedImage";
 import RecommendProductDetailModal from "@/components/RecommendProductDetailModal";
-import { ChevronRight, Heart, Sparkle, ThumbsDown } from "@/components/icons";
-import { postRecommendationFeedback } from "@/api/recommendations";
+import { ChevronRight, Heart } from "@/components/icons";
 import { useRecommendWishlistToggle } from "@/hooks/useRecommendWishlistToggle";
 import type { Garment } from "@/types";
 import type {
@@ -61,10 +60,17 @@ function RecommendationCard({
             }
           />
           <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/85 via-black/45 to-transparent text-white text-left">
-            <p className="text-[10px] font-bold text-white/75 truncate">
-              {item.brandLabel}
-            </p>
-            <h4 className="text-sm font-black line-clamp-2 leading-snug">
+            <div className="flex flex-col">
+              {item.itemTypeLabel ? (
+                <span className="text-[10px] font-bold text-white/60 truncate">
+                  {item.itemTypeLabel}
+                </span>
+              ) : null}
+              <p className="text-[10px] font-bold text-white/75 truncate">
+                {item.brandLabel}
+              </p>
+            </div>
+            <h4 className="text-sm font-black line-clamp-2 leading-snug mt-0.5">
               {item.title}
             </h4>
           </div>
@@ -263,7 +269,6 @@ export default function MatchRecommendationByCategory({
     new Set(),
   );
   const [selectedItem, setSelectedItem] = useState<RecommendCardItem | null>(null);
-  const [isDisliking, setIsDisliking] = useState(false);
 
   useEffect(() => {
     setExpandedCategories(new Set());

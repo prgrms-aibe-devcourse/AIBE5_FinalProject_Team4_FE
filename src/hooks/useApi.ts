@@ -18,7 +18,7 @@ function useApi<T>(url: string): UseApiResult<T>{
                 setLoading(true);
                 const response = await api.get<T>(url);
                 setData(response.data);
-            } catch(err) {
+            } catch {
                 setError('데이터를 불러오는데 실패했습니다');
             } finally {
                 setLoading(false); // 성공이든 실패든 로딩 끝

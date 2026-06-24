@@ -1,5 +1,5 @@
 import { resolveClothesGenderWithBrand } from '@/data/brandGender'
-import type { ClothesGender, ClothesInfoSource, ClothesResponse } from '@/types/be'
+import type { ClothesGender, ClothesResponse } from '@/types/be'
 import type { Garment, GarmentBeMeta } from '@/types'
 import {
   BE_CATEGORY_TO_UI,
