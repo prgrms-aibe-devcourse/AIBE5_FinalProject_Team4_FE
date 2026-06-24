@@ -312,14 +312,6 @@ export default function HomeTab({
     setRefreshSignal(prev => prev + 1);
   }, [onRefreshWardrobe]);
 
-  const handleRefreshExceptStyle = useCallback(() => {
-    onRefreshWardrobe?.()
-    setOotdItems([])
-    setOotdLoading(true)
-    setMatchRecommendationGroups([])
-    setMatchLoading(true)
-    setRefreshSignal(prev => prev + 1)
-  }, [onRefreshWardrobe])
 
   const handleRefreshWardrobeOnly = useCallback(() => {
     onRefreshWardrobe?.()
