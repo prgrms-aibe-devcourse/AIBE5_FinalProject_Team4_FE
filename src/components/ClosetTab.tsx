@@ -278,10 +278,11 @@ export default function ClosetTab({
       });
       const ownedGarment = { ...updated, isWishlist: false };
       upsertGarment(ownedGarment);
-      setSelectedGarment(ownedGarment);
-      setClosetTab("owned");
+      if (selectedRef.current?.id === item.id) {
+        setSelectedGarment(null);
+      }
       void refreshWardrobeStats();
-      showToast("success", "보유 옷장으로 이동했습니다.");
+      showToast("success", "보유 옷장에 등록했습니다.");
     } catch (error) {
       showToast("error", extractApiErrorMessage(error, "보유 옷장 전환에 실패했습니다."));
     } finally {

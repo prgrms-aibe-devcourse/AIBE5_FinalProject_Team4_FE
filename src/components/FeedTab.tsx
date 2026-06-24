@@ -54,6 +54,16 @@ export default function FeedTab({
   const feedHeaderRef = useRef<HTMLDivElement>(null)
   const postListRef = useRef<HTMLDivElement>(null)
   const writeButtonRef = useRef<HTMLButtonElement>(null)
+  const activeCommentComposersRef = useRef(0)
+  const [hideUploadForComments, setHideUploadForComments] = useState(false)
+
+  const handleCommentComposerActiveChange = useCallback((active: boolean) => {
+    activeCommentComposersRef.current += active ? 1 : -1
+    activeCommentComposersRef.current = Math.max(0, activeCommentComposersRef.current)
+    setHideUploadForComments(activeCommentComposersRef.current > 0)
+  }, [])
+
+  const showFeedUploadButton = !writeOpen && !hideUploadForComments && detailPostId == null
 
   const loadPosts = useCallback(async (nextPage: number, append: boolean) => {
     if (append) {
@@ -201,6 +211,7 @@ export default function FeedTab({
               onCommentCountChange={(commentCount) =>
                 updatePostInList({ ...post, commentCount })
               }
+              onCommentComposerActiveChange={handleCommentComposerActiveChange}
               onViewProfile={onViewProfile}
               likeSubmitting={
                 submittingPostId === post.feedPostId && submittingAction === 'like'
@@ -247,7 +258,7 @@ export default function FeedTab({
         onViewProfile={onViewProfile}
       />
 
-      {!writeOpen ? (
+      {showFeedUploadButton ? (
         <div className="fixed bottom-20 left-0 right-0 z-20 flex justify-center px-5 pointer-events-none">
           <button
               ref={writeButtonRef}
@@ -273,7 +284,7 @@ export default function FeedTab({
           }}
         />
       )}
-      {!tourOpen && !writeOpen && (
+      {!tourOpen && showFeedUploadButton && (
           <button
               type="button"
               className="fixed right-5 bottom-20 z-40 w-11 h-11 rounded-full bg-white border border-slate-200 text-[#1E3A8A] shadow-lg flex items-center justify-center transition active:scale-90"
