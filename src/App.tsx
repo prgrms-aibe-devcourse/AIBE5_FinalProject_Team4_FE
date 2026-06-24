@@ -4,7 +4,7 @@
  */
 
 import api from "@/api/index";
-import { useState, useEffect, useCallback, type ChangeEvent } from "react";
+import { useState, useEffect, useCallback, useRef, type ChangeEvent } from "react";
 import {
   Home,
   X,
@@ -269,6 +269,11 @@ export default function App() {
   });
   const [lookfeedProfileSaving, setLookfeedProfileSaving] = useState(false);
   const [isLookfeedProfileExitConfirmOpen, setIsLookfeedProfileExitConfirmOpen] = useState(false);
+  const [registerFromOnboarding, setRegisterFromOnboarding] = useState(false)
+  const [pendingOnboardingData, setPendingOnboardingData] = useState<MyProfilePayload | null>(null)
+  const [isOnboardingSuccessModalOpen, setIsOnboardingSuccessModalOpen] = useState(false)
+  // onSaved 직후 forceClose→onClose가 동기 실행될 때 cleanup을 건너뛰기 위한 ref
+  const onboardingRegistrationSavedRef = useRef(false)
 
   // 비로그인 상태면 모달을 열고 false를 반환, 로그인 상태면 true를 반환
   const requireLogin = (destination?: "closet" | "profile"): boolean => {
@@ -1160,8 +1165,21 @@ export default function App() {
                 styleCodes: styles,
                 marketingAgreed,
               });
-              applyAuthProfile(response.data.data);
-              if (openModal) openGarmentRegister();
+              const profileData = response.data.data;
+              if (openModal) {
+                // 온보딩 페이지를 유지한 채(onboarded=false) 모달만 오픈
+                // applyAuthProfile은 등록 완료 후 호출
+                setAuthUserId(profileData.userId);
+                setIsLoggedIn(true);
+                setAuthReady(true);
+                setPendingOnboardingData(profileData);
+                setRegisterFromOnboarding(true);
+                openGarmentRegister();
+              } else {
+                applyAuthProfile(profileData);
+                setPendingTab(null);
+                setCurrentTab("home");
+              }
             } catch {
               showMessage("프로필 저장 실패", "프로필 저장에 실패했어요. 다시 시도해주세요.", "danger");
             }
@@ -1739,7 +1757,20 @@ export default function App() {
 
         <GarmentRegisterMethodModal
           open={isMethodSelectOpen}
-          onClose={closeGarmentRegisterMethod}
+          onClose={() => {
+            closeGarmentRegisterMethod();
+            if (onboardingRegistrationSavedRef.current) {
+              onboardingRegistrationSavedRef.current = false;
+              return;
+            }
+            if (registerFromOnboarding && pendingOnboardingData) {
+              applyAuthProfile(pendingOnboardingData);
+              setPendingOnboardingData(null);
+              setRegisterFromOnboarding(false);
+              setPendingTab(null);
+              setCurrentTab("home");
+            }
+          }}
           onSelectReceipt={() => {
             closeGarmentRegisterMethod();
             setIsPurchaseRegisterOpen(true);
@@ -1754,7 +1785,20 @@ export default function App() {
           open={isPurchaseRegisterOpen}
           userId={authUserId}
           existingGarments={clothes}
-          onClose={() => setIsPurchaseRegisterOpen(false)}
+          onClose={() => {
+            setIsPurchaseRegisterOpen(false);
+            if (onboardingRegistrationSavedRef.current) {
+              onboardingRegistrationSavedRef.current = false;
+              return;
+            }
+            if (registerFromOnboarding && pendingOnboardingData) {
+              applyAuthProfile(pendingOnboardingData);
+              setPendingOnboardingData(null);
+              setRegisterFromOnboarding(false);
+              setPendingTab(null);
+              setCurrentTab("home");
+            }
+          }}
           onBackToMethodSelect={() => {
             setIsPurchaseRegisterOpen(false);
             openGarmentRegister();
@@ -1763,7 +1807,13 @@ export default function App() {
             setClothes((prev) => [garment, ...prev]);
             if (options?.finished !== false) {
               setSelectedGarment(garment);
-              setCurrentTab("closet");
+              if (registerFromOnboarding) {
+                onboardingRegistrationSavedRef.current = true  // onClose cleanup 차단
+                setRegisterFromOnboarding(false);
+                setIsOnboardingSuccessModalOpen(true);
+              } else {
+                setCurrentTab("closet");
+              }
             }
           }}
         />
@@ -1772,7 +1822,20 @@ export default function App() {
           open={isPhotoRegisterOpen}
           userId={authUserId}
           existingGarments={clothes}
-          onClose={() => setIsPhotoRegisterOpen(false)}
+          onClose={() => {
+            setIsPhotoRegisterOpen(false);
+            if (onboardingRegistrationSavedRef.current) {
+              onboardingRegistrationSavedRef.current = false;
+              return;
+            }
+            if (registerFromOnboarding && pendingOnboardingData) {
+              applyAuthProfile(pendingOnboardingData);
+              setPendingOnboardingData(null);
+              setRegisterFromOnboarding(false);
+              setPendingTab(null);
+              setCurrentTab("home");
+            }
+          }}
           onBackToMethodSelect={() => {
             setIsPhotoRegisterOpen(false);
             openGarmentRegister();
@@ -1780,7 +1843,13 @@ export default function App() {
           onSaved={(garment) => {
             setClothes((prev) => [garment, ...prev]);
             setSelectedGarment(garment);
-            setCurrentTab("closet");
+            if (registerFromOnboarding) {
+              onboardingRegistrationSavedRef.current = true  // onClose cleanup 차단
+              setRegisterFromOnboarding(false);
+              setIsOnboardingSuccessModalOpen(true);
+            } else {
+              setCurrentTab("closet");
+            }
           }}
         />
 
@@ -2219,6 +2288,37 @@ export default function App() {
           documentType={activeLegalDocument ?? "terms"}
           onClose={() => setActiveLegalDocument(null)}
         />
+
+        {/* 온보딩 옷 등록 완료 안내 모달 */}
+        {isOnboardingSuccessModalOpen && (
+          <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/50 px-4">
+            <div className="w-full max-w-sm rounded-[28px] bg-white p-7 shadow-2xl border border-slate-100 text-center space-y-4 animate-modal-in">
+              <div className="text-5xl">🎉</div>
+              <div className="space-y-1.5">
+                <h2 className="text-xl font-black text-slate-900">옷 등록 완료!</h2>
+                <p className="text-sm text-slate-500 leading-relaxed">
+                  내 옷장이 채워졌어요.<br />
+                  이제 홈에서 AI 맞춤 코디 추천을 받아보세요.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsOnboardingSuccessModalOpen(false);
+                  if (pendingOnboardingData) {
+                    applyAuthProfile(pendingOnboardingData);
+                    setPendingOnboardingData(null);
+                  }
+                  setPendingTab(null);
+                  setCurrentTab("home");
+                }}
+                className="w-full h-11 rounded-xl bg-[#1E3A8A] text-sm font-black text-white transition hover:bg-[#172f72] active:scale-[0.98]"
+              >
+                홈에서 둘러보기
+              </button>
+            </div>
+          </div>
+        )}
 
       </div>
     );
