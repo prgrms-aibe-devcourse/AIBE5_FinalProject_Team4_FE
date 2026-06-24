@@ -19,6 +19,11 @@ export function useWardrobeLoader({
 }: UseWardrobeLoaderOptions) {
   const [wardrobeLoading, setWardrobeLoading] = useState(false);
   const loadedUserIdRef = useRef<number | null>(null);
+  const selectedGarmentRef = useRef(selectedGarment);
+
+  useEffect(() => {
+    selectedGarmentRef.current = selectedGarment;
+  }, [selectedGarment]);
 
   const loadWardrobe = useCallback(async () => {
     if (userId == null) return;
@@ -28,14 +33,19 @@ export function useWardrobeLoader({
       const { garments } = await fetchWardrobeGarments(userId);
       setClothes(garments);
 
-      const preserved = garments.find((item) => item.id === selectedGarment?.id);
-      if (loadedUserIdRef.current !== userId) {
+      const selectedId = selectedGarmentRef.current?.id;
+      const preserved = selectedId
+        ? garments.find((item) => item.id === selectedId)
+        : null;
+      const isInitialLoad = loadedUserIdRef.current !== userId;
+
+      if (isInitialLoad) {
         setSelectedGarment(preserved ?? garments[0] ?? null);
         loadedUserIdRef.current = userId;
-      } else if (preserved) {
+      } else if (selectedId && preserved) {
         setSelectedGarment(preserved);
-      } else {
-        setSelectedGarment(garments[0] ?? null);
+      } else if (selectedId && !preserved) {
+        setSelectedGarment(null);
       }
     } catch {
       if (loadedUserIdRef.current !== userId) {
@@ -46,7 +56,7 @@ export function useWardrobeLoader({
     } finally {
       setWardrobeLoading(false);
     }
-  }, [selectedGarment?.id, setClothes, setSelectedGarment, userId]);
+  }, [setClothes, setSelectedGarment, userId]);
 
   useEffect(() => {
     if (!enabled || userId == null) {

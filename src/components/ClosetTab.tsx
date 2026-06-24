@@ -269,6 +269,12 @@ export default function ClosetTab({
 
     setPromotingGarmentId(item.id);
 
+    const previousGarment = item;
+    upsertGarment({ ...item, isWishlist: false });
+    if (selectedRef.current?.id === item.id) {
+      setSelectedGarment(null);
+    }
+
     try {
       const updated = await convertWishlistToOwned(clothesId, {
         productCode: item.productCode ?? recommendationWishlistProductCode(clothesId),
@@ -276,14 +282,13 @@ export default function ClosetTab({
         userImageUrl: normalizeClothesImageUrlForApi(rawImageUrl),
         isVerified: false,
       });
-      const ownedGarment = { ...updated, isWishlist: false };
-      upsertGarment(ownedGarment);
-      if (selectedRef.current?.id === item.id) {
-        setSelectedGarment(null);
+      if (updated) {
+        upsertGarment({ ...updated, isWishlist: false });
       }
       void refreshWardrobeStats();
       showToast("success", "보유 옷장에 등록했습니다.");
     } catch (error) {
+      upsertGarment({ ...previousGarment, isWishlist: true });
       showToast("error", extractApiErrorMessage(error, "보유 옷장 전환에 실패했습니다."));
     } finally {
       setPromotingGarmentId(null);
