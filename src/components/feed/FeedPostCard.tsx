@@ -38,6 +38,7 @@ interface FeedPostCardProps {
   onToggleSave: () => void
   onShare: () => void
   onCommentCountChange?: (commentCount: number) => void
+  onCommentComposerActiveChange?: (active: boolean) => void
   onViewProfile?: (userId: number) => void
   likeSubmitting?: boolean
   saveSubmitting?: boolean
@@ -51,6 +52,7 @@ export default function FeedPostCard({
   onToggleSave,
   onShare,
   onCommentCountChange,
+  onCommentComposerActiveChange,
   onViewProfile,
   likeSubmitting = false,
   saveSubmitting = false,
@@ -78,6 +80,13 @@ export default function FeedPostCard({
     setReplyingToId(null)
     setReplyDraft('')
   }, [post.feedPostId])
+
+  useEffect(() => {
+    onCommentComposerActiveChange?.(commentsOpen)
+    return () => {
+      onCommentComposerActiveChange?.(false)
+    }
+  }, [commentsOpen, onCommentComposerActiveChange])
 
   const syncComments = useCallback(async (showLoading = false) => {
     if (showLoading) setCommentsLoading(true)
