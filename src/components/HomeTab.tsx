@@ -248,7 +248,7 @@ export default function HomeTab({
                                   onAddWishlistItem,
                                   onGoToCloset,
                                   region = '서울',
-                                  onLoginRequired: _onLoginRequired,
+                                  onLoginRequired,
     guideTourCompleted,
     onGuideTourComplete,
                                 }: HomeTabProps) {
@@ -460,7 +460,7 @@ export default function HomeTab({
               console.error('[DEBUG] weather fetch failed:', e);
             }
 
-            const res = userId ? await fetchOotdRecommendations(wardrobeId, currentTemp ?? 20) : { 
+            const res = userId ? await fetchOotdRecommendations(wardrobeId, currentTemp ?? 20) : {
               combinations: [
                 {
                   outfitId: 999991,
@@ -491,8 +491,8 @@ export default function HomeTab({
                   shoes: { clothesId: 1011, name: "하이탑 스니커즈", category: "SHOES", imageUrl: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?q=80&w=400" },
                   totalScore: 9.2,
                 }
-              ], 
-              weatherLabel: "맑음" 
+              ],
+              weatherLabel: "맑음"
             };
             const outfits = res?.combinations || res?.outfits || (Array.isArray(res) ? res : []);
             const weatherLabel = res?.weatherLabel || "";
@@ -599,7 +599,7 @@ export default function HomeTab({
     })();
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeLabel, userId, authReady, refreshSignal]);
+  }, [activeLabel, userId, authReady, refreshSignal, region]);
 
   useEffect(() => {
     if (activeLabel !== "match" || !userId || !authReady || anchorClothesIdNumeric == null) {
@@ -762,6 +762,11 @@ export default function HomeTab({
                   className="group rounded-[24px] border border-slate-100 bg-slate-50 overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:rotate-[0.5deg] hover:shadow-xl active:scale-[0.99] cursor-pointer"
                 >
                   <div className="h-96 sm:h-[28rem] lg:h-[32rem] bg-slate-100 relative overflow-hidden">
+                    {!userId && (
+                      <div className="absolute top-3 left-3 z-10 bg-black/60 backdrop-blur-sm px-2.5 py-1 rounded-full border border-white/20">
+                        <span className="text-[10px] font-black text-white tracking-wider">코디 미리보기</span>
+                      </div>
+                    )}
                     {(() => {
                       const combo = ootdCombinations.find(c => c.id === item.id);
                       if (combo) {
