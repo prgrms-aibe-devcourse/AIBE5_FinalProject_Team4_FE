@@ -1088,7 +1088,7 @@ export default function App() {
     <div
       id="root-container"
       data-view={isOnboardingActive ? "onboarding" : "app"}
-      className={`min-h-screen font-sans antialiased text-slate-800 flex flex-col justify-between font-sans ${
+      className={`w-full max-w-md mx-auto min-h-[100dvh] font-sans antialiased text-slate-800 flex flex-col justify-between ${
         isOnboardingActive
           ? "bg-white p-0"
           : "bg-[#F8FAFC] p-0"
