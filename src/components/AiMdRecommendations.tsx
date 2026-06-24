@@ -12,7 +12,7 @@ import { connectWishlistClothes, createWishlistClothes } from '@/api/wardrobe'
 import AuthenticatedImage from '@/components/common/AuthenticatedImage'
 import ExitConfirmModal from '@/components/common/ExitConfirmModal'
 import { Modal, ModalBody, ModalFooter, ModalHeader } from '@/components/common/Modal'
-import { Check, Heart, Sparkles, X } from '@/components/icons'
+import { Check, ChevronLeft, ChevronRight, Heart, Sparkles, X } from '@/components/icons'
 import RecommendProductDetailModal from '@/components/RecommendProductDetailModal'
 import {
   BE_CATEGORY_TO_UI,
@@ -276,10 +276,15 @@ export default function AiMdRecommendations({
   const [saveOpen, setSaveOpen] = useState(false)
   const [savingProducts, setSavingProducts] = useState(false)
   const [feedbackSubmittingKey, setFeedbackSubmittingKey] = useState<string | null>(null)
+  const mdCarouselRef = useRef<HTMLDivElement | null>(null)
   const recommendRequestIdRef = useRef(0)
 
   const selectedMd = useMemo(
     () => mds.find((md) => md.id === selectedMdId) ?? null,
+    [mds, selectedMdId],
+  )
+  const selectedMdIndex = useMemo(
+    () => mds.findIndex((md) => md.id === selectedMdId),
     [mds, selectedMdId],
   )
 
@@ -452,6 +457,19 @@ export default function AiMdRecommendations({
     if (recommendLoading) return
     setSelectedMdId(mdId)
     resetResults()
+  }
+
+  const scrollMdCarousel = (direction: -1 | 1) => {
+    if (recommendLoading || mds.length === 0) return
+    const currentIndex = selectedMdIndex >= 0 ? selectedMdIndex : 0
+    const nextIndex = Math.min(Math.max(currentIndex + direction, 0), mds.length - 1)
+    const nextMd = mds[nextIndex]
+    if (!nextMd || nextIndex === currentIndex) return
+    selectMd(nextMd.id)
+    window.requestAnimationFrame(() => {
+      const card = mdCarouselRef.current?.children.item(nextIndex)
+      card?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
+    })
   }
 
   const changeMode = (nextMode: RecommendationMode) => {
@@ -761,8 +779,33 @@ export default function AiMdRecommendations({
   return (
     <div className="space-y-5">
       <div>
-        <p className="text-xs font-black text-slate-500 mb-3">나와 맞는 MD 선택</p>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <p className="text-xs font-black text-slate-500">AI MD 선택</p>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              disabled={recommendLoading || selectedMdIndex <= 0}
+              onClick={() => scrollMdCarousel(-1)}
+              className="grid h-8 w-8 place-items-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:text-slate-950 disabled:opacity-30"
+              aria-label="이전 MD"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              disabled={recommendLoading || selectedMdIndex < 0 || selectedMdIndex >= mds.length - 1}
+              onClick={() => scrollMdCarousel(1)}
+              className="grid h-8 w-8 place-items-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:text-slate-950 disabled:opacity-30"
+              aria-label="다음 MD"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+        <div
+          ref={mdCarouselRef}
+          className="flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-2 scrollbar-none"
+        >
           {mds.map((md) => {
             const selected = md.id === selectedMdId
             const characterImage = AI_MD_CHARACTER_IMAGES[md.id]
@@ -772,13 +815,13 @@ export default function AiMdRecommendations({
                 type="button"
                 disabled={recommendLoading}
                 onClick={() => selectMd(md.id)}
-                className={`min-h-40 rounded-2xl border p-3 text-left transition hover:-translate-y-0.5 disabled:opacity-60 ${
+                className={`min-h-44 w-[82%] shrink-0 snap-center rounded-2xl border p-3 text-left transition hover:-translate-y-0.5 disabled:opacity-60 sm:w-[44%] lg:w-[31%] ${
                   selected
                     ? 'border-[#111827] bg-[#111827] text-white ring-2 ring-[#C4B5FD]'
                     : 'border-slate-100 bg-slate-50 text-slate-800 hover:bg-white hover:shadow-md'
                 }`}
               >
-                <div className="grid grid-cols-[64px_minmax(0,1fr)] items-start">
+                <div className="grid grid-cols-[72px_minmax(0,1fr)] items-start gap-2">
                   <img
                     src={characterImage}
                     alt=""
@@ -787,8 +830,13 @@ export default function AiMdRecommendations({
                   <div className="min-w-0 pt-1">
                     <div className="flex items-center justify-between gap-2">
                       <strong className="truncate text-sm font-black">{md.name}</strong>
-                      {selected && <Check className="w-4 h-4 shrink-0 text-[#C4B5FD]" />}
+                      {selected && <Check className="h-4 w-4 shrink-0 text-[#C4B5FD]" />}
                     </div>
+                    <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[9px] font-black ${
+                      selected ? 'bg-white/10 text-white/70' : 'bg-white text-slate-400'
+                    }`}>
+                      {md.gender === 'MALE' ? '남자 MD' : '여자 MD'}
+                    </span>
                     <div className="mt-2 flex flex-wrap gap-1">
                       {md.styleNames.slice(0, 3).map((style) => (
                         <span
@@ -812,6 +860,25 @@ export default function AiMdRecommendations({
               </button>
             )
           })}
+        </div>
+        <div className="mt-2 flex justify-center gap-1.5">
+          {mds.map((md, index) => (
+            <button
+              key={md.id}
+              type="button"
+              disabled={recommendLoading}
+              onClick={() => {
+                selectMd(md.id)
+                mdCarouselRef.current?.children
+                  .item(index)
+                  ?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
+              }}
+              className={`h-1.5 rounded-full transition ${
+                md.id === selectedMdId ? 'w-5 bg-slate-950' : 'w-1.5 bg-slate-300'
+              }`}
+              aria-label={`${md.name} 선택`}
+            />
+          ))}
         </div>
       </div>
 
