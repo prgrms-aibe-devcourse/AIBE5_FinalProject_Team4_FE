@@ -180,13 +180,14 @@ export async function convertWishlistToOwned(
     userImageUrl: string
     isVerified: boolean
   },
-): Promise<Garment> {
+): Promise<Garment | null> {
   const updated = await unwrap(
     api.patch<BeApiResponse<ClothesResponse>>(
       `/api/v1/clothes/${clothesId}/convert-to-owned`,
       payload,
     ),
   )
+  if (updated == null) return null
   return mapClothesToGarment(updated)
 }
 

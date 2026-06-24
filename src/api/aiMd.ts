@@ -58,12 +58,9 @@ export function fetchAiMdProducts(
 export function toAiMdOutfitSaveRequest(
   outfit: AiMdOutfitRecommendation,
 ): AiMdOutfitSaveRequest {
-  const wardrobeClothesIds = outfit.ownedItems.map((item) => {
-    if (item.wardrobeClothesId == null) {
-      throw new Error('보유 옷 ID가 없는 코디는 저장할 수 없습니다.')
-    }
-    return item.wardrobeClothesId
-  })
+  const wardrobeClothesIds = outfit.ownedItems
+    .map((item) => item.wardrobeClothesId)
+    .filter((id): id is number => id != null)
 
   return {
     title: outfit.title,

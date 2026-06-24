@@ -30,6 +30,7 @@ interface OutfitBookTabProps {
   clothes: Garment[];
   guideTourCompleted: boolean;
   onGuideTourComplete: () => void;
+  refreshSignal?: number;
 }
 
 export default function OutfitBookTab({
@@ -37,6 +38,7 @@ export default function OutfitBookTab({
                                         clothes,
                                         guideTourCompleted,
                                         onGuideTourComplete,
+                                        refreshSignal = 0,
                                       }: OutfitBookTabProps) {
   const [outfits, setOutfits] = useState<OutfitResponse[]>([]);
   const [outfitBookId, setOutfitBookId] = useState<number | null>(null);
@@ -70,7 +72,7 @@ export default function OutfitBookTab({
 
   useEffect(() => {
     loadOutfits();
-  }, [loadOutfits]);
+  }, [loadOutfits, refreshSignal]);
 
   const filteredOutfits = useMemo(() => {
     let list = outfits;

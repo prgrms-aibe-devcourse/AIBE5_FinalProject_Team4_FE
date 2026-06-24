@@ -40,12 +40,50 @@ const normalizeTwoDigitDatePart = (value: string) => {
     return String(numberValue).padStart(2, "0").slice(0, 2);
 };
 
+const CURRENT_YEAR = new Date().getFullYear();
+
 const buildBirthday = (year: string, month: string, day: string) => {
     if (year.length !== 4 || month.length === 0 || day.length === 0) return "";
+    const yearNumber = Number(year);
+    if (yearNumber < 1900 || yearNumber > CURRENT_YEAR) return "";
     const monthNumber = Number(month);
     const dayNumber = Number(day);
     if (monthNumber < 1 || monthNumber > 12 || dayNumber < 1 || dayNumber > 31) return "";
     return `${year}-${String(monthNumber).padStart(2, "0")}-${String(dayNumber).padStart(2, "0")}`;
+};
+
+const validateBirthdayFields = (
+    year: string,
+    month: string,
+    day: string,
+    setBirthdayError: (msg: string) => void,
+) => {
+    if (!year && !month && !day) {
+        setBirthdayError("");
+        return;
+    }
+    if (year.length > 0 && year.length < 4) {
+        setBirthdayError("연도는 4자리로 입력해 주세요.");
+        return;
+    }
+    if (year.length === 4) {
+        const y = Number(year);
+        if (y < 1900 || y > CURRENT_YEAR) {
+            setBirthdayError(`연도는 1900 ~ ${CURRENT_YEAR} 사이로 입력해 주세요.`);
+            return;
+        }
+    }
+    const m = Number(month);
+    if (month && (m < 1 || m > 12)) {
+        setBirthdayError("월은 01 ~ 12 사이로 입력해 주세요.");
+        return;
+    }
+    const d = Number(day);
+    if (day && (d < 1 || d > 31)) {
+        setBirthdayError("일은 01 ~ 31 사이로 입력해 주세요.");
+        return;
+    }
+    setBirthdayError("");
 };
 
 const MIN_STYLE_SELECTION = 2;
@@ -110,7 +148,8 @@ export default function OnboardingPage({
             : step === 2
                 ? (
                     <>
-                        마음에 드는 스타일을 <span className="font-black text-slate-950">2개 이상</span> 선택해주세요.
+                        가장 마음에 드는 순서대로 <span className="font-black text-slate-950">2개 이상</span> 골라주세요.<br />
+                        선택 순서가 AI 추천에 반영됩니다.
                     </>
                 )
                 : "옷을 등록하면 AI 맞춤 추천 정확도가 더 좋아집니다.";
@@ -191,8 +230,8 @@ export default function OnboardingPage({
     };
 
     return (
-        <div className="min-h-screen overflow-y-auto bg-white flex items-start justify-center px-0 py-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            <div className="w-full min-h-screen max-w-md overflow-y-auto bg-white px-6 py-7 flex flex-col gap-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="min-h-[100dvh] bg-white flex flex-col [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="w-full flex-1 max-w-md mx-auto px-6 py-7 flex flex-col gap-5 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 <header className="flex items-center justify-between">
                     <button
                         type="button"
@@ -266,7 +305,11 @@ export default function OnboardingPage({
                                     autoComplete="bday-year"
                                     enterKeyHint="next"
                                     value={birthYear}
-                                    onChange={(e) => setBirthYear(onlyDigits(e.target.value, 4))}
+                                    onChange={(e) => {
+                                        setBirthYear(onlyDigits(e.target.value, 4));
+                                        setBirthdayError("");
+                                    }}
+                                    onBlur={(e) => validateBirthdayFields(e.target.value, birthMonth, birthDay, setBirthdayError)}
                                     placeholder="YYYY"
                                     aria-label="생년월일 연도"
                                     className="w-full h-11 px-4 rounded-xl border border-[#e5e7eb] text-sm outline-none focus:border-[#111827] transition"
@@ -278,8 +321,15 @@ export default function OnboardingPage({
                                     autoComplete="bday-month"
                                     enterKeyHint="next"
                                     value={birthMonth}
-                                    onChange={(e) => setBirthMonth(onlyDigits(e.target.value, 2))}
-                                    onBlur={() => setBirthMonth((value) => normalizeTwoDigitDatePart(value))}
+                                    onChange={(e) => {
+                                        setBirthMonth(onlyDigits(e.target.value, 2));
+                                        setBirthdayError("");
+                                    }}
+                                    onBlur={(e) => {
+                                        const normalized = normalizeTwoDigitDatePart(e.target.value);
+                                        setBirthMonth(normalized);
+                                        validateBirthdayFields(birthYear, normalized, birthDay, setBirthdayError);
+                                    }}
                                     placeholder="MM"
                                     aria-label="생년월일 월"
                                     className="w-full h-11 px-4 rounded-xl border border-[#e5e7eb] text-sm outline-none focus:border-[#111827] transition"
@@ -291,8 +341,15 @@ export default function OnboardingPage({
                                     autoComplete="bday-day"
                                     enterKeyHint="done"
                                     value={birthDay}
-                                    onChange={(e) => setBirthDay(onlyDigits(e.target.value, 2))}
-                                    onBlur={() => setBirthDay((value) => normalizeTwoDigitDatePart(value))}
+                                    onChange={(e) => {
+                                        setBirthDay(onlyDigits(e.target.value, 2));
+                                        setBirthdayError("");
+                                    }}
+                                    onBlur={(e) => {
+                                        const normalized = normalizeTwoDigitDatePart(e.target.value);
+                                        setBirthDay(normalized);
+                                        validateBirthdayFields(birthYear, birthMonth, normalized, setBirthdayError);
+                                    }}
                                     placeholder="DD"
                                     aria-label="생년월일 일"
                                     className="w-full h-11 px-4 rounded-xl border border-[#e5e7eb] text-sm outline-none focus:border-[#111827] transition"
@@ -418,12 +475,12 @@ export default function OnboardingPage({
 
                 {/* ── STEP 3: 옷 등록 유도 ── */}
                 {step === 3 && (
-                    <div className="flex flex-col gap-5">
-                        <div className="text-center py-2">
-                            <span className="text-5xl block mb-4">👗</span>
+                    <div className="flex-1 flex flex-col gap-5">
+                        <div className="flex-1 flex items-center justify-center">
+                            <span className="text-6xl">👗</span>
                         </div>
 
-                        <div className="grid grid-cols-1 gap-3">
+                        <div className="grid grid-cols-1 gap-3 pb-2">
                             <button
                                 onClick={() => { void handleComplete(true); }}
                                 className="w-full h-14 rounded-xl bg-[#111827] text-white font-bold text-sm cursor-pointer hover:bg-[#1f2937] transition"

@@ -1225,7 +1225,7 @@ export default function HomeTab({
             <GuideTour
                 steps={[
                   { targetRef: ootdRef, message: "오늘 날씨와 내 옷장을 분석해 코디를 추천해드려요" },
-                  { targetRef: labelSectionRef, message: "AI MD에게 내 스타일을 직접 물어볼 수도 있어요" },
+                  { targetRef: labelSectionRef, message: "스타일 기반·유사 상품·어울리는 옷·AI MD까지 다양한 방식으로 추천을 받아볼 수 있어요" },
                   { targetRef: recommendationListRef, message: "추천 카드를 클릭해 상세 정보와 유사 상품을 확인할 수 있어요" },
                 ]}
                 onComplete={() => {
