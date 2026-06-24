@@ -419,17 +419,20 @@ export default function HomeTab({
   }, [matchEligibleOwnedClothes, anchorClothesId]);
 
   useEffect(() => {
-    if (!userId || !authReady) return;
+    if (!authReady) return;
     let cancelled = false;
     void (async () => {
       try {
-        const meta = await fetchWardrobeMeta(userId);
-        if (!meta || cancelled) return;
-        const wardrobeId = meta.wardrobeId;
+        let wardrobeId = 0;
+        if (userId) {
+          const meta = await fetchWardrobeMeta(userId);
+          if (!meta || cancelled) return;
+          wardrobeId = meta.wardrobeId;
+        }
 
         // Fetch bookId once
         let currentBookId = bookId;
-        if (!currentBookId) {
+        if (userId && !currentBookId) {
           try {
             const book = await fetchMyOutfitBook();
             if (book?.outfitBookId) {
@@ -458,7 +461,40 @@ export default function HomeTab({
               console.error('[DEBUG] weather fetch failed:', e);
             }
 
-            const res = await fetchOotdRecommendations(wardrobeId, currentTemp ?? 20);
+            const res = userId ? await fetchOotdRecommendations(wardrobeId, currentTemp ?? 20) : { 
+              combinations: [
+                {
+                  outfitId: 999991,
+                  title: "세련된 시티룩",
+                  reason: "맑은 날씨에 어울리는 세련된 조합입니다.",
+                  top: { clothesId: 1001, name: "화이트 셔츠", category: "TOP", imageUrl: "https://images.unsplash.com/photo-1598033129183-c4f50c7176c8?q=80&w=400" },
+                  bottom: { clothesId: 1002, name: "슬랙스", category: "BOTTOM", imageUrl: "https://images.unsplash.com/photo-1624373666563-54428a1c360a?q=80&w=400" },
+                  outer: { clothesId: 1003, name: "네이비 블레이저", category: "OUTER", imageUrl: "https://images.unsplash.com/photo-1594932224828-b4b05a833534?q=80&w=400" },
+                  shoes: { clothesId: 1004, name: "더비 슈즈", category: "SHOES", imageUrl: "https://images.unsplash.com/photo-1614252235316-8c857d38b5f4?q=80&w=400" },
+                  totalScore: 9.5,
+                },
+                {
+                  outfitId: 999992,
+                  title: "캐주얼 데일리",
+                  reason: "편안하면서도 스타일리시한 데일리 룩입니다.",
+                  top: { clothesId: 1005, name: "그래픽 티셔츠", category: "TOP", imageUrl: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?q=80&w=400" },
+                  bottom: { clothesId: 1006, name: "데님 팬츠", category: "BOTTOM", imageUrl: "https://images.unsplash.com/photo-1542272604-787c3835535d?q=80&w=400" },
+                  shoes: { clothesId: 1007, name: "화이트 스니커즈", category: "SHOES", imageUrl: "https://images.unsplash.com/photo-1549298916-b41d501d3772?q=80&w=400" },
+                  totalScore: 8.8,
+                },
+                {
+                  outfitId: 999993,
+                  title: "스포티 스트릿",
+                  reason: "활동적인 활동에 적합한 힙한 스트릿 룩입니다.",
+                  top: { clothesId: 1008, name: "후드 티셔츠", category: "TOP", imageUrl: "https://images.unsplash.com/photo-1556821840-3a63f95609a7?q=80&w=400" },
+                  bottom: { clothesId: 1009, name: "조거 팬츠", category: "BOTTOM", imageUrl: "https://images.unsplash.com/photo-1552902865-b72c031ac5ea?q=80&w=400" },
+                  outer: { clothesId: 1010, name: "바시티 자켓", category: "OUTER", imageUrl: "https://images.unsplash.com/photo-1617114919297-3c8ddb01f599?q=80&w=400" },
+                  shoes: { clothesId: 1011, name: "하이탑 스니커즈", category: "SHOES", imageUrl: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?q=80&w=400" },
+                  totalScore: 9.2,
+                }
+              ], 
+              weatherLabel: "맑음" 
+            };
             const outfits = res?.combinations || res?.outfits || (Array.isArray(res) ? res : []);
             const weatherLabel = res?.weatherLabel || "";
 
@@ -525,10 +561,10 @@ export default function HomeTab({
           }
         }
 
-        if (activeLabel === 'style' && styleItems.length === 0) {
+        if (activeLabel === 'style' && userId && styleItems.length === 0) {
           setStyleLoading(true);
           try {
-            const res = await fetchWardrobeRecommendations(wardrobeId);
+            const res = userId ? await fetchWardrobeRecommendations(wardrobeId) : [];
             if (cancelled) return;
             setStyleError(null);
             const items = Array.isArray(res) ? res : [];
@@ -634,9 +670,13 @@ export default function HomeTab({
     if (userId == null || !authReady) {
       resetRecommendationState();
     }
-  }, [authReady, resetRecommendationState, userId]);
+  }, [authReady, resetRecommendationState, userId, region]);
 
   const selectLabel = (label: RecommendationLabel, scrollToList = false) => {
+    if (!userId && label !== "style") {
+      onLoginRequired?.();
+      return;
+    }
     setActiveLabel(label);
     if (scrollToList) {
       window.setTimeout(() => {
@@ -694,13 +734,6 @@ export default function HomeTab({
           ) : ootdError ? (
             <div className="rounded-2xl border border-red-100 bg-red-50 px-5 py-8 text-center">
               <p className="text-sm font-black text-red-700">{ootdError}</p>
-              <button
-                type="button"
-                onClick={() => setRefreshSignal(p => p + 1)}
-                className="mt-3 h-8 px-4 rounded-full bg-[#111827] text-white text-[10px] font-black"
-              >
-                다시 시도
-              </button>
             </div>
           ) : ootdItems.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-5 py-8 text-center">
@@ -712,6 +745,10 @@ export default function HomeTab({
                 <article
                   key={item.id}
                   onClick={() => {
+                    if (!userId) {
+                      onLoginRequired?.();
+                      return;
+                    }
                     const combo = ootdCombinations.find(c => c.id === item.id) ?? null;
                     setSelectedCombo(combo);
                     setSelectedItem(null);
@@ -855,16 +892,6 @@ export default function HomeTab({
               {matchError && (
                 <div className="flex items-center gap-2">
                   <p className="text-xs text-red-600 font-bold">{matchError}</p>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMatchError(null);
-                      setRefreshSignal(prev => prev + 1);
-                    }}
-                    className="text-[10px] font-black underline text-slate-900"
-                  >
-                    다시 시도
-                  </button>
                 </div>
               )}
             </div>
@@ -907,26 +934,19 @@ export default function HomeTab({
                   setSelectedItem(null);
                 }}
             />
-        ) : (
+        ) : activeLabel === "style" ? (
             <div className="grid gap-4 grid-cols-2 lg:grid-cols-3">
-              {styleLoading ? (
+              {!userId ? (
+                <div className="col-span-full rounded-2xl border border-red-100 bg-red-50 px-5 py-10 text-center">
+                  <p className="text-sm font-black text-red-700">로그인 후 스타일 기반 추천을 이용할 수 있어요.</p>
+                </div>
+              ) : styleLoading ? (
                   Array.from({ length: 20 }).map((_, idx) => (
                       <div key={idx} className="h-44 sm:h-52 lg:h-72 rounded-[24px] bg-slate-100 animate-pulse" />
                   ))
               ) : styleError ? (
                   <div className="col-span-full rounded-2xl border border-red-100 bg-red-50 px-5 py-10 text-center">
                     <p className="text-sm font-black text-red-700">{styleError}</p>
-                    <button
-                        type="button"
-                        onClick={() => {
-                          setStyleError(null);
-                          setRefreshSignal(prev => prev + 1);
-                          onRefreshWardrobe?.();
-                        }}
-                        className="mt-4 h-9 px-4 rounded-full bg-[#111827] text-white text-xs font-black"
-                    >
-                      다시 시도
-                    </button>
                   </div>
               ) : selectedRecommendations.length === 0 ? (
                 <div className="col-span-full rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-5 py-10 text-center">
@@ -977,7 +997,7 @@ export default function HomeTab({
                   ))
               )}
             </div>
-        )}
+        ) : null}
       </section>
 
       <Modal
