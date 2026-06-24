@@ -732,7 +732,7 @@ export default function HomeTab({
 
   return (
       <div className="space-y-6 animate-fade-in font-sans">
-        <section ref={ootdRef} className="bg-white border border-slate-100 rounded-[28px] shadow-sm text-left overflow-hidden">
+        <section ref={ootdRef} className="bg-white border border-slate-100 rounded-[28px] shadow-sm text-left">
           <div className="p-4 md:p-5">
             <div className="flex items-center gap-2 mb-1">
               <span className="text-xl">✨</span>
@@ -1205,7 +1205,7 @@ export default function HomeTab({
           open={selectedCombo != null}
           combination={selectedCombo}
           onClose={() => setSelectedCombo(null)}
-          onSaved={handleRefreshExceptStyle}
+          onSaved={handleRefreshWardrobeOnly}
           onFavoriteCreated={(outfitId) => {
             const updatedCombo = selectedCombo ? { ...selectedCombo, outfitId, favorite: true } : null
             setOotdCombinations(prev => prev.map(c =>

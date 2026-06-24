@@ -159,8 +159,11 @@ export default function OutfitDetailModal({
         await updateOutfit(editCombo.bookId, editCombo.outfitId, payload)
         showToast('success', '코디가 수정되었습니다.')
       } else {
-        await createOutfit(editCombo.bookId, payload)
+        const result = await createOutfit(editCombo.bookId, payload)
         showToast('success', '코디가 저장되었습니다.')
+        if (onFavoriteCreated && result?.outfitId) {
+          onFavoriteCreated(result.outfitId)
+        }
       }
       onSaved?.()
       setIsDirty(false)

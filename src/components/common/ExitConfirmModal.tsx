@@ -1,61 +1,65 @@
 import React from 'react'
-import { Modal, ModalBody, ModalFooter, ModalHeader } from '@/components/common/Modal'
+import {Modal, ModalBody, ModalFooter, ModalHeader} from '@/components/common/Modal'
+import type {ModalZIndex} from '@/components/common/Modal'
 
 interface ExitConfirmModalProps {
-  open: boolean
-  onConfirm: () => void   // 나가기
-  onCancel: () => void    // 계속 작성
-  title?: string
-  description?: string
-  confirmText?: string
-  cancelText?: string
-  preventClose?: boolean
+    open: boolean
+    onConfirm: () => void   // 나가기
+    onCancel: () => void    // 계속 작성
+    title?: string
+    description?: string
+    confirmText?: string
+    cancelText?: string
+    preventClose?: boolean
+    zIndex?: ModalZIndex
 }
 
 export default function ExitConfirmModal({
-  open,
-  onConfirm,
-  onCancel,
-  title = '작성 중인 내용이 있어요',
-  description = '지금 나가면 수정 내용이 사라져요.\n계속 수정하시겠어요?',
-  confirmText = '나가기',
-  cancelText = '계속 수정',
-  preventClose = true,
-}: ExitConfirmModalProps) {
-  return (
-    <Modal
-      open={open}
-      onClose={preventClose ? () => {} : onCancel}
-      size="sm"
-      placement="center"
-      zIndex={120}
-      closeOnBackdrop={false}
-    >
-      <ModalHeader
-        title={title}
-        onClose={preventClose ? undefined : onCancel}
-      />
-      <ModalBody className="px-6 py-4">
-        <p className="text-sm text-slate-600 whitespace-pre-line">{description}</p>
-      </ModalBody>
-      <ModalFooter className="p-4 flex gap-2">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="flex-1 h-12 rounded-2xl bg-[#111827] text-white text-sm font-black hover:bg-slate-800 transition-colors"
+                                             open,
+                                             onConfirm,
+                                             onCancel,
+                                             title = '작성 중인 내용이 있어요',
+                                             description = '지금 나가면 수정 내용이 사라져요.\n계속 수정하시겠어요?',
+                                             confirmText = '나가기',
+                                             cancelText = '계속 수정',
+                                             preventClose = true,
+                                             zIndex,
+                                         }: ExitConfirmModalProps) {
+    return (
+        <Modal
+            open={open}
+            onClose={preventClose ? () => {
+            } : onCancel}
+            size="sm"
+            placement="center"
+            zIndex={zIndex ?? 120}
+            closeOnBackdrop={false}
         >
-          {cancelText}
-        </button>
-        <button
-          type="button"
-          onClick={onConfirm}
-          className="flex-1 h-12 rounded-2xl bg-slate-100 text-slate-600 text-sm font-black hover:bg-slate-200 transition-colors"
-        >
-          {confirmText}
-        </button>
-      </ModalFooter>
-    </Modal>
-  )
+            <ModalHeader
+                title={title}
+                onClose={preventClose ? undefined : onCancel}
+            />
+            <ModalBody className="px-6 py-4">
+                <p className="text-sm text-slate-600 whitespace-pre-line">{description}</p>
+            </ModalBody>
+            <ModalFooter className="p-4 flex gap-2">
+                <button
+                    type="button"
+                    onClick={onCancel}
+                    className="flex-1 h-12 rounded-2xl bg-[#111827] text-white text-sm font-black hover:bg-slate-800 transition-colors"
+                >
+                    {cancelText}
+                </button>
+                <button
+                    type="button"
+                    onClick={onConfirm}
+                    className="flex-1 h-12 rounded-2xl bg-slate-100 text-slate-600 text-sm font-black hover:bg-slate-200 transition-colors"
+                >
+                    {confirmText}
+                </button>
+            </ModalFooter>
+        </Modal>
+    )
 }
 
 /**
