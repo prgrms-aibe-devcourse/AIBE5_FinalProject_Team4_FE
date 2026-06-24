@@ -240,6 +240,7 @@ export default function LegalDocumentModal({
   const [markdown, setMarkdown] = useState('')
   const [loading, setLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [retryCount, setRetryCount] = useState(0)
 
   useEffect(() => {
     if (!open) return
@@ -250,7 +251,7 @@ export default function LegalDocumentModal({
 
     fetchLegalDocument(documentType)
       .then((document) => {
-        if (!cancelled) setMarkdown(document.content)
+        if (!cancelled) setMarkdown(document.content ?? '')
       })
       .catch(() => {
         if (!cancelled) {
@@ -264,9 +265,11 @@ export default function LegalDocumentModal({
     return () => {
       cancelled = true
     }
-  }, [open, documentType])
+  }, [open, documentType, retryCount])
 
   const blocks = useMemo(() => parseMarkdown(markdown), [markdown])
+
+  const handleRetry = () => setRetryCount((c) => c + 1)
 
   return (
     <Modal open={open} onClose={onClose} size="lg" zIndex={120} closeOnBackdrop>
@@ -277,8 +280,15 @@ export default function LegalDocumentModal({
             약관 문서를 불러오는 중입니다.
           </p>
         ) : errorMessage ? (
-          <div className="rounded-2xl bg-red-50 px-4 py-5 text-center text-sm font-bold leading-relaxed text-red-500 break-keep">
+          <div className="rounded-2xl bg-red-50 px-4 py-5 text-center text-sm font-bold leading-relaxed text-red-500 break-keep space-y-3">
             <p className="whitespace-pre-line">{errorMessage}</p>
+            <button
+              type="button"
+              onClick={handleRetry}
+              className="mx-auto flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-4 py-1.5 text-xs font-bold text-red-500 transition hover:bg-red-50"
+            >
+              다시 시도
+            </button>
           </div>
         ) : (
           <div className="space-y-4">{renderMarkdownBlocks(blocks)}</div>
