@@ -41,14 +41,8 @@ interface ClosetTabProps {
 }
 
 export default function ClosetTab({
-                                    clothes,
-                                    setClothes,
-                                    selectedGarment,
-                                    setSelectedGarment,
-                                    userId,
-                                    onOpenRegister,
-                                    guideTourCompleted,
-                                    onGuideTourComplete,
+                                    clothes, setClothes, selectedGarment, setSelectedGarment,
+                                    userId, onOpenRegister, guideTourCompleted, onGuideTourComplete,
                                     isRegisterOpen,
                                   }: ClosetTabProps) {
   const [closetTab, setClosetTab] = useState<ClosetTabView>("owned");
