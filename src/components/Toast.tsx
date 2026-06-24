@@ -100,7 +100,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                         }}
                       >
                         <span
-                          className="block max-w-[calc(100vw-3rem)] truncate text-sm font-bold text-slate-800 text-center whitespace-nowrap"
+                          className="block max-w-[min(100%,20rem)] truncate text-sm font-bold text-slate-800 text-center whitespace-nowrap"
                           title={t.message}
                         >
                           {t.message}
@@ -137,21 +137,25 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             {messages.length > 0 ? (
               <div className="pointer-events-none fixed inset-x-0 bottom-24 z-[130] flex justify-center px-4">
                 <div
-                  className="relative flex w-full max-w-[calc(100vw-2rem)] justify-center"
+                  className="relative w-full max-w-full"
                   style={{ height: 48 + Math.max(0, messages.length - 1) * 8 }}
                 >
                   {messages.map((t, index) => (
                     <div
                       key={t.id}
-                      title={t.message}
-                      className="absolute bottom-0 left-1/2 w-fit max-w-full rounded-xl border border-slate-100 bg-white px-5 py-3 text-center text-sm font-bold text-slate-800 shadow-lg whitespace-nowrap transition-transform"
+                      className="absolute inset-x-0 bottom-0 flex justify-center"
                       style={{
-                        transform: `translate(-50%, ${index * -8}px) scale(${Math.max(0.94, 1 - index * 0.03)})`,
+                        transform: `translateY(${index * -8}px) scale(${Math.max(0.94, 1 - index * 0.03)})`,
                         zIndex: messages.length - index,
                         opacity: index > 2 ? 0.55 : 1 - index * 0.12,
                       }}
                     >
-                      <span className="block truncate max-w-[calc(100vw-3rem)]">{t.message}</span>
+                      <div
+                        title={t.message}
+                        className="w-max max-w-[min(100%,24rem)] rounded-xl border border-slate-100 bg-white px-5 py-3 text-center text-sm font-bold text-slate-800 shadow-lg whitespace-nowrap transition-transform"
+                      >
+                        <span className="block truncate">{t.message}</span>
+                      </div>
                     </div>
                   ))}
                 </div>

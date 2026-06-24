@@ -75,8 +75,8 @@ combined_weight = preference_weight + wardrobe_weight + feedback_weight
 | --- | --- | --- |
 | `RECO-001` | OOTD 코디 | 사용자 기준 코디 추천. 날씨, 계절, 체감온도는 보조 조건으로 반영 |
 | `RECO-002` | 취향 분석/스타일 기반 추천 | 사용자 스타일 점수를 기반으로 상품 추천 |
-| `RECO-003` | 유사 상품 추천 | 선택한 옷과 유사한 상품 추천 |
-| `RECO-004` | 어울리는 옷 추천 | 사용자 옷장 데이터를 기준으로 함께 입기 좋은 상품 추천. `GET .../recommendations`의 `limitPerCategory` query는 기본 `5`, 허용 `1`~`50` |
+| `RECO-003` | 유사 상품 추천 | 선택한 옷(`OWNED`/`WISHLIST`)과 유사한 상품 추천 |
+| `RECO-004` | 어울리는 옷 추천 | 사용자 옷장(`OWNED`/`WISHLIST`) 데이터를 기준으로 함께 입기 좋은 상품 추천. `GET .../recommendations`의 `limitPerCategory` query는 기본 `5`, 허용 `1`~`50`. path `clothesId`는 활성 옷장 항목이며 `OWNED` 또는 `WISHLIST` 허용 |
 | `RECO-005` | AI MD 추천 | 추천 이유와 스타일링 설명 생성 |
 | `RECO-012`~`RECO-013` | 추천 싫어요/제외 | 추천 피드백과 제외 처리 |
 
@@ -96,7 +96,7 @@ combined_weight = preference_weight + wardrobe_weight + feedback_weight
 - 추천 제외된 옷은 해당 사용자의 추천 후보에서 제외합니다.
 - 점수 계산 로직은 대표/보조 스타일 가중치를 지켜야 합니다.
 - 점수 동점 그룹 랜덤 노출은 추천 품질을 해치지 않는 범위에서 수행합니다.
-- `RECO-004` `limitPerCategory` query는 기본 `5`, 허용 범위 `1`~`50`입니다. 컨트롤러 validation, [BE API 계약](https://github.com/prgrms-aibe-devcourse/AIBE5_FinalProject_Team4_BE/blob/develop/docs/api/api-contract.md), [FE API 사용 기준](../api/frontend-api-usage.md)을 동일하게 유지합니다.
+- `RECO-004` `limitPerCategory` query는 기본 `5`, 허용 범위 `1`~`50`입니다. path `clothesId`는 `RECO-003`과 동일하게 해당 사용자의 활성 옷장 항목(`OWNED`, `WISHLIST`)만 허용합니다. 컨트롤러 validation, [BE API 계약](https://github.com/prgrms-aibe-devcourse/AIBE5_FinalProject_Team4_BE/blob/develop/docs/api/api-contract.md), [FE RECO-004 기준 옷 계약](../api/api-contract-reco004-anchor.md), [FE API 사용 기준](../api/frontend-api-usage.md)을 동일하게 유지합니다.
 
 ## 백엔드 코드 위치
 

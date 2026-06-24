@@ -57,6 +57,7 @@ import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/common/
 import LegalDocumentModal from "@/components/legal/LegalDocumentModal";
 import ExitConfirmModal from "@/components/common/ExitConfirmModal";
 import { formatNicknameInput, getNicknameValidationError, NICKNAME_RULE_MESSAGE } from "@/utils/nickname";
+import { parseFeedPostIdFromSearch } from "@/utils/feedShare";
 // 기존 상수 data ( TRIGGER_PRODUCTS 는 사용을 하지않아 우선 주석처리함 )
 // import { TRIGGER_PRODUCTS } from "@/data/triggerProducts";
 
@@ -300,8 +301,6 @@ export default function App() {
     selectedGarment, setSelectedGarment,
     isMethodSelectOpen,
     handleAddWishlistItem,
-    toggleFavorite,
-    moveToOwnedCloset,
     openGarmentRegister,
     closeGarmentRegisterMethod,
   } = useCloset();
@@ -428,6 +427,7 @@ export default function App() {
           setAuthUserId(null);
           setAuthReady(true);
         });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only auth bootstrap
   }, []);
 
   useEffect(() => {
@@ -435,6 +435,12 @@ export default function App() {
     setCurrentTab(pendingTab);
     setPendingTab(null);
   }, [isLoggedIn, pendingTab, profile.onboarded]);
+
+  useEffect(() => {
+    if (!authReady || !isLoggedIn || !profile.onboarded) return;
+    if (parseFeedPostIdFromSearch(window.location.search) == null) return;
+    setCurrentTab("feed");
+  }, [authReady, isLoggedIn, profile.onboarded]);
 
   useEffect(() => {
     if (authUserId == null || !profile.onboarded) {
@@ -596,9 +602,9 @@ export default function App() {
     setIsProfileEditOpen(true);
   };
 
-  const updateProfileEditDraft = (patch: Partial<ProfileEditDraft>) => {
+  const updateProfileEditDraft = useCallback((patch: Partial<ProfileEditDraft>) => {
     setProfileEditDraft((current) => (current ? { ...current, ...patch } : current));
-  };
+  }, []);
 
   const updateProfileBirthdayPart = (part: "year" | "month" | "day", value: string) => {
     setProfileEditDraft((current) => {
@@ -697,7 +703,7 @@ export default function App() {
       active = false;
       window.clearTimeout(timer);
     };
-  }, [isProfileEditOpen, profileEditMode, profileEditDraft?.nickname]);
+  }, [isProfileEditOpen, profileEditMode, profileEditDraft, profile.nickname, updateProfileEditDraft]);
 
   const toggleProfileEditStyle = (styleCode: string) => {
     setProfileEditDraft((current) => {
