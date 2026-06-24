@@ -201,7 +201,7 @@ API를 호출하는 화면은 아래 상태를 구분합니다.
 | 추천 | GET | `/api/v1/users/{userId}/clothes/{clothesId}/recommendations?limitPerCategory={n}` | `OWNED`/`WISHLIST` 기준 옷의 어울리는 옷 추천. FE `match` 라벨 연동. 기본 `n=50` (BE 허용 `1`~`50`). 기준 옷 범위: [api-contract-reco004-anchor.md](./api-contract-reco004-anchor.md) |
 | 추천 | GET | `/api/v1/ootd/{wardrobeId}?currentTemp={temp}` | OOTD 추천 표시. FE 홈 `ootd` 라벨 연동 |
 | 추천 | POST | `/api/v1/users/{userId}/recommendations/feedback` | 추천 저장/싫어요/추천 제외 피드백 제출 |
-| AI MD | GET | `/api/v1/users/{userId}/recommendations/ai-md/personas` | 사용자 성별에 맞는 AI MD 목록 표시 |
+| AI MD | GET | `/api/v1/users/{userId}/recommendations/ai-md/personas` | 사용자 성별과 관계없이 전체 AI MD 목록 표시 |
 | AI MD | GET | `/api/v1/users/{userId}/recommendations/ai-md/{mdId}/products` | AI MD 외부 상품 추천 표시 |
 | AI MD | POST | `/api/v1/users/{userId}/recommendations/ai-md/{mdId}/outfits` | AI MD 코디 후보 생성 |
 | AI MD | POST | `/api/v1/users/{userId}/recommendations/ai-md/{mdId}/outfits/save` | 사용자가 선택한 AI MD 코디 후보 저장 |
