@@ -34,6 +34,13 @@ import GuideTour from "@/components/common/GuideTour"
 
 type ClosetTabView = "owned" | "wishlist" | "favorites";
 
+/** convert-to-owned 후 oldId가 위시리스트로 남아 있지 않으면 전환 성공으로 본다. */
+function isWishlistPromoteComplete(garments: Garment[], oldId: string): boolean {
+  const oldItem = garments.find((g) => g.id === oldId);
+  if (!oldItem) return true;
+  return !oldItem.isWishlist;
+}
+
 interface ClosetTabProps {
   clothes: Garment[];
   setClothes: React.Dispatch<React.SetStateAction<Garment[]>>;
@@ -177,6 +184,40 @@ export default function ClosetTab({
     setSelectedGarment(null);
   };
 
+  const removeGarmentFromList = (garmentId: string) => {
+    setClothes((prev) => prev.filter((c) => c.id !== garmentId));
+  };
+
+  const restoreGarmentIfMissing = (garment: Garment) => {
+    setClothes((prev) => {
+      if (prev.some((c) => c.id === garment.id)) return prev;
+      return [garment, ...prev];
+    });
+  };
+
+  /** BE가 새 clothesId를 내려주면 oldId 항목을 제거하고 응답 항목으로 교체한다. */
+  const applyPromotedGarment = (oldId: string, owned: Garment) => {
+    const ownedItem = { ...owned, isWishlist: false };
+    setClothes((prev) => {
+      const withoutStale = prev.filter((c) => c.id !== oldId && c.id !== ownedItem.id);
+      return [ownedItem, ...withoutStale];
+    });
+    if (selectedRef.current?.id === oldId || selectedRef.current?.id === ownedItem.id) {
+      setSelectedGarment(ownedItem);
+    }
+  };
+
+  const syncWardrobeAfterPromote = async (oldId: string): Promise<boolean> => {
+    const { garments } = await fetchWardrobeGarments(userId);
+    setClothes(garments);
+    if (selectedRef.current?.id === oldId) {
+      const nextSelected =
+        garments.find((g) => g.id === oldId && !g.isWishlist) ?? null;
+      setSelectedGarment(nextSelected);
+    }
+    return isWishlistPromoteComplete(garments, oldId);
+  };
+
   // Helper values
   const ownedList = useMemo(() => clothes.filter(c => !c.isWishlist), [clothes]);
   const wishlistList = useMemo(() => clothes.filter(c => c.isWishlist), [clothes]);
@@ -269,6 +310,13 @@ export default function ClosetTab({
 
     setPromotingGarmentId(item.id);
 
+    const previousGarment = item;
+    const hadSelectedPromotedItem = selectedRef.current?.id === item.id;
+    removeGarmentFromList(item.id);
+    if (hadSelectedPromotedItem) {
+      setSelectedGarment(null);
+    }
+
     try {
       const updated = await convertWishlistToOwned(clothesId, {
         productCode: item.productCode ?? recommendationWishlistProductCode(clothesId),
@@ -276,14 +324,23 @@ export default function ClosetTab({
         userImageUrl: normalizeClothesImageUrlForApi(rawImageUrl),
         isVerified: false,
       });
-      const ownedGarment = { ...updated, isWishlist: false };
-      upsertGarment(ownedGarment);
-      if (selectedRef.current?.id === item.id) {
-        setSelectedGarment(null);
+
+      if (updated) {
+        applyPromotedGarment(item.id, updated);
+      } else {
+        const synced = await syncWardrobeAfterPromote(item.id);
+        if (!synced) {
+          throw new Error("보유 전환 결과를 확인하지 못했습니다. 옷장을 새로고침해 주세요.");
+        }
       }
+
       void refreshWardrobeStats();
       showToast("success", "보유 옷장에 등록했습니다.");
     } catch (error) {
+      restoreGarmentIfMissing(previousGarment);
+      if (hadSelectedPromotedItem) {
+        setSelectedGarment(previousGarment);
+      }
       showToast("error", extractApiErrorMessage(error, "보유 옷장 전환에 실패했습니다."));
     } finally {
       setPromotingGarmentId(null);

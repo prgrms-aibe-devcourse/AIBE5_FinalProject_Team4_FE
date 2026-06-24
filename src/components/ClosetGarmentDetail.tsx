@@ -316,23 +316,23 @@ export default function ClosetGarmentDetail({
     }, { confirmLabel: '삭제', variant: 'danger' })
   }
 
-  const handleRemoveFromWishlist = async () => {
+  const handleRemoveFromWishlist = () => {
     if (!detail || !detail.isWishlist) return
-    const confirmed = window.confirm(
-      `"${detail.name}"을(를) 위시리스트에서 빼시겠어요?`,
-    )
-    if (!confirmed) return
 
-    try {
-      await deleteClothes(Number(detail.id))
-      onGarmentDeleted(detail.id)
-      onGarmentChange(null)
-      setDetail(null)
-      onToast('위시리스트에서 제거했어요')
-    } catch (err) {
-      console.error('[ClosetGarmentDetail] removeFromWishlist failed:', err)
-      onToast('위시리스트에서 빼지 못했습니다.')
-    }
+    showConfirm('위시리스트에서 빼시겠어요?', () => {
+      void (async () => {
+        try {
+          await deleteClothes(Number(detail.id))
+          onGarmentDeleted(detail.id)
+          onGarmentChange(null)
+          setDetail(null)
+          showToast('success', '위시리스트에서 제거했어요.')
+        } catch (err) {
+          console.error('[ClosetGarmentDetail] removeFromWishlist failed:', err)
+          showToast('error', extractApiErrorMessage(err, '위시리스트에서 빼지 못했습니다.'))
+        }
+      })()
+    }, { confirmLabel: '빼기', variant: 'danger' })
   }
 
   if (!garment) {
