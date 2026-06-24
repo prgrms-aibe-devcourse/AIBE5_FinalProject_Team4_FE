@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { fetchFeedPosts, toggleFeedLike, toggleFeedSave } from '@/api/feed'
 import { useToast } from '@/components/Toast'
 import Spinner from '@/components/common/Spinner'
@@ -20,6 +20,7 @@ interface FeedTabProps {
   guideTourCompleted: boolean
   onGuideTourComplete: () => void
   onViewProfile?: (userId: number) => void
+  onOutfitBookChanged?: () => void
 }
 
 export default function FeedTab({
@@ -29,6 +30,7 @@ export default function FeedTab({
   guideTourCompleted,
   onGuideTourComplete,
   onViewProfile,
+  onOutfitBookChanged,
 }: FeedTabProps) {
   const { showToast } = useToast()
 
@@ -65,6 +67,11 @@ export default function FeedTab({
 
   const showFeedUploadButton = !writeOpen && !hideUploadForComments && detailPostId == null
 
+  const detailListPost = useMemo(
+    () => (detailPostId != null ? posts.find((p) => p.feedPostId === detailPostId) ?? null : null),
+    [posts, detailPostId],
+  )
+
   const loadPosts = useCallback(async (nextPage: number, append: boolean) => {
     if (append) {
       setLoadingMore(true)
@@ -100,13 +107,13 @@ export default function FeedTab({
     }
   }, [])
 
-  const updatePostInList = (updated: FeedPost) => {
+  const updatePostInList = useCallback((updated: FeedPost) => {
     setPosts((prev) =>
       prev.map((post) =>
         post.feedPostId === updated.feedPostId ? updated : post,
       ),
     )
-  }
+  }, [])
 
   const handleToggleLike = async (post: FeedPost) => {
     if (submittingPostId != null) return
@@ -141,19 +148,22 @@ export default function FeedTab({
       showToast('error', '연결된 코디가 없어 저장할 수 없습니다.')
       return
     }
+
+    const nextSaved = !post.savedByMe
+    updatePostInList({ ...post, savedByMe: nextSaved })
+
     setSubmittingPostId(post.feedPostId)
     setSubmittingAction('save')
     try {
       const result = await toggleFeedSave(post.feedPostId)
-      updatePostInList({
-        ...post,
-        savedByMe: result.active,
-      })
+      updatePostInList({ ...post, savedByMe: result.active })
+      onOutfitBookChanged?.()
       showToast(
         'success',
         result.active ? '코디북에 저장했어요.' : '코디북 저장을 취소했어요.',
       )
     } catch (toggleError) {
+      updatePostInList(post)
       const message = extractApiErrorMessage(toggleError, '저장 처리에 실패했습니다.')
       setError(message)
       showToast('error', message)
@@ -256,6 +266,8 @@ export default function FeedTab({
         onPostUpdated={updatePostInList}
         onPostDeleted={handleDeleted}
         onViewProfile={onViewProfile}
+        listPost={detailListPost}
+        onOutfitBookChanged={onOutfitBookChanged}
       />
 
       {showFeedUploadButton ? (

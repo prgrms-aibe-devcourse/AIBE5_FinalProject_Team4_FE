@@ -334,6 +334,10 @@ export default function App() {
   const [isLookfeedWriteOpen, setIsLookfeedWriteOpen] = useState(false);
   const [lookfeedDetailPostId, setLookfeedDetailPostId] = useState<number | null>(null);
   const [homeResetSignal, setHomeResetSignal] = useState<number>(0);
+  const [outfitBookRefreshSignal, setOutfitBookRefreshSignal] = useState(0);
+  const bumpOutfitBookRefresh = useCallback(() => {
+    setOutfitBookRefreshSignal((prev) => prev + 1);
+  }, []);
   const [isPhotoRegisterOpen, setIsPhotoRegisterOpen] = useState(false);
   const [isPurchaseRegisterOpen, setIsPurchaseRegisterOpen] = useState(false);
   const regionLabel = REGIONS.find((region) => region.code === profile.region)?.label ?? "서울특별시";
@@ -1300,6 +1304,7 @@ export default function App() {
                       clothes={clothes}
                       guideTourCompleted={authReady ? (profile.guideTourCompletedOutfitBook ?? false) : true}
                       onGuideTourComplete={() => { void handleGuideTourComplete("outfit-book") }}
+                      refreshSignal={outfitBookRefreshSignal}
                   />
               )}
 
@@ -1349,6 +1354,7 @@ export default function App() {
                       userId={authUserId}
                       wardrobeGarments={clothes}
                       onWishlistChanged={() => void refreshWardrobe()}
+                      onOutfitBookChanged={bumpOutfitBookRefresh}
                       guideTourCompleted={profile.guideTourCompletedFeed ?? false}
                       onGuideTourComplete={() => { void handleGuideTourComplete("feed")}}
                       onViewProfile={handleViewFeedProfile}
@@ -1915,6 +1921,15 @@ export default function App() {
               onPostUpdated={handleLookfeedPostUpdated}
               onPostDeleted={handleLookfeedPostDeleted}
               onViewProfile={handleViewFeedProfile}
+              onOutfitBookChanged={bumpOutfitBookRefresh}
+              listPost={
+                lookfeedDetailPostId == null
+                  ? null
+                  : lookfeedMyPosts.find((p) => p.feedPostId === lookfeedDetailPostId)
+                    ?? lookfeedMyLikedPosts.find((p) => p.feedPostId === lookfeedDetailPostId)
+                    ?? lookfeedTargetPosts.find((p) => p.feedPostId === lookfeedDetailPostId)
+                    ?? null
+              }
             />
           </>
         )}

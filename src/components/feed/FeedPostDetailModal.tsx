@@ -476,6 +476,9 @@ interface FeedPostDetailModalProps {
   onPostUpdated: (post: FeedPost) => void
   onPostDeleted: (postId: number) => void
   onViewProfile?: (userId: number) => void
+  /** 피드 목록과 상호작용 상태(좋아요·저장 등) 동기화 */
+  listPost?: FeedPost | null
+  onOutfitBookChanged?: () => void
 }
 
 export default function FeedPostDetailModal({
@@ -488,6 +491,8 @@ export default function FeedPostDetailModal({
   onPostUpdated,
   onPostDeleted,
   onViewProfile,
+  listPost = null,
+  onOutfitBookChanged,
 }: FeedPostDetailModalProps) {
   const { showToast, showConfirm } = useToast()
 
@@ -512,6 +517,11 @@ export default function FeedPostDetailModal({
   const [editingCaption, setEditingCaption] = useState(false)
   const [captionDraft, setCaptionDraft] = useState('')
   const [captionSubmitting, setCaptionSubmitting] = useState(false)
+  const onPostUpdatedRef = useRef(onPostUpdated)
+
+  useEffect(() => {
+    onPostUpdatedRef.current = onPostUpdated
+  }, [onPostUpdated])
 
   const loadDetail = useCallback(async (id: number) => {
     setLoading(true)
@@ -538,7 +548,7 @@ export default function FeedPostDetailModal({
         const nextCount = countFeedComments(data)
         if (prev.commentCount === nextCount) return prev
         const next = { ...prev, commentCount: nextCount }
-        onPostUpdated(next)
+        onPostUpdatedRef.current(next)
         return next
       })
     } catch {
@@ -546,7 +556,7 @@ export default function FeedPostDetailModal({
     } finally {
       if (showLoading) setCommentsLoading(false)
     }
-  }, [onPostUpdated])
+  }, [])
 
   useEffect(() => {
     if (!open || postId == null) {
@@ -563,6 +573,28 @@ export default function FeedPostDetailModal({
   }, [open, postId, loadDetail, loadComments])
 
   useEffect(() => {
+    if (!open || listPost == null) return
+    setPost((prev) => {
+      if (!prev || prev.feedPostId !== listPost.feedPostId) return prev
+      if (
+        prev.likedByMe === listPost.likedByMe
+        && prev.likeCount === listPost.likeCount
+        && prev.savedByMe === listPost.savedByMe
+        && prev.commentCount === listPost.commentCount
+      ) {
+        return prev
+      }
+      return {
+        ...prev,
+        likedByMe: listPost.likedByMe,
+        likeCount: listPost.likeCount,
+        savedByMe: listPost.savedByMe,
+        commentCount: listPost.commentCount,
+      }
+    })
+  }, [open, listPost])
+
+  useEffect(() => {
     if (!open || postId == null) return
     const intervalId = window.setInterval(() => {
       void loadComments(postId, false)
@@ -572,7 +604,7 @@ export default function FeedPostDetailModal({
 
   const syncPost = (next: FeedPost) => {
     setPost(next)
-    onPostUpdated(next)
+    onPostUpdatedRef.current(next)
   }
 
   const handleToggleLike = async () => {
@@ -606,18 +638,22 @@ export default function FeedPostDetailModal({
       showToast('error', '연결된 코디가 없어 저장할 수 없습니다.')
       return
     }
+
+    const prevPost = post
+    const nextSaved = !post.savedByMe
+    syncPost({ ...post, savedByMe: nextSaved })
+
     setInteractionSubmitting(true)
     try {
       const result = await toggleFeedSave(post.feedPostId)
-      syncPost({
-        ...post,
-        savedByMe: result.active,
-      })
+      syncPost({ ...prevPost, savedByMe: result.active })
+      onOutfitBookChanged?.()
       showToast(
         'success',
         result.active ? '코디북에 저장했어요.' : '코디북 저장을 취소했어요.',
       )
     } catch (toggleError) {
+      syncPost(prevPost)
       const message = extractApiErrorMessage(toggleError, '저장 처리에 실패했습니다.')
       setError(message)
       showToast('error', message)
