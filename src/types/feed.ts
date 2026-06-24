@@ -98,6 +98,6 @@ export interface FeedUserProfile {
   postCount: number
   followerCount: number
   followingCount: number
-  followedByMe: boolean | null
+  followedByMe: boolean
   mine: boolean
 }

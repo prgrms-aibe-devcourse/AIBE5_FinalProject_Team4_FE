@@ -295,7 +295,7 @@ AI MD 추천은 아래 기준을 함께 확인합니다.
 
 `RECO-005` `match` 상세에서 구매 링크 클릭 후 **샀어요** 선택 시 FE는 `POST /api/users/{userId}/wishlist-clothes/{clothesId}`(필요 시)와 `PATCH /api/v1/clothes/{id}/convert-to-owned`로 보유 옷장 등록합니다. 흐름 상세는 [home-recommendation.md](../features/home-recommendation.md)를 따릅니다.
 
-날씨와 지역 정보(`EXT-004`~`EXT-005`)는 독립 추천 기능이 아니라 `RECO-001`, `RECO-002` 등 추천 기능의 보조 조건입니다. `/api/weather`는 추천 보조 정보 API로 설명합니다.
+날씨와 지역 정보(`EXT-003`~`EXT-004`)는 독립 추천 기능이 아니라 `RECO-001`, `RECO-002` 등 추천 기능의 보조 조건입니다. `/api/weather`는 추천 보조 정보 API로 설명합니다.
 
 옷 대상 성별(`gender`)은 응답 또는 저장 요청 payload에 포함될 수 있습니다. 옷 등록/수정 또는 등록 초안 확인 화면에서는 사용자가 선택·확정할 수 있으며, 추천 카드의 일반 표시명이나 필터 UI로는 사용하지 않습니다.
 

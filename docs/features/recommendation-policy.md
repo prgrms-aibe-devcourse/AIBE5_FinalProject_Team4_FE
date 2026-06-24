@@ -80,7 +80,7 @@ combined_weight = preference_weight + wardrobe_weight + feedback_weight
 | `RECO-005` | AI MD 추천 | 추천 이유와 스타일링 설명 생성 |
 | `RECO-012`~`RECO-013` | 추천 싫어요/제외 | 추천 피드백과 제외 처리 |
 
-날씨와 지역 정보(`EXT-004`~`EXT-005`)는 독립 추천 기능이 아니라 OOTD, 취향 기반 추천 등 추천 기능의 보조 조건으로 사용합니다.
+날씨와 지역 정보(`EXT-003`~`EXT-004`)는 독립 추천 기능이 아니라 OOTD, 취향 기반 추천 등 추천 기능의 보조 조건으로 사용합니다.
 
 ## FE 확인 포인트
 

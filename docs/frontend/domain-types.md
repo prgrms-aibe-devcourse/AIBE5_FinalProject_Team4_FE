@@ -240,7 +240,7 @@ type FeedUserProfile = {
   postCount: number;
   followerCount: number;
   followingCount: number;
-  followedByMe: boolean | null;  // 타인 프로필에서 현재 사용자의 팔로우 여부. 본인 프로필 또는 비로그인 조회처럼 팔로우 상태를 계산하지 않는 경우 null
+  followedByMe: boolean;  // 타인 프로필에서 현재 사용자의 팔로우 여부. 본인 프로필, 비로그인 조회, 조회자가 팔로우하지 않는 경우 false
   mine: boolean;           // true이면 조회 대상이 로그인 사용자 본인 — 팔로우 버튼 미표시, liked-posts 탭 허용
 };
 

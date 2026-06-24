@@ -511,7 +511,7 @@ export default function App() {
     setProfile(EMPTY_PROFILE);
     setProfileMarketingAgreed(null);
     setCurrentTab("home");
-    setAuthReady(false);
+    setAuthReady(true);
     setShowIntro(true);
     setHomeResetSignal((signal) => signal + 1);
   };

@@ -38,9 +38,9 @@ last_updated: 2026-06-25
 | `RECO-012`~`RECO-013` | 추천 상세 | 추천 피드백/제외 | 추천 결과에 사용자별 긍정/부정 피드백을 저장하고 추천 정책에 반영 | `POST /api/v1/users/{userId}/recommendations/feedback`, `RECOMMENDATION_FEEDBACKS`, `USER_STYLES.feedback_weight` | 추천 상세 |
 | `OUTFIT-001`~`OUTFIT-006` | 코디 | 코디 저장/조회/수정/삭제/스타일 | 직접 저장하거나 추천받은 코디를 저장, 조회, 수정, 삭제하고 대표/보조 스타일 관리 | `OUTFITS`, `OUTFIT_ITEMS`, `OUTFIT_STYLES` | 코디북, 코디 상세 |
 | `OUTFITBOOK-001`~`OUTFITBOOK-003` | 코디북 | 코디북 관리 | 사용자별 단일 코디북, 코디 목록 조회, 코디북 상세 | `OUTFIT_BOOKS`, `/api/v1/outfit-books` | 코디북 |
-| `EXT-001`~`EXT-003` | 외부 연동 | 네이버쇼핑 상품 연동 | 외부 상품 검색, 상세 조회, 상품 저장 | `GET /api/naver/search`, `POST /api/v1/external/clothes/naver` | 외부 상품 검색, 추천 상세 |
-| `EXT-004`~`EXT-005` | 외부 연동 | 날씨 보조 정보 | 사용자 지역 기반 현재 날씨 조회. 독립 추천 기능이 아니라 추천 보조 조건 | `GET /api/weather` | 추천 메인 |
-| `EXT-007`~`EXT-008` | 외부 연동 | AI 의류 분석/추천 설명 | 옷 사진 분석, 스타일링 설명 또는 추천 이유 생성 | Gemini API | 옷 등록, 추천 상세 |
+| `EXT-001`~`EXT-002` | 외부 연동 | 네이버쇼핑 상품 연동 | 외부 상품 상세 조회, 상품 저장 | `POST /api/v1/external/clothes/naver` | 추천 상세 |
+| `EXT-003`~`EXT-004` | 외부 연동 | 날씨 보조 정보 | 사용자 지역 기반 현재 날씨 조회. 독립 추천 기능이 아니라 추천 보조 조건 | `GET /api/weather` | 추천 메인 |
+| `EXT-005`~`EXT-006` | 외부 연동 | AI 의류 분석/추천 설명 | 옷 사진 분석, 스타일링 설명 또는 추천 이유 생성 | Gemini API | 옷 등록, 추천 상세 |
 | `SYSTEM-001`~`SYSTEM-004` | 공통 시스템 | 로딩/에러 | 로딩, 404/500/네트워크 오류 안내 | 공통 오류 응답 | 공통 UI |
 | `SYSTEM-005` | 공통 시스템 | 통합 필터 | 카탈로그 기준값을 활용한 목록 필터링 | `GET /api/v1/categories`, 카탈로그 code | 옷장, 추천, 목록 필터 |
 | `SYSTEM-006`~`SYSTEM-007` | 공통 시스템 | 서비스 안내 | 서비스 소개와 도움말 안내. 최초 로그인 사용자에게 홈·옷장·피드·마이페이지·코디북 주요 기능을 순차 안내하는 가이드 투어 제공, 완료 후 `?` 버튼으로 재진입 가능 | `docs/planning/project-plan.md`, `docs/legal/terms.md`, `GET /api/v1/users/profile`, `PATCH /api/v1/users/guide-tour`, `USERS.guide_tour_completed_home`, `guide_tour_completed_wardrobe`, `guide_tour_completed_feed`, `guide_tour_completed_mypage`, `guide_tour_completed_outfit_book` | 홈, 옷장, 피드, 마이페이지, 코디북 |
