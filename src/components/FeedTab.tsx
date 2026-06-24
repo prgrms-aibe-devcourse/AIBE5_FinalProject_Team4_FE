@@ -52,10 +52,14 @@ export default function FeedTab({
   const [detailPostId, setDetailPostId] = useState<number | null>(null)
   const [submittingPostId, setSubmittingPostId] = useState<number | null>(null)
   const [submittingAction, setSubmittingAction] = useState<'like' | 'save' | null>(null)
-  const [tourOpen, setTourOpen] = useState(!guideTourCompleted)
+  // posts가 로드된 후에 투어를 시작 — 로드 전엔 firstPostRef가 null이라 투어가 안 보임
+  const [tourOpen, setTourOpen] = useState(false)
+  const tourStartedRef = useRef(false)
   const feedHeaderRef = useRef<HTMLDivElement>(null)
   const postListRef = useRef<HTMLDivElement>(null)
   const writeButtonRef = useRef<HTMLButtonElement>(null)
+  const firstPostRef = useRef<HTMLElement>(null)
+  const firstPostActionRef = useRef<HTMLDivElement>(null)
   const activeCommentComposersRef = useRef(0)
   const [hideUploadForComments, setHideUploadForComments] = useState(false)
 
@@ -99,6 +103,16 @@ export default function FeedTab({
   useEffect(() => {
     void loadPosts(0, false)
   }, [loadPosts, userId])
+
+  // 로딩 완료 후 한 번만 투어 시작
+  // - 게시글 있음: firstPostRef가 DOM에 붙은 뒤이므로 정상 동작
+  // - 게시글 없음: writeButtonRef만으로 구성된 단축 투어
+  useEffect(() => {
+    if (guideTourCompleted || tourStartedRef.current) return
+    if (loading) return
+    tourStartedRef.current = true
+    setTourOpen(true)
+  }, [loading, guideTourCompleted])
 
   useEffect(() => {
     const postId = consumeFeedPostIdFromUrl()
@@ -209,7 +223,7 @@ export default function FeedTab({
         </div>
       ) : (
         <div ref={postListRef} className="flex flex-col">
-          {posts.map((post) => (
+          {posts.map((post, index) => (
             <FeedPostCard
               key={post.feedPostId}
               post={post}
@@ -229,6 +243,10 @@ export default function FeedTab({
               saveSubmitting={
                 submittingPostId === post.feedPostId && submittingAction === 'save'
               }
+              {...(index === 0 && {
+                containerRef: firstPostRef,
+                actionRef: firstPostActionRef,
+              })}
             />
           ))}
 
@@ -285,11 +303,17 @@ export default function FeedTab({
       ) : null}
       {tourOpen && (
         <GuideTour
-          steps={[
-            { targetRef: feedHeaderRef, message: "다른 사람들의 실제 코디에서 스타일 힌트를 얻어보세요" },
-            { targetRef: postListRef, message: "좋아요·저장으로 마음에 드는 코디를 바로 기록할 수 있어요" },
-            { targetRef: writeButtonRef, message: "내 코디를 업로드하면 팔로워와 공유할 수 있어요" },
-          ]}
+          steps={
+            posts.length > 0
+              ? [
+                  { targetRef: firstPostRef, message: "다른 사람들의 실제 코디에서 스타일 힌트를 얻어보세요" },
+                  { targetRef: firstPostActionRef, message: "좋아요·저장으로 마음에 드는 코디를 바로 기록할 수 있어요" },
+                  { targetRef: writeButtonRef, message: "내 코디를 업로드하면 팔로워와 공유할 수 있어요" },
+                ]
+              : [
+                  { targetRef: writeButtonRef, message: "아직 공유된 코디가 없어요. 내 코디를 첫 번째로 업로드해보세요!" },
+                ]
+          }
           onComplete={() => {
             setTourOpen(false)
             onGuideTourComplete()
