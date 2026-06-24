@@ -262,6 +262,7 @@ export default function HomeTab({
   const [matchLoading, setMatchLoading] = useState(false);
   const [matchError, setMatchError] = useState<string | null>(null);
   const [ootdItems, setOotdItems] = useState<RecommendItem[]>([]);
+  const [currentOotdIndex, setCurrentOotdIndex] = useState(0);
   const [styleItems, setStyleItems] = useState<RecommendItem[]>([]);
   const [ootdError, setOotdError] = useState<string | null>(null);
   const [styleError, setStyleError] = useState<string | null>(null);
@@ -731,17 +732,30 @@ export default function HomeTab({
 
   return (
       <div className="space-y-6 animate-fade-in font-sans">
-        <section ref={ootdRef} className="bg-white border border-slate-100 rounded-[28px] p-4 md:p-5 shadow-sm text-left">
-          <div className="flex items-center gap-2 mb-4">
-            <span className="text-xl">✨</span>
-            <h2 className="text-xl md:text-2xl font-black text-slate-950">오늘의 OOTD 추천</h2>
+        <section ref={ootdRef} className="bg-white border border-slate-100 rounded-[28px] shadow-sm text-left overflow-hidden">
+          <div className="p-4 md:p-5">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-xl">✨</span>
+              <h2 className="text-xl md:text-2xl font-black text-slate-950">오늘의 OOTD 추천</h2>
+            </div>
+            {userId && ootdItems[0]?.reason && (
+              <p className="text-xs text-slate-400 font-bold mb-3 -mt-2">{ootdItems[0].reason}</p>
+            )}
+            {!userId && (
+              <p className="text-xs text-slate-400 font-bold mb-3 -mt-2">로그인하면 오늘 날씨에 맞는 코디를 추천해드려요</p>
+            )}
           </div>
+
           {ootdLoading && ootdItems.length === 0 ? (
-            <div className="grid grid-cols-1 gap-6">
-              <div className="h-96 sm:h-[28rem] lg:h-[32rem] rounded-[24px] bg-slate-100 animate-pulse" />
+            <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-none pb-2 px-4 gap-3">
+              {Array.from({ length: 3 }).map((_, idx) => (
+                <div key={idx} className="flex-none w-[85vw] sm:w-[400px] snap-center">
+                  <div className="h-96 sm:h-[28rem] lg:h-[32rem] rounded-[24px] bg-slate-100 animate-pulse" />
+                </div>
+              ))}
             </div>
           ) : ootdError ? (
-            <div className="rounded-2xl border border-red-100 bg-red-50 px-5 py-8 text-center">
+            <div className="mx-4 mb-4 rounded-2xl border border-red-100 bg-red-50 px-5 py-8 text-center">
               <p className="text-sm font-black text-red-700">{ootdError}</p>
               <button
                 type="button"
@@ -752,55 +766,79 @@ export default function HomeTab({
               </button>
             </div>
           ) : ootdItems.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-5 py-8 text-center">
+            <div className="mx-4 mb-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-5 py-8 text-center">
               <p className="text-sm font-black text-slate-600">추천된 OOTD가 없습니다.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-6">
+            <>
+            <div
+              className="flex overflow-x-auto snap-x snap-mandatory scrollbar-none pb-2 px-4 gap-3"
+              onScroll={(e) => {
+                const el = e.currentTarget
+                const idx = Math.round(el.scrollLeft / el.offsetWidth)
+                setCurrentOotdIndex(idx)
+              }}
+            >
               {ootdItems.slice(0, 3).map((item) => (
-                <article
+                <div
                   key={item.id}
-                  onClick={() => {
-                    if (!userId) {
-                      onLoginRequired?.();
-                      return;
-                    }
-                    const combo = ootdCombinations.find(c => c.id === item.id) ?? null;
-                    setSelectedCombo(combo);
-                    setSelectedItem(null);
-                  }}
-                  className="group rounded-[24px] border border-slate-100 bg-slate-50 overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:rotate-[0.5deg] hover:shadow-xl active:scale-[0.99] cursor-pointer"
+                  className="flex-none w-[85vw] sm:w-[400px] snap-center"
                 >
-                  <div className="h-96 sm:h-[28rem] lg:h-[32rem] bg-slate-100 relative overflow-hidden">
-                    {!userId && (
-                      <div className="absolute top-3 left-3 z-10 bg-black/60 backdrop-blur-sm px-2.5 py-1 rounded-full border border-white/20">
-                        <span className="text-[10px] font-black text-white tracking-wider">코디 미리보기</span>
-                      </div>
-                    )}
-                    {(() => {
-                      const combo = ootdCombinations.find(c => c.id === item.id);
-                      if (combo) {
-                        return (
-                          <OotdCanvas
-                            top={combo.top?.imageUrl || combo.top?.userImageUrl}
-                            bottom={combo.bottom?.imageUrl || combo.bottom?.userImageUrl}
-                            outer={combo.outer?.imageUrl || combo.outer?.userImageUrl}
-                            shoes={combo.shoes?.imageUrl || combo.shoes?.userImageUrl}
-                          />
-                        );
+                  <article
+                    onClick={() => {
+                      if (!userId) {
+                        onLoginRequired?.();
+                        return;
                       }
-                      return (
-                        <AuthenticatedImage src={item.imageUrl} alt={item.title} className="w-full h-full object-cover object-top transition-transform duration-300 group-hover:scale-105" fallback={<div className="w-full h-full flex items-center justify-center bg-slate-200 text-slate-400 text-xs font-bold">이미지 없음</div>} />
-                      );
-                    })()}
-                    <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/80 via-black/45 to-transparent text-white">
-                      <p className="text-[10px] font-bold text-white/70 mb-1">{item.reason}</p>
-                      <h3 className="text-base font-black truncate">{item.title}</h3>
+                      const combo = ootdCombinations.find(c => c.id === item.id) ?? null;
+                      setSelectedCombo(combo);
+                      setSelectedItem(null);
+                    }}
+                    className="rounded-[24px] border border-slate-100 bg-slate-50 overflow-hidden transition-all duration-200 hover:shadow-xl active:scale-[0.99] cursor-pointer"
+                  >
+                    <div className="h-96 sm:h-[28rem] lg:h-[32rem] bg-slate-100 relative overflow-hidden">
+                      {!userId && (
+                        <div className="absolute top-3 left-3 z-10 bg-black/60 backdrop-blur-sm px-2.5 py-1 rounded-full border border-white/20">
+                          <span className="text-[10px] font-black text-white tracking-wider">코디 미리보기</span>
+                        </div>
+                      )}
+                      {(() => {
+                        const combo = ootdCombinations.find(c => c.id === item.id);
+                        if (combo) {
+                          return (
+                            <OotdCanvas
+                              top={combo.top?.imageUrl || combo.top?.userImageUrl}
+                              bottom={combo.bottom?.imageUrl || combo.bottom?.userImageUrl}
+                              outer={combo.outer?.imageUrl || combo.outer?.userImageUrl}
+                              shoes={combo.shoes?.imageUrl || combo.shoes?.userImageUrl}
+                            />
+                          );
+                        }
+                        return (
+                          <AuthenticatedImage src={item.imageUrl} alt={item.title} className="w-full h-full object-cover object-top transition-transform duration-300 group-hover:scale-105" fallback={<div className="w-full h-full flex items-center justify-center bg-slate-200 text-slate-400 text-xs font-bold">이미지 없음</div>} />
+                        );
+                      })()}
+                      <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/80 via-black/45 to-transparent text-white">
+                        <h3 className="text-base font-black truncate">{item.title}</h3>
+                      </div>
                     </div>
-                  </div>
-                </article>
+                  </article>
+                </div>
               ))}
             </div>
+            <div className="flex justify-center gap-1.5 mt-2">
+              {ootdItems.slice(0, 3).map((_, idx) => (
+                <div
+                  key={idx}
+                  className={`h-1.5 rounded-full transition-all duration-300 ${
+                    idx === currentOotdIndex
+                      ? 'w-4 bg-slate-800'
+                      : 'w-1.5 bg-slate-300'
+                  }`}
+                />
+              ))}
+            </div>
+            </>
           )}
         </section>
 
@@ -1034,7 +1072,7 @@ export default function HomeTab({
                             <Heart className={`w-3.5 h-3.5 ${isWishlisted(item.clothesId) ? 'text-rose-500 fill-rose-500' : ''}`} />
                           </button>
                           <AuthenticatedImage src={item.imageUrl} alt={item.title} className="w-full h-full object-cover object-top transition-transform duration-300 group-hover:scale-105" fallback={<div className="w-full h-full flex items-center justify-center bg-slate-200 text-slate-400 text-xs font-bold">이미지 없음</div>} />
-                          <div className="absolute left-0 bottom-0 p-3 bg-gradient-to-t from-black/80 via-black/40 to-transparent text-white flex flex-col items-start max-w-[66%]">
+                          <div className="absolute left-0 bottom-0 right-0 p-3 bg-gradient-to-t from-black/80 via-black/40 to-transparent text-white flex flex-col items-start">
                               {item.itemType ? (
                                 <span className="text-[10px] font-bold text-slate-400 truncate">
                                   {getItemTypeLabel(item.category, item.itemType)}

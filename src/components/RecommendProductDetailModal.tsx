@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import AuthenticatedImage from '@/components/common/AuthenticatedImage'
 import BrandDisplay from '@/components/common/BrandDisplay'
 import { Modal, ModalBody, ModalFooter, ModalHeader } from '@/components/common/Modal'
-import { Heart } from '@/components/icons'
+import { getGarmentStyleLabel } from '@/data/garmentStyles'
 import type { RecommendCardItem, RecommendColorChip } from '@/utils/recommendationMapper'
 
 
@@ -19,6 +19,9 @@ interface RecommendProductDetailModalProps {
     dislikeSubmitting?: boolean
     onPurchaseConfirm?: () => Promise<boolean>
     purchaseConfirmSubmitting?: boolean
+    onSelect?: () => void
+    selectLabel?: string
+    zIndex?: 100 | 110 | 120 | 130
 }
 
 function ColorSwatch({ color }: { color: RecommendColorChip }) {
@@ -60,6 +63,9 @@ export default function RecommendProductDetailModal({
                                                         dislikeSubmitting = false,
                                                         onPurchaseConfirm,
                                                         purchaseConfirmSubmitting = false,
+                                                        onSelect,
+                                                        selectLabel,
+                                                        zIndex = 100,
                                                     }: RecommendProductDetailModalProps) {
     const [purchaseOpened, setPurchaseOpened] = useState(false)
 
@@ -71,17 +77,30 @@ export default function RecommendProductDetailModal({
 
     const categoryLabel = item.categoryLabel
         ?? ({ Top: '상의', Bottom: '하의', Outer: '아우터', Shoes: '신발' } as const)[item.category]
-    const styles = item.styles.length > 0
-        ? item.styles
-        : item.style !== '-' && item.style !== '—'
-            ? [item.style]
-            : []
-    const allColors: RecommendColorChip[] = [
-        ...(item.color !== '-' && item.color !== '—'
-            ? [{ label: item.color, hex: item.colorHex }]
-            : []),
-        ...item.secondaryColors,
-    ]
+    const styles = Array.from(new Set([
+        ...(item.styles || []),
+        ...(item.style && item.style !== '-' && item.style !== '—' ? [item.style] : [])
+    ])).filter(s => s && s.trim().length > 0)
+
+    const allColors: RecommendColorChip[] = []
+    const colorMap = new Map<string, string | undefined>()
+
+    if (item.color && item.color !== '-' && item.color !== '—') {
+        colorMap.set(item.color, item.colorHex)
+    }
+    if (item.secondaryColors) {
+        item.secondaryColors.forEach(c => {
+            if (c.label && c.label !== '-' && c.label !== '—') {
+                if (!colorMap.has(c.label)) {
+                    colorMap.set(c.label, c.hex)
+                }
+            }
+        })
+    }
+    colorMap.forEach((hex, label) => {
+        allColors.push({ label, hex })
+    })
+
     const hasStyles = styles.length > 0
     const hasColors = allColors.length > 0
     const canToggleWishlist = !item.isAnchor && Boolean(onWishlistToggle)
@@ -99,7 +118,7 @@ export default function RecommendProductDetailModal({
             titleId="recommend-product-detail-title"
             size="sm"
             placement="sheet"
-            zIndex={100}
+            zIndex={zIndex}
             closeOnBackdrop
             panelClassName="max-h-[92vh]"
         >
@@ -107,24 +126,7 @@ export default function RecommendProductDetailModal({
                 title="상품 상세"
                 titleId="recommend-product-detail-title"
                 className="[&_h3]:text-lg [&_h3]:font-black"
-                trailing={
-                    canToggleWishlist ? (
-                        <button
-                            type="button"
-                            onClick={onWishlistToggle}
-                            disabled={wishlistSubmitting}
-                            aria-pressed={wishlisted}
-                            aria-label={wishlisted ? '위시리스트에서 빼기' : '위시리스트에 추가'}
-                            className={`p-2 rounded-full border bg-white transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed ${
-                                wishlisted
-                                    ? 'border-rose-200 text-rose-500 hover:bg-rose-50 hover:border-rose-300'
-                                    : 'border-slate-200 text-slate-400 hover:text-rose-500 hover:border-rose-200 hover:bg-rose-50 disabled:hover:text-slate-400 disabled:hover:border-slate-200 disabled:hover:bg-white'
-                            }`}
-                        >
-                            <Heart className={`w-5 h-5 ${wishlisted ? 'text-rose-500 fill-rose-500' : ''}`} />
-                        </button>
-                    ) : null
-                }
+                onClose={onClose}
             />
 
             <ModalBody>
@@ -141,9 +143,9 @@ export default function RecommendProductDetailModal({
                     />
                 </div>
 
-                <div className="px-5 py-2">
-                    <div className="mb-3">
-                        <h4 className="text-lg font-black text-slate-900 leading-tight">{item.title}</h4>
+                <div className="px-5 py-4">
+                    <div className="mb-4">
+                        <h4 className="text-xl font-black text-slate-900 leading-tight">{item.title}</h4>
                     </div>
                     {item.brandLabel && (
                         <DetailRow label="브랜드">
@@ -156,18 +158,20 @@ export default function RecommendProductDetailModal({
                             {item.itemTypeLabel ? <p className="text-xs font-bold text-slate-500">{item.itemTypeLabel}</p> : null}
                         </div>
                     </DetailRow>
-                    {hasStyles && (
-                        <DetailRow label="스타일">
-                            <div className="flex flex-wrap gap-1.5">
-                                {styles.map((style) => (
-                                    <span key={style} className="inline-flex rounded-full bg-[#F3E8FF] text-[#1E3A8A] px-2.5 py-1 text-xs font-black">
-                    {style}
-                  </span>
-                                ))}
-                            </div>
-                        </DetailRow>
-                    )}
-                    {hasColors && (
+                    <DetailRow label="스타일">
+                        <div className="flex flex-wrap gap-1.5">
+                            {hasStyles ? (
+                                styles.map((style, idx) => (
+                                    <span key={`${style}-${idx}`} className="inline-flex rounded-lg bg-slate-100 text-slate-600 px-2.5 py-1 text-[11px] font-bold">
+                                        {getGarmentStyleLabel(style)}
+                                    </span>
+                                ))
+                            ) : (
+                                <span className="text-sm font-black text-slate-900">-</span>
+                            )}
+                        </div>
+                    </DetailRow>
+                    {hasColors ? (
                         <DetailRow label="컬러">
                             <div className="flex flex-wrap gap-1.5">
                                 {allColors.map((color, index) => (
@@ -175,11 +179,28 @@ export default function RecommendProductDetailModal({
                                 ))}
                             </div>
                         </DetailRow>
+                    ) : (
+                        <DetailRow label="컬러">
+                            <span className="text-sm font-black text-slate-900">-</span>
+                        </DetailRow>
                     )}
                 </div>
             </ModalBody>
 
             <ModalFooter className="px-5 py-4 space-y-2">
+                {onSelect && (
+                    <button
+                        type="button"
+                        onClick={() => {
+                            onSelect()
+                            onClose()
+                        }}
+                        className="flex w-full h-11 items-center justify-center rounded-2xl bg-[#111827] text-white text-sm font-black hover:bg-slate-800 transition-colors cursor-pointer"
+                    >
+                        {selectLabel || '이 제품으로 교체'}
+                    </button>
+                )}
+
                 {item.hasDirectPurchaseUrl && item.purchaseUrl && item.purchaseUrl !== '#' && (
                     <a
                         href={item.purchaseUrl}
@@ -203,6 +224,17 @@ export default function RecommendProductDetailModal({
                     </button>
                 )}
 
+                {canToggleWishlist && (
+                    <button
+                        type="button"
+                        onClick={onWishlistToggle}
+                        disabled={wishlistSubmitting}
+                        className="flex w-full h-11 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white text-slate-500 hover:text-amber-500 hover:border-amber-200 hover:bg-amber-50 transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed text-sm font-black"
+                    >
+                        {wishlisted ? '위시리스트에서 해제' : '위시리스트에 추가'}
+                    </button>
+                )}
+
                 {onDislike && (
                     <button
                         type="button"
@@ -210,17 +242,9 @@ export default function RecommendProductDetailModal({
                         disabled={dislikeSubmitting}
                         className="flex w-full h-11 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white text-slate-500 text-sm font-black hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-colors cursor-pointer disabled:opacity-60"
                     >
-                        {dislikeSubmitting ? '처리 중...' : '이런 추천 싫어요'}
+                        {dislikeSubmitting ? '처리 중...' : '마음에 들지 않아요'}
                     </button>
                 )}
-
-                <button
-                    type="button"
-                    onClick={onClose}
-                    className="w-full h-10 rounded-2xl border border-slate-200 bg-white text-slate-600 text-sm font-black hover:bg-slate-50 hover:border-slate-300 transition-colors cursor-pointer"
-                >
-                    닫기
-                </button>
             </ModalFooter>
         </Modal>
     )

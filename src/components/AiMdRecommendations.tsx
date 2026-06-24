@@ -1051,7 +1051,7 @@ export default function AiMdRecommendations({
                         className="w-full h-full object-cover object-top transition-transform duration-300 group-hover:scale-105"
                         fallback={<div className="w-full h-full flex items-center justify-center bg-slate-200 text-slate-400 text-xs font-bold">이미지 없음</div>}
                       />
-                      <div className="absolute left-0 bottom-0 p-3 bg-gradient-to-t from-black/80 via-black/40 to-transparent text-white flex flex-col items-start max-w-[66%]">
+                      <div className="absolute left-0 bottom-0 right-0 p-3 bg-gradient-to-t from-black/80 via-black/40 to-transparent text-white flex flex-col items-start">
                         {card.brandLabel ? <div className="text-[11px] font-bold text-white/90 uppercase tracking-wide truncate">{card.brandLabel}</div> : null}
                         <h3 className="text-sm md:text-base font-black truncate mt-1 leading-tight">{card.title}</h3>
                       </div>
