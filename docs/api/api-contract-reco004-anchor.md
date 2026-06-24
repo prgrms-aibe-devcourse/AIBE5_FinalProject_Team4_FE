@@ -1,7 +1,7 @@
 ---
 doc_type: fe_api_contract_delta
 source_of_truth: AIBE5_FinalProject_Team4_FE
-last_updated: 2026-06-22
+last_updated: 2026-06-25
 sync_target: AIBE5_FinalProject_Team4_BE/docs/api/api-contract.md
 ---
 
@@ -17,7 +17,7 @@ sync_target: AIBE5_FinalProject_Team4_BE/docs/api/api-contract.md
 | path `clothesId` | 해당 사용자의 **활성 옷장 항목** |
 | 허용 `ownership_status` | `OWNED`, `WISHLIST` 모두 허용 |
 | FE 기준 옷 후보 | `GET /api/v1/users/{userId}/clothes` + `GET /api/users/{userId}/wishlist-clothes`를 합친 옷장 목록 |
-| FE 선택 UI | 전체 / 보유 / 미보유 + 카테고리 필터 (`HomeTab` 기준 옷 선택 모달) |
+| FE 선택 UI | 전체 / 보유 / 위시리스트 + 카테고리 필터 (`HomeTab` 기준 옷 선택 모달) |
 | query `limitPerCategory` | 기본 `5`, 허용 `1`~`50`. FE는 `50`을 명시 전달 |
 
 `RECO-003` 유사 상품(`GET .../similar-products`)과 **동일한 기준 옷 범위**를 사용합니다.

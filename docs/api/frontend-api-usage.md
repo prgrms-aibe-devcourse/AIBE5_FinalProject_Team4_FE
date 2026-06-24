@@ -2,7 +2,7 @@
 doc_type: fe_api_usage
 source_of_truth: AIBE5_FinalProject_Team4_FE
 api_contract_source_of_truth: AIBE5_FinalProject_Team4_BE/docs/api/api-contract.md
-last_updated: 2026-06-22
+last_updated: 2026-06-25
 ---
 
 # API 사용 기준
@@ -51,8 +51,8 @@ src/api/index.ts
 - API 요청은 쿠키 기반 인증을 사용하며, 공통 API 클라이언트는 `withCredentials: true`로 쿠키를 함께 전송합니다.
 - 401 응답을 받으면 `/api/v1/auth/refresh`를 한 번 호출한 뒤 기존 요청을 재시도합니다.
 - FE는 access token 또는 refresh token 값을 직접 읽거나 `localStorage`에 저장하지 않습니다.
-- 500 서버 내부 오류는 `/error/server`로 이동합니다.
-- 502 외부 서비스 오류는 외부 서비스 오류 안내로 처리합니다.
+- 5xx 서버 또는 외부 연동 오류는 기본적으로 `/error/server`로 이동합니다.
+- 화면 단위에서 복구 가능한 외부 서비스 오류를 직접 처리하는 경우에만 별도 안내 메시지를 표시합니다.
 - 네트워크 오류는 `/error/network`로 이동합니다.
 
 ## 인증 (현재 `App.tsx` + 공통 API client)
@@ -78,7 +78,7 @@ api.get(`/api/v1/users/${userId}/clothes`)
 지양:
 
 ```ts
-fetch('/api/chat-gamyagi') // mock 경로 — 공통 api client·BE 계약 경로로 대체
+fetch('/api/temporary-recommendation') // BE 계약에 없는 임시 경로 — 공통 api client·BE 계약 경로로 대체
 api.get('api/v1/categories')
 ```
 
@@ -128,7 +128,7 @@ FE 공통 응답 타입은 위 구조를 반영해야 합니다. `status`, `erro
 | 403 | 인증 사용자와 요청 대상 사용자 불일치, 접근 권한 없음 | 접근 권한 없음 안내를 표시합니다. |
 | 404 | 리소스 없음 | 리소스 없음 안내 또는 404 페이지로 처리합니다. 빈 목록 상태로 대체하지 않습니다. |
 | 409 | 이미 존재하는 데이터, 상태 충돌 | 중복 데이터 또는 상태 전환 불가 안내를 표시합니다. |
-| 502 | 외부 API 호출 실패 | 외부 서비스 오류 안내를 표시합니다. |
+| 502 | 외부 API 호출 실패 | 기본적으로 서버 오류 페이지로 이동합니다. 화면 단위로 복구 가능한 경우에만 외부 서비스 오류 안내를 표시합니다. |
 | 500 | 서버 내부 오류 | 서버 오류 페이지 또는 서버 오류 안내로 처리합니다. |
 | 네트워크 오류 | 서버 연결 실패 | 네트워크 에러 페이지 또는 네트워크 오류 안내로 처리합니다. |
 
@@ -230,7 +230,7 @@ API를 호출하는 화면은 아래 상태를 구분합니다.
 | 댓글 작성 | POST | `/api/v1/feed/posts/{postId}/comments` | 댓글/대댓글 작성 (`FEED-007`). `FeedCommentPayload` 요청 |
 | 댓글 수정 | PUT | `/api/v1/feed/posts/{postId}/comments/{commentId}` | 내 댓글 수정 |
 | 댓글 삭제 | DELETE | `/api/v1/feed/posts/{postId}/comments/{commentId}` | 내 댓글 삭제 |
-| 팔로우 토글 | POST | `/api/v1/feed/users/{followeeId}/follows` | 팔로우/언팔로우 토글 (`FEED-008`). `FeedInteraction` 응답. 현재 팔로우 상태는 `FeedPost.author.followedByMe`로 초기화. BE가 해당 필드를 내려주지 않으면 버튼 미표시 |
+| 팔로우 토글 | POST | `/api/v1/feed/users/{followeeId}/follows` | 팔로우/언팔로우 토글 (`FEED-008`). `FeedInteraction` 응답. 현재 팔로우 상태는 `FeedPost.author.followedByMe` 또는 `FeedUserProfile.followedByMe`로 초기화 |
 
 ## 룩피드 API 동기화 기준
 
@@ -246,24 +246,23 @@ API를 호출하는 화면은 아래 상태를 구분합니다.
 | `FEED-007` | `POST /api/v1/feed/posts/{postId}/comments` | `src/api/feed.ts` `createFeedComment` | 댓글/대댓글 작성 연동 |
 | `FEED-008` | `POST /api/v1/feed/users/{followeeId}/follows` | `src/api/feed.ts` `toggleFollow` | 팔로우 토글 연동. 초기 상태는 `FeedPost.author.followedByMe` 또는 `FeedUserProfile.followedByMe`로 설정. `mine: true`이면 팔로우 버튼 미표시 |
 | 프로필 게시물 | `GET /api/v1/feed/users/{userId}/posts` | `src/api/feed.ts` `fetchUserFeedPosts` | 룩피드 프로필 grid(게시한 피드). `page`/`size` 사용 |
-| 프로필 통계 | `GET /api/v1/feed/users/{userId}/profile` | `src/api/feedProfileSupport.ts` `loadFeedUserProfileSafe` | profile API 404 시 posts·로컬 프로필로 fallback, 팔로우 버튼 숨김 |
+| 프로필 통계 | `GET /api/v1/feed/users/{userId}/profile` | `src/api/feedProfileSupport.ts` `loadFeedUserProfileSafe` | 룩피드 프로필 헤더, 통계, 팔로우 상태 조회 |
 | 좋아요한 피드 | `GET /api/v1/feed/users/{userId}/liked-posts` | `src/api/feedProfileSupport.ts` `loadUserLikedFeedPostsSafe` | 별도 저장 기능을 대체하는 관심 피드 목록. 404 시 빈 목록 + 「좋아요한 피드」 탭 숨김 |
 
 룩피드 프로필 API 동기화:
 
 - 내 프로필 진입(`lookfeedTargetUserId === null`): `loadFeedUserProfileSafe` + `fetchUserFeedPosts`, 또는 탭에 따라 `loadUserLikedFeedPostsSafe`.
-- 타인 프로필 진입: `loadFeedUserProfileSafe` + `fetchUserFeedPosts`. profile API 404 시 posts·작성자 정보로 fallback, 팔로우 버튼 숨김.
+- 타인 프로필 진입: `loadFeedUserProfileSafe` + `fetchUserFeedPosts`.
 - grid 썸네일 클릭 → `FeedPostDetailModal` → `fetchFeedPost(postId)`.
 
 팔로우 버튼 초기 상태:
 
 - `GET /api/v1/feed/posts/{postId}` 상세 응답의 `author.followedByMe`로 초기화합니다.
 - `mine: true`인 게시물에는 팔로우 버튼을 표시하지 않습니다.
-- `author.followedByMe`가 `undefined`(BE 미제공)이면 팔로우 버튼을 표시하지 않습니다. 팔로우 상태를 알 수 없는 상태에서 toggle을 허용하면 기존 팔로우 관계가 의도치 않게 해제될 수 있습니다.
-- BE `FeedAuthorResponse`에 `followedByMe` 필드가 추가되면 버튼이 자동으로 표시됩니다.
+- `author.followedByMe`가 `null`이면 팔로우 버튼을 표시하지 않습니다. 본인 게시물 또는 비로그인 조회처럼 팔로우 상태를 계산하지 않는 경우입니다.
 - 팔로우 토글 성공 후 `FeedInteraction.active`를 UI 상태에 반영합니다.
 
-`FeedAuthor.followedByMe`는 FE 타입(`src/types/feed.ts`)에 optional(`boolean | undefined`)로 선언되어 있습니다. BE `FeedAuthorResponse`에 해당 필드가 추가되면 필수(`boolean`)로 전환합니다.
+`FeedAuthor.followedByMe`는 FE 타입(`src/types/feed.ts`)에서 `boolean | null`로 선언합니다.
 
 ## 추천 API 동기화 기준
 
@@ -285,7 +284,7 @@ BE 추천 API 중 현재 FE에서 실제 호출하는 API와 아직 mock/static 
 | `brandName` | 추천 카드 브랜드명과 브랜드 로고 매칭에 사용합니다. 값이 비어 있으면 `UNKNOWN` 또는 대체 문구로 처리합니다. |
 | `season` | `CLOTHES.season` code입니다. 추천 카드 저장 payload에 전달할 수 있지만 사용자별 옷장 정보로 해석하지 않습니다. |
 | `externalProductUrl` | 구매 이동 URL 또는 네이버쇼핑 URL 생성의 우선 입력값입니다. 값이 없으면 상품명 기반 검색 URL로 대체할 수 있습니다. |
-| `gender` | 옷 대상 성별 code입니다. 사용자 화면에 표시하지 않고 내부 필터/추천 제외 기준으로만 사용합니다. |
+| `gender` | 옷 대상 성별 code입니다. 추천 카드의 일반 표시명이나 필터 UI로는 사용하지 않고 내부 필터/추천 제외 기준으로만 사용합니다. |
 
 AI MD 추천은 아래 기준을 함께 확인합니다.
 
@@ -296,9 +295,9 @@ AI MD 추천은 아래 기준을 함께 확인합니다.
 
 `RECO-005` `match` 상세에서 구매 링크 클릭 후 **샀어요** 선택 시 FE는 `POST /api/users/{userId}/wishlist-clothes/{clothesId}`(필요 시)와 `PATCH /api/v1/clothes/{id}/convert-to-owned`로 보유 옷장 등록합니다. 흐름 상세는 [home-recommendation.md](../features/home-recommendation.md)를 따릅니다.
 
-날씨, 지역, 체감온도 정보(`EXT-004`~`EXT-006`)는 독립 추천 기능이 아니라 `RECO-001`, `RECO-002` 등 추천 기능의 보조 조건입니다. `/api/weather`는 추천 보조 정보 API로 설명합니다.
+날씨와 지역 정보(`EXT-004`~`EXT-005`)는 독립 추천 기능이 아니라 `RECO-001`, `RECO-002` 등 추천 기능의 보조 조건입니다. `/api/weather`는 추천 보조 정보 API로 설명합니다.
 
-옷 대상 성별(`gender`)은 응답 또는 저장 요청 payload에 포함될 수 있지만 사용자 화면에 표시하거나 필터 UI로 노출하지 않습니다. FE는 필요 시 내부 분류/추천 제외 기준으로만 사용합니다.
+옷 대상 성별(`gender`)은 응답 또는 저장 요청 payload에 포함될 수 있습니다. 옷 등록/수정 또는 등록 초안 확인 화면에서는 사용자가 선택·확정할 수 있으며, 추천 카드의 일반 표시명이나 필터 UI로는 사용하지 않습니다.
 
 옷 계절(`season`)은 `CLOTHES.season` 기준의 공통 옷 정보입니다. FE는 옷 등록 저장 요청에 `season` code를 포함할 수 있으며, 생성된 옷의 계절을 옷 수정 화면에서 변경하는 UI로 다루지 않습니다. 현재 `GET /api/v1/categories` 일반 응답은 계절 code 목록을 별도 필드로 제공하지 않으므로, 계절 code 기준은 [catalog.md](../domain/catalog.md)의 계절 섹션을 따릅니다.
 

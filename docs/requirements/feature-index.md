@@ -1,7 +1,7 @@
 ---
 doc_type: shared
 source_of_truth: AIBE5_FinalProject_Team4_BE
-last_updated: 2026-06-22
+last_updated: 2026-06-25
 ---
 
 # 기능 인덱스
@@ -28,7 +28,7 @@ last_updated: 2026-06-22
 | `WARDROBE-011`~`WARDROBE-016` | 옷 등록 | 구매내역 기반 등록 | 구매내역 캡처 업로드, AI 상품 추출, 결과 편집, 계절 선택, 보유 저장 | `/api/v1/users/{userId}/clothes/purchase-captures/**`, `PURCHASE_HISTORY` | 옷 등록 |
 | `WARDROBE-017`~`WARDROBE-030` | 옷 등록 | 사진 기반 등록 | 옷 사진 업로드, AI 판별, 결과 표시/수정, 계절 선택, 최종 저장, 성공/실패 알림 | `/api/v1/users/{userId}/clothes/photos/**`, `PHOTO` | 옷 등록 |
 | `CATALOG-001` | 카탈로그 | 공통 카탈로그 | 카테고리, 타입, 색상, 스타일, 외부 쇼핑몰 출처 code와 표시값 제공. 계절 code 기준은 카탈로그 문서에서 관리 | `GET /api/v1/categories`, `StyleCode`, `ColorCode`, `GenderCode` | 옷 등록, 필터 |
-| `RECO-001` | 추천 | OOTD 코디 | 사용자 기준 코디 추천. 날씨, 계절, 체감온도는 보조 조건으로 반영 | `GET /api/v1/ootd/{wardrobeId}`, `WeatherCompatibilityTable` | 추천 메인 |
+| `RECO-001` | 추천 | OOTD 코디 | 사용자 기준 코디 추천. 날씨와 계절은 보조 조건으로 반영 | `GET /api/v1/ootd/{wardrobeId}`, `WeatherCompatibilityTable` | 추천 메인 |
 | `RECO-002` | 추천 | 취향 분석/스타일 기반 추천 | 사용자 취향, 옷장, 지역, 날씨 등 데이터를 추천 근거로 활용 | `GET /api/v1/recommendations/{wardrobeId}`, `USER_STYLES`, `RECOMMENDATION_FEEDBACKS` | 추천 메인 |
 | `RECO-003` | 추천 | 유사 상품 탐색 | 선택한 상품이나 옷과 유사한 상품을 이미지, 카테고리, 색상, 스타일 기준으로 탐색 | `GET /api/v1/users/{userId}/clothes/{clothesId}/similar-products` | 옷 상세, 추천 상세 |
 | `RECO-004` | 추천 | 어울리는 옷 추천 | 사용자 옷장(`OWNED`/`WISHLIST`) 데이터를 기준으로 함께 입기 좋은 상의, 하의, 아우터, 신발 추천 (`limitPerCategory` query, 기본 `5`, 허용 `1`~`50`) | `GET /api/v1/users/{userId}/clothes/{clothesId}/recommendations` | 추천 상세 |
@@ -39,7 +39,7 @@ last_updated: 2026-06-22
 | `OUTFIT-001`~`OUTFIT-006` | 코디 | 코디 저장/조회/수정/삭제/스타일 | 직접 저장하거나 추천받은 코디를 저장, 조회, 수정, 삭제하고 대표/보조 스타일 관리 | `OUTFITS`, `OUTFIT_ITEMS`, `OUTFIT_STYLES` | 코디북, 코디 상세 |
 | `OUTFITBOOK-001`~`OUTFITBOOK-003` | 코디북 | 코디북 관리 | 사용자별 단일 코디북, 코디 목록 조회, 코디북 상세 | `OUTFIT_BOOKS`, `/api/v1/outfit-books` | 코디북 |
 | `EXT-001`~`EXT-003` | 외부 연동 | 네이버쇼핑 상품 연동 | 외부 상품 검색, 상세 조회, 상품 저장 | `GET /api/naver/search`, `POST /api/v1/external/clothes/naver` | 외부 상품 검색, 추천 상세 |
-| `EXT-004`~`EXT-006` | 외부 연동 | 날씨 보조 정보 | 사용자 지역 기반 현재 날씨와 체감온도 조회. 독립 추천 기능이 아니라 추천 보조 조건 | `GET /api/weather` | 추천 메인 |
+| `EXT-004`~`EXT-005` | 외부 연동 | 날씨 보조 정보 | 사용자 지역 기반 현재 날씨 조회. 독립 추천 기능이 아니라 추천 보조 조건 | `GET /api/weather` | 추천 메인 |
 | `EXT-007`~`EXT-008` | 외부 연동 | AI 의류 분석/추천 설명 | 옷 사진 분석, 스타일링 설명 또는 추천 이유 생성 | Gemini API | 옷 등록, 추천 상세 |
 | `SYSTEM-001`~`SYSTEM-004` | 공통 시스템 | 로딩/에러 | 로딩, 404/500/네트워크 오류 안내 | 공통 오류 응답 | 공통 UI |
 | `SYSTEM-005` | 공통 시스템 | 통합 필터 | 카탈로그 기준값을 활용한 목록 필터링 | `GET /api/v1/categories`, 카탈로그 code | 옷장, 추천, 목록 필터 |

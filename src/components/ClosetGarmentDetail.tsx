@@ -356,7 +356,7 @@ export default function ClosetGarmentDetail({
   }
 
   const g = detail ?? garment
-  const statusLabel = g.isWishlist ? '미보유 (위시리스트)' : '보유'
+  const statusLabel = g.isWishlist ? '위시리스트' : '보유'
   const sizeOnlyEdit = isExternalProductGarment(g)
   const brandName = g.be?.brandName ?? g.fabricMaterial
   const brandLabel = formatRecommendBrandLabel(brandName)

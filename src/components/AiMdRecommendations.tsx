@@ -746,7 +746,7 @@ export default function AiMdRecommendations({
       failedCount ? 'error' : 'success',
       failedCount
         ? `${successCount}개 저장, ${failedCount}개는 저장하지 못했어요.`
-        : `${successCount}개 상품을 미보유 옷으로 저장했어요.`,
+        : `${successCount}개 상품을 위시리스트로 저장했어요.`,
     )
     if (successCount > 0) onWishlistAdded?.()
   }
@@ -1340,7 +1340,7 @@ export default function AiMdRecommendations({
           >
             {savingProducts
               ? '저장 중…'
-              : `${chosenProducts.length}개 미보유 옷으로 저장`}
+              : `${chosenProducts.length}개 위시리스트로 저장`}
           </button>
         </ModalFooter>
       </Modal>

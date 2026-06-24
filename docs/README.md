@@ -1,7 +1,7 @@
 ---
 doc_type: fe_doc_index
 source_of_truth: AIBE5_FinalProject_Team4_FE
-last_updated: 2026-06-15
+last_updated: 2026-06-25
 ---
 
 # 프로젝트 문서
@@ -44,7 +44,7 @@ last_updated: 2026-06-15
 | [frontend/mock-policy.md](./frontend/mock-policy.md) | FE | mock 데이터, mock API, 실제 API 경계 |
 | [frontend/routing.md](./frontend/routing.md) | FE | 라우팅과 화면 진입 기준 |
 | [features/home-recommendation.md](./features/home-recommendation.md) | FE | 홈 추천 화면, 추천 라벨, 저장/피드백 기준 |
-| [features/wardrobe.md](./features/wardrobe.md) | FE | 옷장 화면, 보유/미보유 탭, 전환 기준 |
+| [features/wardrobe.md](./features/wardrobe.md) | FE | 옷장 화면, 보유/위시리스트 탭, 전환 기준 |
 | [features/mypage.md](./features/mypage.md) | FE | 마이페이지, 프로필 API, 계정 관리 기준 |
 | [features/outfit-book.md](./features/outfit-book.md) | FE | 코디북, 코디 상세, 저장/수정/삭제 기준 |
 | [features/common-loading-error.md](./features/common-loading-error.md) | FE | 공통 loading, success, empty, error 상태 처리 기준 |

@@ -87,7 +87,7 @@ export function buildFallbackFeedUserProfile(
     postCount: options.postsPage?.totalElements ?? options.postsPage?.content.length ?? 0,
     followerCount: 0,
     followingCount: 0,
-    followedByMe: false,
+    followedByMe: mine || viewerUserId == null ? null : (author?.followedByMe ?? null),
     mine,
   }
 }

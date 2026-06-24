@@ -95,7 +95,7 @@ export default function GarmentPickerGridCard({
             </span>
           )}
           {selected && favorite && (
-            <span className={`absolute top-1.5 left-1.5 rounded-full bg-[#111827] text-white grid place-items-center shadow ${
+            <span className={`absolute ${showOwnershipBadge ? 'top-7 left-1.5' : 'top-1.5 left-1.5'} rounded-full bg-[#111827] text-white grid place-items-center shadow ${
               isMd ? 'w-7 h-7' : 'w-6 h-6'
             }`}>
               <Check className={isMd ? 'w-4 h-4' : 'w-3.5 h-3.5'} />
@@ -103,7 +103,7 @@ export default function GarmentPickerGridCard({
           )}
           {showOwnershipBadge && (
             <span
-              className={`absolute left-1.5 bottom-1.5 h-5 px-2 rounded-full text-[10px] font-black shadow-sm ${
+              className={`absolute left-1.5 top-1.5 h-5 px-2 rounded-full text-[10px] font-black shadow-sm inline-flex items-center justify-center ${
                 owned ? 'bg-emerald-500 text-white' : 'bg-orange-500 text-white'
               }`}
             >

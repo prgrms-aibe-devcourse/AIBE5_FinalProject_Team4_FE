@@ -409,10 +409,10 @@ export default function OutfitDetailModal({
                         })()}
                       </div>
                       {item?.ownershipStatus === 'OWNED' && (
-                        <span className="absolute left-2 top-2 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-black">보유</span>
+                        <span className="absolute left-2 top-2 h-5 px-2 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-black inline-flex items-center justify-center">보유</span>
                       )}
                       {item?.ownershipStatus === 'WISHLIST' && (
-                        <span className="absolute left-2 top-2 px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 text-[10px] font-black">미보유</span>
+                        <span className="absolute left-2 top-2 h-5 px-2 rounded-full bg-orange-100 text-orange-700 text-[10px] font-black inline-flex items-center justify-center">위시리스트</span>
                       )}
                     </div>
                     <button

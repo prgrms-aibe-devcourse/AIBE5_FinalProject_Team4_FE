@@ -1,7 +1,7 @@
 ---
 doc_type: fe_mock_policy
 source_of_truth: AIBE5_FinalProject_Team4_FE
-last_updated: 2026-06-22
+last_updated: 2026-06-25
 ---
 
 # Mock 데이터 사용 정책
@@ -81,7 +81,6 @@ mock을 사용하는 화면은 관련 기능 문서에 아래를 적습니다.
 | `HomeTab.tsx` `match` 탭 (`RECO-004`) | **BE `recommendations` API 연동**. mock/static이 아닙니다. 기준 옷은 `OWNED`와 `WISHLIST`를 모두 사용합니다. |
 | `HomeTab.tsx` `similar` 탭 (`RECO-003`) | **BE `similar-products` API 연동**. 기준 옷은 `OWNED`와 `WISHLIST`를 모두 사용합니다. |
 | `HomeTab.tsx` `aimd` 탭 (`RECO-005`) | **BE AI MD API 연동**. MD 목록, 코디·상품 추천, 코디 저장을 사용합니다. |
-| `/api/chat-gamyagi` | BE API 계약에 없는 AI 채팅 mock 또는 개발용 경로입니다. 실제 AI MD 연동은 `/api/v1/users/{userId}/recommendations/ai-md/**` 기준입니다. |
 | `/api/analyze-garment` | BE API 계약에 없는 legacy 분석 mock 또는 개발용 경로입니다. 실제 옷 등록 분석은 photo/purchase-capture API 기준으로 사용합니다. |
 
 위 경로가 실제 서비스 API로 유지되어야 한다면 BE API 계약과 FE API 사용 문서를 먼저 갱신합니다.

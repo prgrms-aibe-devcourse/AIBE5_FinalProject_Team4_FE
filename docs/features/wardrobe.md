@@ -1,7 +1,7 @@
 ---
 doc_type: fe_feature_wardrobe
 source_of_truth: AIBE5_FinalProject_Team4_FE
-last_updated: 2026-06-10
+last_updated: 2026-06-25
 ---
 
 # 옷장 화면 기준
@@ -26,11 +26,11 @@ last_updated: 2026-06-10
 | 개념 | FE 표시 기준 |
 | --- | --- |
 | `OWNED` | 보유 옷 |
-| `WISHLIST` | 미보유 옷, 관심 상품 |
+| `WISHLIST` | 위시리스트, 관심 상품 |
 | `WARDROBE_CLOTHES` | 사용자 옷장에 연결된 옷 정보 |
 | `CLOTHES` | 옷 자체의 공통 정보 |
 
-보유/미보유 상태는 `CLOTHES`가 아니라 `WARDROBE_CLOTHES.ownership_status` 기준으로 판단합니다.
+보유/위시리스트 상태는 `CLOTHES`가 아니라 `WARDROBE_CLOTHES.ownership_status` 기준으로 판단합니다.
 
 ## 화면 구성
 
