@@ -58,7 +58,7 @@ export interface Recommendation {
   matchRate: number;
   imageName: string;
   styleTag: string;
-  price: string;
+  price?: string;
 }
 
 export interface AnatomicalFitGuide {

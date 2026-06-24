@@ -197,7 +197,7 @@ type RecommendItem = {
   itemType?: string;
   color: string;
   colorHex?: string;
-  price: string;
+  price?: string;
   matchRate: number;
   imageUrl: string;
   reason: string;
@@ -585,8 +585,8 @@ export default function HomeTab({
               color: item.primaryColorDisplay?.name ?? getGarmentColorLabel(item.primaryColor ?? ''),
               colorHex: item.primaryColorDisplay?.hex ?? getGarmentColor(item.primaryColor ?? '')?.hex ?? '',
               brand: item.brandName ?? '',
-              price: item.price && item.price !== '0' ? `${parseInt(item.price).toLocaleString()}원` : '',
-              matchRate: Math.round(parseFloat(item.score) * 100),
+              price: '',
+              matchRate: Math.round(Number.parseFloat(String(item.score ?? '0')) * 100),
               imageUrl: item.imageUrl || fallbackImages.Top,
               reason: item.reason ?? '',
               isAnchor: false,

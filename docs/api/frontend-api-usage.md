@@ -218,15 +218,14 @@ API를 호출하는 화면은 아래 상태를 구분합니다.
 | 이미지 | GET | `/api/v1/images/feed/{userId}/{filename}` | 룩피드 게시물 이미지 표시 |
 | 룩피드 목록 | GET | `/api/v1/feed/posts?page={p}&size={s}` | 피드 목록 페이지네이션 표시 (`FEED-002`). `FeedPage` 응답 |
 | 룩피드 사용자 게시물 | GET | `/api/v1/feed/users/{userId}/posts?page={p}&size={s}` | 룩피드 프로필 grid — 해당 사용자 게시물. `FeedPage` 응답. FE `fetchUserFeedPosts` |
-| 룩피드 사용자 프로필 | GET | `/api/v1/feed/users/{userId}/profile` | 룩피드 프로필 헤더(닉네임·소개·통계·`mine`·`followedByMe`). `FeedUserProfile` 응답. FE `loadFeedUserProfileSafe` (**BE PR #156**, develop 미반영 시 fallback) |
-| 룩피드 좋아요 목록 | GET | `/api/v1/feed/users/{userId}/liked-posts?page={p}&size={s}` | 본인 프로필 「좋아요한 피드」 탭. FE `loadUserLikedFeedPostsSafe` (**BE PR #156**, 404 시 탭 숨김) |
+| 룩피드 사용자 프로필 | GET | `/api/v1/feed/users/{userId}/profile` | 룩피드 프로필 헤더(닉네임·소개·통계·`mine`·`followedByMe`). `FeedUserProfile` 응답. FE `loadFeedUserProfileSafe` |
+| 룩피드 좋아요 목록 | GET | `/api/v1/feed/users/{userId}/liked-posts?page={p}&size={s}` | 본인 프로필 「좋아요한 피드」 탭. 별도 저장 기능을 대체하는 관심 피드 목록으로 사용. FE `loadUserLikedFeedPostsSafe` |
 | 룩피드 상세 | GET | `/api/v1/feed/posts/{postId}` | 피드 상세 모달 표시 (`FEED-003`). `FeedPost` 응답 |
 | 룩피드 작성 | POST | `/api/v1/feed/posts` | 피드 게시물 생성 (`FEED-001`). `FeedCreatePayload` 요청 |
 | 룩피드 수정 | PUT | `/api/v1/feed/posts/{postId}` | 내 피드 caption 수정. `{ caption }` 요청 |
 | 룩피드 삭제 | DELETE | `/api/v1/feed/posts/{postId}` | 내 피드 게시물 삭제 |
 | 룩피드 이미지 업로드 | POST | `/api/v1/feed/images` | 피드 이미지 업로드. `multipart/form-data`. `{ imageUrl }` 응답 |
-| 좋아요 토글 | POST | `/api/v1/feed/posts/{postId}/likes` | 좋아요/취소 토글 (`FEED-004`). `FeedInteraction` 응답 |
-| 저장 토글 | POST | `/api/v1/feed/posts/{postId}/saves` | 코디 저장/취소 토글 (`FEED-005`). `FeedInteraction` 응답. 연결 코디(`outfit`)가 없으면 FE에서 요청하지 않음 |
+| 좋아요 토글 | POST | `/api/v1/feed/posts/{postId}/likes` | 좋아요/취소 토글 (`FEED-004`). 별도 피드 저장 기능을 대체하며 `FeedInteraction` 응답으로 상태를 갱신 |
 | 댓글 목록 | GET | `/api/v1/feed/posts/{postId}/comments` | 댓글 목록 표시 (`FEED-006`). `FeedComment[]` 응답 |
 | 댓글 작성 | POST | `/api/v1/feed/posts/{postId}/comments` | 댓글/대댓글 작성 (`FEED-007`). `FeedCommentPayload` 요청 |
 | 댓글 수정 | PUT | `/api/v1/feed/posts/{postId}/comments/{commentId}` | 내 댓글 수정 |
@@ -242,20 +241,18 @@ API를 호출하는 화면은 아래 상태를 구분합니다.
 | `FEED-001` | `POST /api/v1/feed/posts` | `src/api/feed.ts` `createFeedPost` | 피드 게시물 작성 연동 |
 | `FEED-002` | `GET /api/v1/feed/posts` | `src/api/feed.ts` `fetchFeedPosts` | 피드 목록 조회 연동. 페이지네이션 `page`/`size` 사용 |
 | `FEED-003` | `GET /api/v1/feed/posts/{postId}` | `src/api/feed.ts` `fetchFeedPost` | 피드 상세 모달 연동 |
-| `FEED-004` | `POST /api/v1/feed/posts/{postId}/likes` | `src/api/feed.ts` `toggleFeedLike` | 좋아요 토글 연동. `FeedInteraction.active`/`count`로 화면 상태 갱신 |
-| `FEED-005` | `POST /api/v1/feed/posts/{postId}/saves` | `src/api/feed.ts` `toggleFeedSave` | 코디 저장 토글 연동. `outfit`이 없으면 FE에서 요청하지 않음 |
+| `FEED-004` | `POST /api/v1/feed/posts/{postId}/likes` | `src/api/feed.ts` `toggleFeedLike` | 좋아요 토글 연동. `FeedInteraction.active`/`count`로 화면 상태 갱신. 별도 피드 저장 기능을 대체 |
 | `FEED-006` | `GET /api/v1/feed/posts/{postId}/comments` | `src/api/feed.ts` `fetchFeedComments` | 댓글 목록 조회 연동 |
 | `FEED-007` | `POST /api/v1/feed/posts/{postId}/comments` | `src/api/feed.ts` `createFeedComment` | 댓글/대댓글 작성 연동 |
 | `FEED-008` | `POST /api/v1/feed/users/{followeeId}/follows` | `src/api/feed.ts` `toggleFollow` | 팔로우 토글 연동. 초기 상태는 `FeedPost.author.followedByMe` 또는 `FeedUserProfile.followedByMe`로 설정. `mine: true`이면 팔로우 버튼 미표시 |
 | 프로필 게시물 | `GET /api/v1/feed/users/{userId}/posts` | `src/api/feed.ts` `fetchUserFeedPosts` | 룩피드 프로필 grid(게시한 피드). `page`/`size` 사용 |
-| 프로필 통계 | `GET /api/v1/feed/users/{userId}/profile` | `src/api/feedProfileSupport.ts` `loadFeedUserProfileSafe` | BE PR #156. 404 시 posts·로컬 프로필로 fallback, 팔로우 버튼 숨김 |
-| 좋아요한 피드 | `GET /api/v1/feed/users/{userId}/liked-posts` | `src/api/feedProfileSupport.ts` `loadUserLikedFeedPostsSafe` | BE PR #156. 404 시 빈 목록 + 「좋아요한 피드」 탭 숨김 |
+| 프로필 통계 | `GET /api/v1/feed/users/{userId}/profile` | `src/api/feedProfileSupport.ts` `loadFeedUserProfileSafe` | profile API 404 시 posts·로컬 프로필로 fallback, 팔로우 버튼 숨김 |
+| 좋아요한 피드 | `GET /api/v1/feed/users/{userId}/liked-posts` | `src/api/feedProfileSupport.ts` `loadUserLikedFeedPostsSafe` | 별도 저장 기능을 대체하는 관심 피드 목록. 404 시 빈 목록 + 「좋아요한 피드」 탭 숨김 |
 
 룩피드 프로필 API 동기화:
 
 - 내 프로필 진입(`lookfeedTargetUserId === null`): `loadFeedUserProfileSafe` + `fetchUserFeedPosts`, 또는 탭에 따라 `loadUserLikedFeedPostsSafe`.
 - 타인 프로필 진입: `loadFeedUserProfileSafe` + `fetchUserFeedPosts`. profile API 404 시 posts·작성자 정보로 fallback, 팔로우 버튼 숨김.
-- BE PR #156(`profile`, `liked-posts`, `FeedAuthor.followedByMe`)이 develop에 반영되면 fallback 없이 전체 기능 활성화.
 - grid 썸네일 클릭 → `FeedPostDetailModal` → `fetchFeedPost(postId)`.
 
 팔로우 버튼 초기 상태:

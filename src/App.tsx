@@ -1354,7 +1354,6 @@ export default function App() {
                       userId={authUserId}
                       wardrobeGarments={clothes}
                       onWishlistChanged={() => void refreshWardrobe()}
-                      onOutfitBookChanged={bumpOutfitBookRefresh}
                       guideTourCompleted={profile.guideTourCompletedFeed ?? false}
                       onGuideTourComplete={() => { void handleGuideTourComplete("feed")}}
                       onViewProfile={handleViewFeedProfile}
@@ -1921,7 +1920,6 @@ export default function App() {
               onPostUpdated={handleLookfeedPostUpdated}
               onPostDeleted={handleLookfeedPostDeleted}
               onViewProfile={handleViewFeedProfile}
-              onOutfitBookChanged={bumpOutfitBookRefresh}
               listPost={
                 lookfeedDetailPostId == null
                   ? null

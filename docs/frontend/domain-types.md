@@ -159,7 +159,9 @@ type RecommendedClothesItem = {
   primaryColor: string;
   secondaryColors: string[];
   styleCodes: string[];
-  compatibilityScore: number;
+  score: string | number;
+  reason?: string | null;
+  compatibilityScore?: number;
   externalProductUrl?: string | null;
 };
 
@@ -208,7 +210,6 @@ type FeedPost = {
   likeCount: number;
   commentCount: number;
   likedByMe: boolean;
-  savedByMe: boolean;
   hidden: boolean;
   mine: boolean;           // true이면 현재 사용자의 게시물 — 팔로우 버튼 미표시
   createdAt: string;
@@ -216,8 +217,8 @@ type FeedPost = {
 };
 
 type FeedInteraction = {
-  active: boolean;   // 좋아요/저장/팔로우 현재 활성 상태
-  count: number;     // 좋아요/저장/팔로우 총 수
+  active: boolean;   // 좋아요/팔로우 현재 활성 상태
+  count: number;     // 좋아요/팔로우 총 수
 };
 
 type FeedPage = {
