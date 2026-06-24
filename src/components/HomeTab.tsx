@@ -276,6 +276,8 @@ export default function HomeTab({
   const labelSectionRef = useRef<HTMLElement | null>(null);
   const recommendationListRef = useRef<HTMLElement>(null);
 
+  const lastFetchedRegion = useRef<string | null>(null);
+
   const [refreshSignal, setRefreshSignal] = useState(0);
 
   const resetRecommendationState = useCallback(() => {
@@ -443,7 +445,14 @@ export default function HomeTab({
           }
         }
 
-        if (ootdItems.length === 0) {
+        const isRegionChanged = lastFetchedRegion.current !== region;
+
+        if (ootdItems.length === 0 || isRegionChanged) {
+          lastFetchedRegion.current = region;
+          if (isRegionChanged) {
+            setOotdItems([]);
+            setOotdCombinations([]);
+          }
           setOotdLoading(true);
           try {
             let currentTemp: number | undefined = undefined;
@@ -668,8 +677,9 @@ export default function HomeTab({
   useEffect(() => {
     if (userId == null || !authReady) {
       resetRecommendationState();
+      lastFetchedRegion.current = null;
     }
-  }, [authReady, resetRecommendationState, userId, region]);
+  }, [authReady, resetRecommendationState, userId]);
 
   const selectLabel = (label: RecommendationLabel, scrollToList = false) => {
     if (!userId && label !== "style") {
