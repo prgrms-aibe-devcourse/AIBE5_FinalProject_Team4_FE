@@ -12,6 +12,7 @@ import type { Garment } from '@/types'
 import { extractApiErrorMessage } from '@/utils/apiError'
 import { buildFeedPostShareUrl, consumeFeedPostIdFromUrl } from '@/utils/feedShare'
 import GuideTour from '@/components/common/GuideTour'
+import { useFeedOutfitBookSave } from '@/hooks/useFeedOutfitBookSave'
 
 interface FeedTabProps {
   userId: number
@@ -20,6 +21,7 @@ interface FeedTabProps {
   guideTourCompleted: boolean
   onGuideTourComplete: () => void
   onViewProfile?: (userId: number) => void
+  onOutfitBookChanged?: () => void
 }
 
 export default function FeedTab({
@@ -29,6 +31,7 @@ export default function FeedTab({
   guideTourCompleted,
   onGuideTourComplete,
   onViewProfile,
+  onOutfitBookChanged,
 }: FeedTabProps) {
   const { showToast } = useToast()
 
@@ -121,12 +124,22 @@ export default function FeedTab({
   }, [])
 
   const updatePostInList = useCallback((updated: FeedPost) => {
-    setPosts((prev) =>
-      prev.map((post) =>
+    setPosts((prev) => {
+      const index = prev.findIndex((post) => post.feedPostId === updated.feedPostId)
+      if (index === -1) return prev
+      return prev.map((post) =>
         post.feedPostId === updated.feedPostId ? updated : post,
-      ),
-    )
+      )
+    })
   }, [])
+
+  const {
+    saveOutfitFromPost,
+    outfitSaveSubmittingPostId,
+  } = useFeedOutfitBookSave({
+    onOutfitBookChanged,
+    onPostUpdated: updatePostInList,
+  })
 
   const handleToggleLike = async (post: FeedPost) => {
     if (submittingPostId != null) return
@@ -198,6 +211,7 @@ export default function FeedTab({
               userId={userId}
               onOpen={() => setDetailPostId(post.feedPostId)}
               onToggleLike={() => void handleToggleLike(post)}
+              onSaveOutfit={() => void saveOutfitFromPost(post)}
               onShare={() => void handleShare(post.feedPostId)}
               onCommentCountChange={(commentCount) =>
                 updatePostInList({ ...post, commentCount })
@@ -207,6 +221,8 @@ export default function FeedTab({
               likeSubmitting={
                 submittingPostId === post.feedPostId && submittingAction === 'like'
               }
+              outfitSaved={post.savedByMe}
+              outfitSaveSubmitting={outfitSaveSubmittingPostId === post.feedPostId}
               {...(index === 0 && {
                 containerRef: firstPostRef,
                 titleRef: firstPostTitleRef,
@@ -250,6 +266,7 @@ export default function FeedTab({
         onPostDeleted={handleDeleted}
         onViewProfile={onViewProfile}
         listPost={detailListPost}
+        onOutfitBookChanged={onOutfitBookChanged}
       />
 
       {showFeedUploadButton ? (

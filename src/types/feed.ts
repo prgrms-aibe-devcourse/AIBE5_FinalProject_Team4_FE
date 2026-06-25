@@ -43,6 +43,8 @@ export interface FeedPost {
   likeCount: number
   commentCount: number
   likedByMe: boolean
+  /** 피드에 연결된 코디를 내 코디북에 저장했는지 (좋아요와 별개) */
+  savedByMe: boolean
   hidden: boolean
   mine: boolean
   createdAt: string

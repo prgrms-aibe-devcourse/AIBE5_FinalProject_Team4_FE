@@ -83,6 +83,11 @@ export default function ClosetTab({
     selectedRef.current = selectedGarment;
   }, [selectedGarment]);
 
+  const handleDetailToast = useCallback(
+    (message: string) => showToast("info", message),
+    [showToast],
+  );
+
   const selectGarment = useCallback((item: Garment) => {
     setSelectedGarment(item);
     if (window.matchMedia("(max-width: 1023px)").matches) {
@@ -614,7 +619,7 @@ export default function ClosetTab({
                 onGarmentChange={setSelectedGarment}
                 onGarmentUpdated={upsertGarment}
                 onGarmentDeleted={handleGarmentDeleted}
-                onToast={(message) => showToast("info", message)}
+                onToast={handleDetailToast}
             />
             </div>
           </aside>

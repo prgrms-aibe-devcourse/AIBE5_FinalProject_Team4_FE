@@ -23,6 +23,7 @@ interface MatchRecommendationByCategoryProps {
   userId: number | null;
   existingGarments?: Garment[];
   onWishlistAdded?: () => void;
+  onFeedbackSubmitted?: () => void;
 }
 
 function RecommendationCard({
@@ -264,6 +265,7 @@ export default function MatchRecommendationByCategory({
   userId,
   existingGarments = [],
   onWishlistAdded,
+  onFeedbackSubmitted,
 }: MatchRecommendationByCategoryProps) {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
     new Set(),
@@ -285,6 +287,7 @@ export default function MatchRecommendationByCategory({
     userId,
     existingGarments,
     onWishlistChanged: onWishlistAdded,
+    onFeedbackChanged: onFeedbackSubmitted,
   });
 
   const isItemWishlisted = useCallback(

@@ -351,7 +351,10 @@ export default function App() {
   const [isLookfeedWriteOpen, setIsLookfeedWriteOpen] = useState(false);
   const [lookfeedDetailPostId, setLookfeedDetailPostId] = useState<number | null>(null);
   const [homeResetSignal, setHomeResetSignal] = useState<number>(0);
-  const outfitBookRefreshSignal = 0;
+  const [outfitBookRefreshSignal, setOutfitBookRefreshSignal] = useState(0);
+  const bumpOutfitBookRefresh = useCallback(() => {
+    setOutfitBookRefreshSignal((prev) => prev + 1);
+  }, []);
   const [isPhotoRegisterOpen, setIsPhotoRegisterOpen] = useState(false);
   const [isPurchaseRegisterOpen, setIsPurchaseRegisterOpen] = useState(false);
   const regionLabel = REGIONS.find((region) => region.code === profile.region)?.label ?? "서울특별시";
@@ -1465,6 +1468,7 @@ export default function App() {
                       guideTourCompleted={profile.guideTourCompletedFeed ?? false}
                       onGuideTourComplete={() => { void handleGuideTourComplete("feed")}}
                       onViewProfile={handleViewFeedProfile}
+                      onOutfitBookChanged={bumpOutfitBookRefresh}
                   />
                 )}
               {currentTab === "feed" &&
@@ -2010,6 +2014,7 @@ export default function App() {
                     ?? lookfeedTargetPosts.find((p) => p.feedPostId === lookfeedDetailPostId)
                     ?? null
               }
+              onOutfitBookChanged={bumpOutfitBookRefresh}
             />
           </>
         )}
