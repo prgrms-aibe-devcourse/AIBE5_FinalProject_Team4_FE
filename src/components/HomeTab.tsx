@@ -55,8 +55,8 @@ function OotdCanvas({ top, bottom, outer, shoes }: {
     const loadImage = async (src: string): Promise<HTMLImageElement> => {
       let url = src;
       
-      // 외부 URL(http로 시작)이면 프록시 경유
-      if (src.startsWith('http')) {
+      // pstatic.net이 포함되면 프록시 경유
+      if (src.includes('pstatic.net')) {
         url = `/api/v1/images/proxy?url=${encodeURIComponent(src)}`;
       } else {
         // 내부 이미지일 경우 기존 인증 로직 적용
