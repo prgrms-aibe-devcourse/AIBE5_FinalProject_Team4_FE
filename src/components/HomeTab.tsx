@@ -553,9 +553,9 @@ export default function HomeTab({
               return `오늘 ${Math.round(temp)}°C — 패딩·방한 필수`;
             }
 
-            // TODO: [발표용 임시 mock] OOTD API 호출을 고정 mock 데이터로 대체.
+            // [발표용 임시 mock] OOTD API 호출을 고정 mock 데이터로 임시 대체.
             // BE OOTD 데이터 품질 이슈로 발표 후 fetchOotdRecommendations(wardrobeId, currentTemp)로 원복 예정.
-            // 원복 시 아래 res를 다시 API 호출로 변경할 것.
+            // docs/frontend/mock-policy.md 기준과 다름을 인지하고 있으며, 발표 후 API 호출 경로로 복구 예정.
             const res = {
               combinations: [
                 {
@@ -683,7 +683,6 @@ export default function HomeTab({
               const id = generateOotdId(item, idx);
               const mainItem = item.top || item.outer || item.bottom || item;
               const title = [item.top?.name, item.bottom?.name].filter(Boolean).join(' + ') || (item.name ?? item.title ?? `추천 코디 ${idx + 1}`);
-              
               const topColor = item.top?.primaryColor ?? item.primaryColor ?? '';
               return {
                 id,

@@ -29,7 +29,11 @@ last_updated: 2026-06-25
 
 ## 현재 남은 gap 요약
 
-BE `#176`, FE `#130` 및 현재 브랜치 반영을 전제로 다시 확인한 결과, 현재 FE 공식 기준과 구현 사이에서 별도 추적해야 할 gap은 없습니다.
+### OOTD 발표용 임시 mock (HomeTab.tsx)
+- **상태**: 임시 (발표 후 원복 예정)
+- **내용**: 로그인 사용자에게도 `fetchOotdRecommendations` API 대신 고정 mock 3개 코디를 표시하도록 임시 변경됨.
+- **영향**: BE OOTD API 장애/계약 문제가 화면에 드러나지 않음. 사용자 옷장/날씨 기반 추천 결과 미반영.
+- **원복 방법**: HomeTab.tsx에서 TODO 주석 위치 찾아 `res = { combinations: [...] }` 를 `res = await fetchOotdRecommendations(wardrobeId, currentTemp ?? 20)` 로 복구.
 
 ## 문서 변경 기준
 
