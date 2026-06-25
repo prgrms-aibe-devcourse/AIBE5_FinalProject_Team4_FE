@@ -47,6 +47,7 @@ import {
 } from "@/api/feedProfileSupport";
 import type { FeedPage, FeedPost, FeedUserProfile } from "@/types/feed";
 import FeedWriteModal from "./components/feed/FeedWriteModal";
+import GuideTour from "@/components/common/GuideTour";
 import FeedPostDetailModal from "./components/feed/FeedPostDetailModal";
 import AuthenticatedImage from "@/components/common/AuthenticatedImage";
 import { checkNicknameAvailability } from "@/api/users";
@@ -274,6 +275,14 @@ export default function App() {
   const [isOnboardingSuccessModalOpen, setIsOnboardingSuccessModalOpen] = useState(false)
   // onSaved 직후 forceClose→onClose가 동기 실행될 때 cleanup을 건너뛰기 위한 ref
   const onboardingRegistrationSavedRef = useRef(false)
+
+  // ── 룩피드 프로필 가이드 투어 (FE 전용, localStorage 기반) ──────────────
+  const [lookfeedProfileTourOpen, setLookfeedProfileTourOpen] = useState(false)
+  const lookfeedProfileTourStartedRef = useRef(false)
+  const lookfeedProfileTourCompleted = localStorage.getItem('lookfeedProfileTourCompleted') === 'true'
+  const lookfeedProfileEditButtonRef = useRef<HTMLButtonElement>(null)
+  const lookfeedProfileTabsRef = useRef<HTMLDivElement>(null)
+  const lookfeedProfileUploadButtonRef = useRef<HTMLButtonElement>(null)
 
   // 비로그인 상태면 모달을 열고 false를 반환, 로그인 상태면 true를 반환
   const requireLogin = (destination?: "closet" | "profile"): boolean => {
@@ -987,6 +996,16 @@ export default function App() {
     }
   };
 
+  // 룩피드 프로필 투어: 내 프로필 탭 진입 시 한 번만 시작
+  useEffect(() => {
+    if (currentTab !== 'lookfeed-profile') return
+    if (lookfeedProfileTourCompleted || lookfeedProfileTourStartedRef.current) return
+    // 타인 프로필은 투어 대상 아님
+    if (lookfeedTargetUserId != null && lookfeedTargetUserId !== authUserId) return
+    lookfeedProfileTourStartedRef.current = true
+    setLookfeedProfileTourOpen(true)
+  }, [currentTab, lookfeedTargetUserId, authUserId, lookfeedProfileTourCompleted])
+
   const handleViewFeedProfile = (targetUserId: number) => {
     if (authUserId != null && targetUserId === authUserId) {
       openLookfeedProfile();
@@ -1636,6 +1655,7 @@ export default function App() {
                           </div>
                           <div className="mt-4">
                             <button
+                              ref={lookfeedProfileEditButtonRef}
                               type="button"
                               onClick={openLookfeedProfileEdit}
                               className="h-10 w-full rounded-lg bg-slate-100 text-sm font-black text-slate-900 transition hover:bg-slate-200 active:scale-[0.99]"
@@ -1649,7 +1669,7 @@ export default function App() {
 
                     <section>
                       {!isOtherUser && isFeedLikedPostsApiAvailable() ? (
-                        <div className="grid grid-cols-2 border-y border-slate-200 text-center">
+                        <div ref={lookfeedProfileTabsRef} className="grid grid-cols-2 border-y border-slate-200 text-center">
                           {[
                             { id: "shared" as const, label: "게시한 피드" },
                             { id: "liked" as const, label: "좋아요한 피드" },
@@ -1680,6 +1700,7 @@ export default function App() {
                     {!isOtherUser && !isLookfeedWriteOpen && (
                       <div className="pointer-events-none fixed bottom-20 left-0 right-0 z-20 flex justify-center px-5">
                         <button
+                          ref={lookfeedProfileUploadButtonRef}
                           type="button"
                           onClick={() => setIsLookfeedWriteOpen(true)}
                           className="pointer-events-auto flex items-center gap-2 h-12 px-6 rounded-2xl bg-[#1E3A8A] hover:bg-[#1E3A8A]/90 text-[#BBF7D0] shadow-lg font-bold text-sm transition active:scale-95 cursor-pointer"
@@ -1688,6 +1709,39 @@ export default function App() {
                           <span>코디 업로드</span>
                         </button>
                       </div>
+                    )}
+
+                    {/* ── 룩피드 프로필 가이드 투어 (내 프로필 전용) ── */}
+                    {!isOtherUser && lookfeedProfileTourOpen && (
+                      <GuideTour
+                        steps={[
+                          {
+                            targetRef: lookfeedProfileEditButtonRef,
+                            message: "프로필 사진·소개·외부 링크를 여기서 수정할 수 있어요",
+                          },
+                          ...(isFeedLikedPostsApiAvailable()
+                            ? [{
+                                targetRef: lookfeedProfileTabsRef,
+                                message: "내가 게시한 코디와 좋아요한 코디를 탭으로 구분해 볼 수 있어요",
+                              }]
+                            : []),
+                          {
+                            targetRef: lookfeedProfileUploadButtonRef,
+                            message: "내 코디를 업로드하면 팔로워와 공유할 수 있어요",
+                          },
+                        ]}
+                        onComplete={() => {
+                          setLookfeedProfileTourOpen(false)
+                          localStorage.setItem('lookfeedProfileTourCompleted', 'true')
+                        }}
+                      />
+                    )}
+                    {!isOtherUser && !lookfeedProfileTourOpen && (
+                      <button
+                        type="button"
+                        className="fixed right-5 bottom-20 z-40 w-11 h-11 rounded-full bg-white border border-slate-200 text-[#1E3A8A] shadow-lg flex items-center justify-center transition active:scale-90"
+                        onClick={() => setLookfeedProfileTourOpen(true)}
+                      >?</button>
                     )}
                   </div>
                 );
