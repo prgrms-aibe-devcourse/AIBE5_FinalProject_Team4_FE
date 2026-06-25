@@ -40,6 +40,7 @@ interface FeedPostCardProps {
   onViewProfile?: (userId: number) => void
   likeSubmitting?: boolean
   containerRef?: RefObject<HTMLElement>
+  titleRef?: RefObject<HTMLDivElement>
   actionRef?: RefObject<HTMLDivElement>
 }
 
@@ -54,6 +55,7 @@ export default function FeedPostCard({
   onViewProfile,
   likeSubmitting = false,
   containerRef,
+  titleRef,
   actionRef,
 }: FeedPostCardProps) {
   const [imageIndex, setImageIndex] = useState(0)
@@ -252,7 +254,7 @@ export default function FeedPostCard({
   return (
     <article ref={containerRef} className="border-b border-slate-100 bg-white">
       {/* 헤더 — 프로필·닉네임만 프로필, 나머지 영역은 상세 */}
-      <div className="flex items-stretch gap-2 px-3 py-2.5">
+      <div ref={titleRef} className="flex items-stretch gap-2 px-3 py-2.5">
         <div className="flex min-w-0 shrink-0 items-center gap-2">
           {renderProfileAvatar()}
           {renderAuthorName(post.author, 'truncate text-sm font-semibold text-slate-900')}

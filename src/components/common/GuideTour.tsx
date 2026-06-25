@@ -21,7 +21,8 @@ export default function GuideTour({ steps, onComplete }: GuideTourProps) {
         const el = steps[currentStep].targetRef.current
         if (!el) return
 
-        el.scrollIntoView({ behavior: 'instant', block: 'center' })
+        // 'nearest': 이미 화면에 보이면 스크롤 안 함, 벗어났을 때만 최소한으로 스크롤
+        el.scrollIntoView({ behavior: 'instant', block: 'nearest' })
 
         const id = requestAnimationFrame(() => {
             setTargetRect(el.getBoundingClientRect())

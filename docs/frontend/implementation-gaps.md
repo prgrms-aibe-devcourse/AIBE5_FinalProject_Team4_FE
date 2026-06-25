@@ -29,7 +29,26 @@ last_updated: 2026-06-25
 
 ## 현재 남은 gap 요약
 
-BE `#176`, FE `#130` 및 현재 브랜치 반영을 전제로 다시 확인한 결과, 현재 FE 공식 기준과 구현 사이에서 별도 추적해야 할 gap은 없습니다.
+### [GAP-001] 룩피드 프로필 가이드 투어 완료 상태 — localStorage (FE 전용)
+
+| 항목 | 내용 |
+|------|------|
+| 위치 | `src/App.tsx` |
+| 관련 키 | `` lookfeedProfileTourCompleted_${authUserId} `` |
+| 심각도 | Medium |
+
+**현재 구현:**
+룩피드 프로필 탭의 가이드 투어 완료 여부를 `lookfeedProfileTourCompleted_${authUserId}` 키로 localStorage에 읽고 저장한다. 키에 `authUserId`를 포함해 사용자별로 분리되어 있으나, 브라우저 localStorage에만 저장되므로 다른 기기·다른 브라우저·시크릿 모드에서는 완료 상태가 유지되지 않는다.
+
+**공식 기준과의 차이:**
+다른 가이드 투어(`home`, `wardrobe`, `feed`, `mypage`, `outfit-book`)는 `PATCH /api/v1/users/guide-tour`를 통해 서버에 저장되고 `GET /api/v1/users/profile`의 `guideTourCompleted*` 필드로 읽힌다. 룩피드 프로필 투어만 서버 연동 없이 FE 단독으로 관리된다.
+
+**해소 조건:**
+BE에 `lookfeedProfile` 필드가 추가되면 다음을 수정해 해소한다.
+- `src/api/guideTour.ts` — `GuideTourPayload`에 `lookfeedProfile?: boolean` 추가
+- `src/App.tsx` — `handleGuideTourComplete("lookfeed-profile")` 호출로 교체, localStorage 코드 제거
+- `src/App.tsx:285–289` 주석 및 `lookfeedProfileTourCompleted` 계산식 삭제
+- 이 문서에서 GAP-001 항목 삭제
 
 ## 문서 변경 기준
 

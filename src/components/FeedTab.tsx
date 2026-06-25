@@ -57,6 +57,7 @@ export default function FeedTab({
   const postListRef = useRef<HTMLDivElement>(null)
   const writeButtonRef = useRef<HTMLButtonElement>(null)
   const firstPostRef = useRef<HTMLElement>(null)
+  const firstPostTitleRef = useRef<HTMLDivElement>(null)
   const firstPostActionRef = useRef<HTMLDivElement>(null)
   const activeCommentComposersRef = useRef(0)
   const [hideUploadForComments, setHideUploadForComments] = useState(false)
@@ -208,6 +209,7 @@ export default function FeedTab({
               }
               {...(index === 0 && {
                 containerRef: firstPostRef,
+                titleRef: firstPostTitleRef,
                 actionRef: firstPostActionRef,
               })}
             />
@@ -268,7 +270,7 @@ export default function FeedTab({
           steps={
             posts.length > 0
               ? [
-                  { targetRef: firstPostRef, message: "다른 사람들의 실제 코디에서 스타일 힌트를 얻어보세요" },
+                  { targetRef: firstPostTitleRef, message: "다른 사람들의 실제 코디에서 스타일 힌트를 얻어보세요" },
                   { targetRef: firstPostActionRef, message: "좋아요로 마음에 드는 코디를 바로 기록할 수 있어요" },
                   { targetRef: writeButtonRef, message: "내 코디를 업로드하면 팔로워와 공유할 수 있어요" },
                 ]
