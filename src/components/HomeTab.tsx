@@ -56,7 +56,8 @@ function OotdCanvas({ top, bottom, outer, shoes }: {
       let url = src;
       // pstatic.net이 포함되면 프록시 경유
       if (src.includes('pstatic.net')) {
-        url = `/api/v1/images/proxy?url=${encodeURIComponent(src)}`;
+        const apiBase = import.meta.env.VITE_API_BASE_URL ?? '';
+        url = `${apiBase}/api/v1/images/proxy?url=${encodeURIComponent(src)}`;
       } else {
         // 내부 이미지일 경우 기존 인증 로직 적용
         try {
