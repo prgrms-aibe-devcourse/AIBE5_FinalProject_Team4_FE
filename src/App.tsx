@@ -281,7 +281,8 @@ export default function App() {
   // authUserId가 null이면 투어를 열지 않음(완료로 간주)
   // gap: docs/frontend/implementation-gaps.md 참조
   const [lookfeedProfileTourOpen, setLookfeedProfileTourOpen] = useState(false)
-  const lookfeedProfileTourStartedRef = useRef(false)
+  // boolean 대신 마지막으로 투어를 시작한 userId 저장 → 계정 전환 시 자동으로 재시작 허용
+  const lastStartedLookfeedProfileTourUserIdRef = useRef<number | null>(null)
   const lookfeedProfileTourCompleted =
     authUserId == null ||
     localStorage.getItem(`lookfeedProfileTourCompleted_${authUserId}`) === 'true'
@@ -1001,13 +1002,17 @@ export default function App() {
     }
   };
 
-  // 룩피드 프로필 투어: 내 프로필 탭 진입 시 한 번만 시작
+  // 룩피드 프로필 투어: 내 프로필 탭 진입 시 사용자별로 한 번만 시작
+  // ref에 userId를 저장해 계정 전환 시 자동으로 재시작 허용
   useEffect(() => {
     if (currentTab !== 'lookfeed-profile') return
-    if (lookfeedProfileTourCompleted || lookfeedProfileTourStartedRef.current) return
+    if (authUserId == null) return
+    if (lookfeedProfileTourCompleted) return
+    // 이미 이 userId로 투어를 시작한 경우 중복 실행 방지
+    if (lastStartedLookfeedProfileTourUserIdRef.current === authUserId) return
     // 타인 프로필은 투어 대상 아님
     if (lookfeedTargetUserId != null && lookfeedTargetUserId !== authUserId) return
-    lookfeedProfileTourStartedRef.current = true
+    lastStartedLookfeedProfileTourUserIdRef.current = authUserId
     setLookfeedProfileTourOpen(true)
   }, [currentTab, lookfeedTargetUserId, authUserId, lookfeedProfileTourCompleted])
 
