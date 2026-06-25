@@ -188,18 +188,6 @@ export default function RecommendProductDetailModal({
             </ModalBody>
 
             <ModalFooter className="px-5 py-4 space-y-2">
-                {onSelect && (
-                    <button
-                        type="button"
-                        onClick={() => {
-                            onSelect()
-                            onClose()
-                        }}
-                        className="flex w-full h-11 items-center justify-center rounded-2xl bg-[#111827] text-white text-sm font-black hover:bg-slate-800 transition-colors cursor-pointer"
-                    >
-                        {selectLabel || '이 제품으로 교체'}
-                    </button>
-                )}
 
                 {item.hasDirectPurchaseUrl && item.purchaseUrl && item.purchaseUrl !== '#' && (
                     <a
