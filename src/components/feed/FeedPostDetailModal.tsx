@@ -6,6 +6,7 @@ import {
   fetchFeedComments,
   fetchFeedPost,
   toggleFeedLike,
+  toggleFeedOutfitSave,
   toggleFollow,
   updateFeedComment,
   updateFeedPost,
@@ -477,8 +478,7 @@ interface FeedPostDetailModalProps {
   onViewProfile?: (userId: number) => void
   /** 피드 목록과 상호작용 상태(좋아요·코디 저장·댓글 등) 동기화 */
   listPost?: FeedPost | null
-  onSaveOutfit?: (post: FeedPost) => void
-  outfitSaveSubmitting?: boolean
+  onOutfitBookChanged?: () => void
 }
 
 export default function FeedPostDetailModal({
@@ -492,8 +492,7 @@ export default function FeedPostDetailModal({
   onPostDeleted,
   onViewProfile,
   listPost = null,
-  onSaveOutfit,
-  outfitSaveSubmitting = false,
+  onOutfitBookChanged,
 }: FeedPostDetailModalProps) {
   const { showToast, showConfirm } = useToast()
 
@@ -511,6 +510,7 @@ export default function FeedPostDetailModal({
   const [commentDraft, setCommentDraft] = useState('')
   const [commentSubmitting, setCommentSubmitting] = useState(false)
   const [interactionSubmitting, setInteractionSubmitting] = useState(false)
+  const [outfitSaveSubmitting, setOutfitSaveSubmitting] = useState(false)
   const [following, setFollowing] = useState<boolean | null>(null)
   const [followSubmitting, setFollowSubmitting] = useState(false)
   const [deleteSubmitting, setDeleteSubmitting] = useState(false)
@@ -630,6 +630,37 @@ export default function FeedPostDetailModal({
       showToast('error', message)
     } finally {
       setInteractionSubmitting(false)
+    }
+  }
+
+  const handleToggleOutfitSave = async () => {
+    if (!post || outfitSaveSubmitting) return
+    if (post.mine) return
+    if (!post.outfit || post.outfit.items.length === 0) {
+      showToast('error', '연결된 코디가 없어 저장할 수 없습니다.')
+      return
+    }
+
+    const prevPost = post
+    const nextSaved = !post.savedByMe
+    syncPost({ ...post, savedByMe: nextSaved })
+
+    setOutfitSaveSubmitting(true)
+    try {
+      const result = await toggleFeedOutfitSave(post.feedPostId)
+      syncPost({ ...prevPost, savedByMe: result.active })
+      onOutfitBookChanged?.()
+      showToast(
+        'success',
+        result.active ? '코디북에 저장했어요.' : '코디북 저장을 취소했어요.',
+      )
+    } catch (toggleError) {
+      syncPost(prevPost)
+      const message = extractApiErrorMessage(toggleError, '코디북 저장에 실패했습니다.')
+      setError(message)
+      showToast('error', message)
+    } finally {
+      setOutfitSaveSubmitting(false)
     }
   }
 
@@ -953,10 +984,10 @@ export default function FeedPostDetailModal({
                   <MessageSquare className="h-4 w-4" />
                   {post.commentCount}
                 </span>
-                {!post.mine && post.outfit && post.outfit.items.length > 0 && onSaveOutfit ? (
+                {!post.mine && post.outfit && post.outfit.items.length > 0 ? (
                   <button
                     type="button"
-                    onClick={() => onSaveOutfit(post)}
+                    onClick={() => void handleToggleOutfitSave()}
                     disabled={outfitSaveSubmitting}
                     aria-pressed={post.savedByMe}
                     aria-label="코디북에 저장"

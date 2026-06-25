@@ -32,7 +32,6 @@ import OnboardingPage from "@/pages/OnboardingPage";
 import IntroPage from "@/pages/IntroPage";
 import { useCloset } from "@/hooks/useCloset";
 import { useWardrobeLoader } from "@/hooks/useWardrobeLoader";
-import { useFeedOutfitBookSave } from "@/hooks/useFeedOutfitBookSave";
 import {
   fetchMarketingConsent,
   updateMarketingConsent,
@@ -981,14 +980,6 @@ export default function App() {
     });
     setLookfeedTargetPosts(merge);
   };
-
-  const {
-    saveOutfitFromPost: saveLookfeedOutfitFromPost,
-    outfitSaveSubmittingPostId: lookfeedOutfitSaveSubmittingPostId,
-  } = useFeedOutfitBookSave({
-    onOutfitBookChanged: bumpOutfitBookRefresh,
-    onPostUpdated: handleLookfeedPostUpdated,
-  });
 
   const handleLookfeedPostDeleted = (postId: number) => {
     setLookfeedMyPosts((prev) => prev.filter((post) => post.feedPostId !== postId));
@@ -2023,11 +2014,7 @@ export default function App() {
                     ?? lookfeedTargetPosts.find((p) => p.feedPostId === lookfeedDetailPostId)
                     ?? null
               }
-              onSaveOutfit={(post) => void saveLookfeedOutfitFromPost(post)}
-              outfitSaveSubmitting={
-                lookfeedDetailPostId != null
-                && lookfeedOutfitSaveSubmittingPostId === lookfeedDetailPostId
-              }
+              onOutfitBookChanged={bumpOutfitBookRefresh}
             />
           </>
         )}

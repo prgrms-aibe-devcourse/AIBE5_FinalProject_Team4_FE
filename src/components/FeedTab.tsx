@@ -124,11 +124,13 @@ export default function FeedTab({
   }, [])
 
   const updatePostInList = useCallback((updated: FeedPost) => {
-    setPosts((prev) =>
-      prev.map((post) =>
+    setPosts((prev) => {
+      const index = prev.findIndex((post) => post.feedPostId === updated.feedPostId)
+      if (index === -1) return prev
+      return prev.map((post) =>
         post.feedPostId === updated.feedPostId ? updated : post,
-      ),
-    )
+      )
+    })
   }, [])
 
   const {
@@ -264,10 +266,7 @@ export default function FeedTab({
         onPostDeleted={handleDeleted}
         onViewProfile={onViewProfile}
         listPost={detailListPost}
-        onSaveOutfit={(post) => void saveOutfitFromPost(post)}
-        outfitSaveSubmitting={
-          detailPostId != null && outfitSaveSubmittingPostId === detailPostId
-        }
+        onOutfitBookChanged={onOutfitBookChanged}
       />
 
       {showFeedUploadButton ? (
