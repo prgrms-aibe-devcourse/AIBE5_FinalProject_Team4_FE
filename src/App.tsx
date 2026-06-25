@@ -277,9 +277,14 @@ export default function App() {
   const onboardingRegistrationSavedRef = useRef(false)
 
   // ── 룩피드 프로필 가이드 투어 (FE 전용, localStorage 기반) ──────────────
+  // 주의: BE guideTourCompleted* 필드와 달리 사용자별 localStorage 키로 관리됨
+  // authUserId가 null이면 투어를 열지 않음(완료로 간주)
+  // gap: docs/frontend/implementation-gaps.md 참조
   const [lookfeedProfileTourOpen, setLookfeedProfileTourOpen] = useState(false)
   const lookfeedProfileTourStartedRef = useRef(false)
-  const lookfeedProfileTourCompleted = localStorage.getItem('lookfeedProfileTourCompleted') === 'true'
+  const lookfeedProfileTourCompleted =
+    authUserId == null ||
+    localStorage.getItem(`lookfeedProfileTourCompleted_${authUserId}`) === 'true'
   const lookfeedProfileEditButtonRef = useRef<HTMLButtonElement>(null)
   const lookfeedProfileTabsRef = useRef<HTMLDivElement>(null)
   const lookfeedProfileUploadButtonRef = useRef<HTMLButtonElement>(null)
@@ -1732,7 +1737,9 @@ export default function App() {
                         ]}
                         onComplete={() => {
                           setLookfeedProfileTourOpen(false)
-                          localStorage.setItem('lookfeedProfileTourCompleted', 'true')
+                          if (authUserId != null) {
+                            localStorage.setItem(`lookfeedProfileTourCompleted_${authUserId}`, 'true')
+                          }
                         }}
                       />
                     )}
