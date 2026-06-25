@@ -1,4 +1,10 @@
-import { useEffect, useState, type HTMLAttributes, type ReactNode } from 'react'
+import {
+  forwardRef,
+  useEffect,
+  useState,
+  type HTMLAttributes,
+  type ReactNode,
+} from 'react'
 import { createPortal } from 'react-dom'
 import { X } from '@/components/icons'
 
@@ -193,13 +199,19 @@ interface ModalBodyProps {
   className?: string
 }
 
-export function ModalBody({ children, className = '' }: ModalBodyProps) {
+export const ModalBody = forwardRef<HTMLDivElement, ModalBodyProps>(function ModalBody(
+  { children, className = '' },
+  ref,
+) {
   return (
-    <div className={`flex-1 min-h-0 overflow-y-auto overscroll-y-contain ${className}`}>
+    <div
+      ref={ref}
+      className={`flex-1 min-h-0 overflow-y-auto overscroll-y-contain ${className}`}
+    >
       {children}
     </div>
   )
-}
+})
 
 interface ModalFooterProps {
   children: ReactNode
