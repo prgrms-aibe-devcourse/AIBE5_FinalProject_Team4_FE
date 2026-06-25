@@ -49,18 +49,25 @@ function OotdCanvas({ top, bottom, outer, shoes }: {
     const W = 400, H = 500;
     canvas.width = W;
     canvas.height = H;
-    ctx.fillStyle = '#F8F8F8';
+    ctx.fillStyle = '#F1F5F9';
     ctx.fillRect(0, 0, W, H);
 
     const loadImage = async (src: string): Promise<HTMLImageElement> => {
-      // 인증 필요한 URL이면 blob URL로 변환
       let url = src;
-      try {
-        const authUrl = await fetchAuthenticatedImageObjectUrl(src);
-        if (authUrl) url = authUrl;
-      } catch {
-        url = src; // 실패하면 원본 URL 그대로 사용
+      
+      // 외부 URL(http로 시작)이면 프록시 경유
+      if (src.startsWith('http')) {
+        url = `/api/v1/images/proxy?url=${encodeURIComponent(src)}`;
+      } else {
+        // 내부 이미지일 경우 기존 인증 로직 적용
+        try {
+          const authUrl = await fetchAuthenticatedImageObjectUrl(src);
+          if (authUrl) url = authUrl;
+        } catch {
+          url = src; // 실패하면 원본 URL 그대로 사용
+        }
       }
+      
       return new Promise((resolve, reject) => {
         const img = new Image();
         img.crossOrigin = 'anonymous';
@@ -70,7 +77,34 @@ function OotdCanvas({ top, bottom, outer, shoes }: {
       });
     };
 
-    const cropTransparent = (img: HTMLImageElement) => {
+    const removeWhiteBackground = (img: HTMLImageElement): HTMLCanvasElement => {
+      const offscreen = document.createElement('canvas');
+      offscreen.width = img.width;
+      offscreen.height = img.height;
+      const offCtx = offscreen.getContext('2d')!;
+      offCtx.drawImage(img, 0, 0);
+      
+      const imageData = offCtx.getImageData(0, 0, img.width, img.height);
+      const data = imageData.data;
+      
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+        
+        if (r >= 230 && g >= 230 && b >= 230) {
+          data[i + 3] = 0;
+        } else if (r >= 200 && g >= 200 && b >= 200) {
+          const factor = (230 - Math.max(r, g, b)) / 30;
+          data[i + 3] = Math.round(data[i + 3] * factor);
+        }
+      }
+      
+      offCtx.putImageData(imageData, 0, 0);
+      return offscreen;
+    };
+
+    const cropTransparent = (img: HTMLImageElement | HTMLCanvasElement) => {
       const offscreen = document.createElement('canvas');
       offscreen.width = img.width;
       offscreen.height = img.height;
@@ -81,7 +115,7 @@ function OotdCanvas({ top, bottom, outer, shoes }: {
       for (let y = 0; y < img.height; y++) {
         for (let x = 0; x < img.width; x++) {
           const alpha = data[(y * img.width + x) * 4 + 3];
-          if (alpha > 10) {
+          if (alpha > 5) {
             minX = Math.min(minX, x);
             minY = Math.min(minY, y);
             maxX = Math.max(maxX, x);
@@ -94,7 +128,7 @@ function OotdCanvas({ top, bottom, outer, shoes }: {
     };
 
     const drawCropped = (
-      img: HTMLImageElement,
+      img: HTMLImageElement | HTMLCanvasElement,
       slotX: number, slotY: number,
       slotW: number, slotH: number,
       scaleFactor = 0.92
@@ -111,19 +145,21 @@ function OotdCanvas({ top, bottom, outer, shoes }: {
     (async () => {
       try {
         const hasShoes = !!shoes;
-        // 비율 조정: 상의 35%, 하의 50%, 신발 15% (신발 비중 축소)
-        const topH = hasShoes ? H * 0.35 : H * 0.45;
-        const bottomH = hasShoes ? H * 0.50 : H * 0.55;
+        // 비율 조정: 상의 38%, 하의 47%, 신발 15% (overlap 증가)
+        const topH = hasShoes ? H * 0.38 : H * 0.48;
+        const bottomH = hasShoes ? H * 0.47 : H * 0.52;
         const shoesH = hasShoes ? H * 0.15 : 0;
 
         if (outer) {
           const outerImg = await loadImage(outer);
+          const outerImgClean = removeWhiteBackground(outerImg);
           // 아우터는 상의 영역보다 조금 더 길게(하의와 겹치게) 그림
-          drawCropped(outerImg, 0, 0, W, topH + bottomH * 0.15, 0.95);
+          drawCropped(outerImgClean, 0, 0, W, topH + bottomH * 0.15, 0.95);
 
           if (top) {
             const topImg = await loadImage(top);
-            const crop = cropTransparent(topImg);
+            const topImgClean = removeWhiteBackground(topImg);
+            const crop = cropTransparent(topImgClean);
             // 아우터 안의 상의는 더 작게 중앙에 배치
             const overlayW = W * 0.25;
             const overlayH = topH * 0.4;
@@ -132,25 +168,28 @@ function OotdCanvas({ top, bottom, outer, shoes }: {
             const dh = crop.h * scale;
             const dx = (W - dw) / 2;
             const dy = topH * 0.35; // 위치 조정
-            ctx.drawImage(topImg, crop.x, crop.y, crop.w, crop.h, dx, dy, dw, dh);
+            ctx.drawImage(topImgClean, crop.x, crop.y, crop.w, crop.h, dx, dy, dw, dh);
           }
         } else if (top) {
           const topImg = await loadImage(top);
+          const topImgClean = removeWhiteBackground(topImg);
           // 상의 위치를 약간 아래로 내려서 하의와 자연스럽게 연결
-          drawCropped(topImg, 0, topH * 0.05, W, topH, 0.95);
+          drawCropped(topImgClean, 0, topH * 0.05, W, topH, 0.95);
         }
 
         if (bottom) {
           const bottomImg = await loadImage(bottom);
+          const bottomImgClean = removeWhiteBackground(bottomImg);
           // 하의를 상의 쪽으로 살짝 올려서(Overlap) 간격 제거
-          const overlap = topH * 0.08;
-          drawCropped(bottomImg, 0, topH - overlap, W, bottomH + overlap, 0.95);
+          const overlap = topH * 0.18;
+          drawCropped(bottomImgClean, 0, topH - overlap, W, bottomH + overlap, 0.95);
         }
 
         if (shoes) {
           const shoesImg = await loadImage(shoes);
-          // 신발 크기를 대폭 줄이고(scaleFactor 0.65), 하의와 가깝게 배치
-          drawCropped(shoesImg, 0, topH + bottomH - topH * 0.05, W, shoesH, 0.65);
+          const shoesImgClean = removeWhiteBackground(shoesImg);
+          // 신발 크기를 조금 키우고(scaleFactor 0.78), 하의와 가깝게 배치
+          drawCropped(shoesImgClean, 0, topH + bottomH - topH * 0.05, W, shoesH, 0.78);
         }
 
       } catch (e) {
