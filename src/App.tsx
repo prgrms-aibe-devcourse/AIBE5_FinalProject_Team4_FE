@@ -356,11 +356,6 @@ export default function App() {
   const bumpOutfitBookRefresh = useCallback(() => {
     setOutfitBookRefreshSignal((prev) => prev + 1);
   }, []);
-  const {
-    isOutfitInBook: isLookfeedOutfitInBook,
-    saveOutfitFromPost: saveLookfeedOutfitFromPost,
-    outfitSaveSubmittingPostId: lookfeedOutfitSaveSubmittingPostId,
-  } = useFeedOutfitBookSave({ onOutfitBookChanged: bumpOutfitBookRefresh });
   const [isPhotoRegisterOpen, setIsPhotoRegisterOpen] = useState(false);
   const [isPurchaseRegisterOpen, setIsPurchaseRegisterOpen] = useState(false);
   const regionLabel = REGIONS.find((region) => region.code === profile.region)?.label ?? "서울특별시";
@@ -986,6 +981,14 @@ export default function App() {
     });
     setLookfeedTargetPosts(merge);
   };
+
+  const {
+    saveOutfitFromPost: saveLookfeedOutfitFromPost,
+    outfitSaveSubmittingPostId: lookfeedOutfitSaveSubmittingPostId,
+  } = useFeedOutfitBookSave({
+    onOutfitBookChanged: bumpOutfitBookRefresh,
+    onPostUpdated: handleLookfeedPostUpdated,
+  });
 
   const handleLookfeedPostDeleted = (postId: number) => {
     setLookfeedMyPosts((prev) => prev.filter((post) => post.feedPostId !== postId));
@@ -2020,7 +2023,6 @@ export default function App() {
                     ?? lookfeedTargetPosts.find((p) => p.feedPostId === lookfeedDetailPostId)
                     ?? null
               }
-              isOutfitInBook={isLookfeedOutfitInBook}
               onSaveOutfit={(post) => void saveLookfeedOutfitFromPost(post)}
               outfitSaveSubmitting={
                 lookfeedDetailPostId != null

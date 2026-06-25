@@ -20,7 +20,7 @@ import type { ClothesResponse } from '@/types/be'
 import { addExistingClothesToWishlist, createWishlistClothes, deleteClothes } from '@/api/wardrobe'
 import { resolveGarmentColorCode } from '@/data/garmentColors'
 import { CATEGORY_ITEM_TYPES } from '@/data/categoryItemTypes'
-import type { FeedComment, FeedOutfit, FeedPost } from '@/types/feed'
+import type { FeedComment, FeedPost } from '@/types/feed'
 import type { Garment } from '@/types'
 import { countFeedComments, FEED_COMMENTS_POLL_MS, canReplyToFeedComment, resolveReplyParentCommentId } from '@/utils/feedComments'
 import { extractApiErrorMessage } from '@/utils/apiError'
@@ -475,9 +475,8 @@ interface FeedPostDetailModalProps {
   onPostUpdated: (post: FeedPost) => void
   onPostDeleted: (postId: number) => void
   onViewProfile?: (userId: number) => void
-  /** 피드 목록과 상호작용 상태(좋아요·댓글 등) 동기화 */
+  /** 피드 목록과 상호작용 상태(좋아요·코디 저장·댓글 등) 동기화 */
   listPost?: FeedPost | null
-  isOutfitInBook?: (outfit: FeedOutfit | null | undefined) => boolean
   onSaveOutfit?: (post: FeedPost) => void
   outfitSaveSubmitting?: boolean
 }
@@ -493,7 +492,6 @@ export default function FeedPostDetailModal({
   onPostDeleted,
   onViewProfile,
   listPost = null,
-  isOutfitInBook,
   onSaveOutfit,
   outfitSaveSubmitting = false,
 }: FeedPostDetailModalProps) {
@@ -582,6 +580,7 @@ export default function FeedPostDetailModal({
       if (
         prev.likedByMe === listPost.likedByMe
         && prev.likeCount === listPost.likeCount
+        && prev.savedByMe === listPost.savedByMe
         && prev.commentCount === listPost.commentCount
       ) {
         return prev
@@ -590,6 +589,7 @@ export default function FeedPostDetailModal({
         ...prev,
         likedByMe: listPost.likedByMe,
         likeCount: listPost.likeCount,
+        savedByMe: listPost.savedByMe,
         commentCount: listPost.commentCount,
       }
     })
@@ -958,15 +958,11 @@ export default function FeedPostDetailModal({
                     type="button"
                     onClick={() => onSaveOutfit(post)}
                     disabled={outfitSaveSubmitting}
-                    aria-pressed={isOutfitInBook?.(post.outfit) ?? false}
+                    aria-pressed={post.savedByMe}
                     aria-label="코디북에 저장"
-                    title={
-                      isOutfitInBook?.(post.outfit)
-                        ? '코디북에 저장됨'
-                        : '코디북에 저장'
-                    }
+                    title={post.savedByMe ? '코디북에 저장됨' : '코디북에 저장'}
                     className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-black transition-colors cursor-pointer disabled:opacity-40 ${
-                      isOutfitInBook?.(post.outfit)
+                      post.savedByMe
                         ? 'border-[#1E3A8A]/20 bg-[#BBF7D0]/30 text-[#1E3A8A]'
                         : 'border-slate-200 bg-white text-slate-600'
                     }`}

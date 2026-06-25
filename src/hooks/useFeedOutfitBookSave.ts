@@ -1,46 +1,20 @@
-import { useCallback, useEffect, useState } from 'react'
-import { createOutfit, fetchMyOutfitBook } from '@/api/outfits'
+import { useCallback, useState } from 'react'
+import { toggleFeedOutfitSave } from '@/api/feed'
 import { useToast } from '@/components/Toast'
-import type { FeedOutfit, FeedPost } from '@/types/feed'
+import type { FeedPost } from '@/types/feed'
 import { extractApiErrorMessage } from '@/utils/apiError'
-import {
-  buildOutfitSavePayloadFromFeedOutfit,
-  collectSavedOutfitKeys,
-  feedOutfitItemKey,
-} from '@/utils/feedOutfitSave'
 
 interface UseFeedOutfitBookSaveOptions {
   onOutfitBookChanged?: () => void
+  onPostUpdated?: (post: FeedPost) => void
 }
 
-export function useFeedOutfitBookSave({ onOutfitBookChanged }: UseFeedOutfitBookSaveOptions = {}) {
+export function useFeedOutfitBookSave({
+  onOutfitBookChanged,
+  onPostUpdated,
+}: UseFeedOutfitBookSaveOptions = {}) {
   const { showToast } = useToast()
-  const [bookId, setBookId] = useState<number | null>(null)
-  const [savedKeys, setSavedKeys] = useState<Set<string>>(new Set())
   const [submittingPostId, setSubmittingPostId] = useState<number | null>(null)
-
-  const refreshSavedState = useCallback(async () => {
-    try {
-      const book = await fetchMyOutfitBook()
-      setBookId(book.outfitBookId)
-      setSavedKeys(collectSavedOutfitKeys(book.outfits ?? []))
-    } catch {
-      setBookId(null)
-      setSavedKeys(new Set())
-    }
-  }, [])
-
-  useEffect(() => {
-    void refreshSavedState()
-  }, [refreshSavedState])
-
-  const isOutfitInBook = useCallback(
-    (outfit: FeedOutfit | null | undefined) => {
-      if (!outfit || outfit.items.length === 0) return false
-      return savedKeys.has(feedOutfitItemKey(outfit))
-    },
-    [savedKeys],
-  )
 
   const saveOutfitFromPost = useCallback(
     async (post: FeedPost) => {
@@ -51,46 +25,31 @@ export function useFeedOutfitBookSave({ onOutfitBookChanged }: UseFeedOutfitBook
         return
       }
 
-      const key = feedOutfitItemKey(post.outfit)
-      if (savedKeys.has(key)) {
-        showToast('info', '이미 코디북에 저장된 코디예요.')
-        return
-      }
-
-      let targetBookId = bookId
-      if (targetBookId == null) {
-        try {
-          const book = await fetchMyOutfitBook()
-          targetBookId = book.outfitBookId
-          setBookId(targetBookId)
-        } catch {
-          showToast('error', '코디북 정보를 불러오지 못했습니다.')
-          return
-        }
-      }
+      const prevPost = post
+      const nextSaved = !post.savedByMe
+      onPostUpdated?.({ ...post, savedByMe: nextSaved })
 
       setSubmittingPostId(post.feedPostId)
       try {
-        await createOutfit(
-          targetBookId,
-          buildOutfitSavePayloadFromFeedOutfit(post.outfit, post.caption),
-        )
-        setSavedKeys((prev) => new Set(prev).add(key))
+        const result = await toggleFeedOutfitSave(post.feedPostId)
+        onPostUpdated?.({ ...prevPost, savedByMe: result.active })
         onOutfitBookChanged?.()
-        showToast('success', '코디북에 저장했어요.')
+        showToast(
+          'success',
+          result.active ? '코디북에 저장했어요.' : '코디북 저장을 취소했어요.',
+        )
       } catch (err) {
+        onPostUpdated?.(prevPost)
         showToast('error', extractApiErrorMessage(err, '코디북 저장에 실패했습니다.'))
       } finally {
         setSubmittingPostId(null)
       }
     },
-    [bookId, onOutfitBookChanged, savedKeys, showToast, submittingPostId],
+    [onOutfitBookChanged, onPostUpdated, showToast, submittingPostId],
   )
 
   return {
-    isOutfitInBook,
     saveOutfitFromPost,
     outfitSaveSubmittingPostId: submittingPostId,
-    refreshSavedState,
   }
 }

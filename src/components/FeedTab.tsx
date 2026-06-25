@@ -34,11 +34,6 @@ export default function FeedTab({
   onOutfitBookChanged,
 }: FeedTabProps) {
   const { showToast } = useToast()
-  const {
-    isOutfitInBook,
-    saveOutfitFromPost,
-    outfitSaveSubmittingPostId,
-  } = useFeedOutfitBookSave({ onOutfitBookChanged })
 
   const handleShare = async (postId: number) => {
     try {
@@ -136,6 +131,14 @@ export default function FeedTab({
     )
   }, [])
 
+  const {
+    saveOutfitFromPost,
+    outfitSaveSubmittingPostId,
+  } = useFeedOutfitBookSave({
+    onOutfitBookChanged,
+    onPostUpdated: updatePostInList,
+  })
+
   const handleToggleLike = async (post: FeedPost) => {
     if (submittingPostId != null) return
     // 낙관적 업데이트: API 응답 전 즉시 반영
@@ -216,7 +219,7 @@ export default function FeedTab({
               likeSubmitting={
                 submittingPostId === post.feedPostId && submittingAction === 'like'
               }
-              outfitSaved={isOutfitInBook(post.outfit)}
+              outfitSaved={post.savedByMe}
               outfitSaveSubmitting={outfitSaveSubmittingPostId === post.feedPostId}
               {...(index === 0 && {
                 containerRef: firstPostRef,
@@ -261,7 +264,6 @@ export default function FeedTab({
         onPostDeleted={handleDeleted}
         onViewProfile={onViewProfile}
         listPost={detailListPost}
-        isOutfitInBook={isOutfitInBook}
         onSaveOutfit={(post) => void saveOutfitFromPost(post)}
         outfitSaveSubmitting={
           detailPostId != null && outfitSaveSubmittingPostId === detailPostId
