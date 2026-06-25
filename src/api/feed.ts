@@ -96,6 +96,13 @@ export async function toggleFeedLike(postId: number): Promise<FeedInteraction> {
   )
 }
 
+/** POST /api/v1/feed/posts/{postId}/saves — FEED-005 */
+export async function toggleFeedSave(postId: number): Promise<FeedInteraction> {
+  return unwrap(
+    api.post<BeApiResponse<FeedInteraction>>(`${FEED_BASE}/posts/${postId}/saves`),
+  )
+}
+
 /** GET /api/v1/feed/posts/{postId}/comments — FEED-005 */
 export async function fetchFeedComments(postId: number): Promise<FeedComment[]> {
   return unwrap(

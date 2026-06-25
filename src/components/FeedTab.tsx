@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { fetchFeedPosts, toggleFeedLike } from '@/api/feed'
+import { fetchFeedPosts, toggleFeedLike, toggleFeedSave } from '@/api/feed'
 import { useToast } from '@/components/Toast'
 import Spinner from '@/components/common/Spinner'
 import FeedEmptyState from '@/components/feed/FeedEmptyState'
@@ -20,6 +20,7 @@ interface FeedTabProps {
   guideTourCompleted: boolean
   onGuideTourComplete: () => void
   onViewProfile?: (userId: number) => void
+  onOutfitBookChanged?: () => void
 }
 
 export default function FeedTab({
@@ -29,6 +30,7 @@ export default function FeedTab({
   guideTourCompleted,
   onGuideTourComplete,
   onViewProfile,
+  onOutfitBookChanged,
 }: FeedTabProps) {
   const { showToast } = useToast()
 
@@ -49,7 +51,7 @@ export default function FeedTab({
   const [writeOpen, setWriteOpen] = useState(false)
   const [detailPostId, setDetailPostId] = useState<number | null>(null)
   const [submittingPostId, setSubmittingPostId] = useState<number | null>(null)
-  const [submittingAction, setSubmittingAction] = useState<'like' | null>(null)
+  const [submittingAction, setSubmittingAction] = useState<'like' | 'save' | null>(null)
   // posts가 로드된 후에 투어를 시작 — 로드 전엔 firstPostRef가 null이라 투어가 안 보임
   const [tourOpen, setTourOpen] = useState(false)
   const tourStartedRef = useRef(false)
@@ -155,6 +157,37 @@ export default function FeedTab({
     }
   }
 
+  const handleToggleSave = async (post: FeedPost) => {
+    if (submittingPostId != null) return
+    if (!post.outfit) {
+      showToast('error', '연결된 코디가 없어 저장할 수 없습니다.')
+      return
+    }
+
+    const nextSaved = !post.savedByMe
+    updatePostInList({ ...post, savedByMe: nextSaved })
+
+    setSubmittingPostId(post.feedPostId)
+    setSubmittingAction('save')
+    try {
+      const result = await toggleFeedSave(post.feedPostId)
+      updatePostInList({ ...post, savedByMe: result.active })
+      onOutfitBookChanged?.()
+      showToast(
+        'success',
+        result.active ? '코디북에 저장했어요.' : '코디북 저장을 취소했어요.',
+      )
+    } catch (toggleError) {
+      updatePostInList(post)
+      const message = extractApiErrorMessage(toggleError, '저장 처리에 실패했습니다.')
+      setError(message)
+      showToast('error', message)
+    } finally {
+      setSubmittingPostId(null)
+      setSubmittingAction(null)
+    }
+  }
+
   const handleCreated = (created: FeedPost) => {
     setPosts((prev) => [created, ...prev])
     setError(null)
@@ -198,6 +231,7 @@ export default function FeedTab({
               userId={userId}
               onOpen={() => setDetailPostId(post.feedPostId)}
               onToggleLike={() => void handleToggleLike(post)}
+              onToggleSave={() => void handleToggleSave(post)}
               onShare={() => void handleShare(post.feedPostId)}
               onCommentCountChange={(commentCount) =>
                 updatePostInList({ ...post, commentCount })
@@ -206,6 +240,9 @@ export default function FeedTab({
               onViewProfile={onViewProfile}
               likeSubmitting={
                 submittingPostId === post.feedPostId && submittingAction === 'like'
+              }
+              saveSubmitting={
+                submittingPostId === post.feedPostId && submittingAction === 'save'
               }
               {...(index === 0 && {
                 containerRef: firstPostRef,
@@ -250,6 +287,7 @@ export default function FeedTab({
         onPostDeleted={handleDeleted}
         onViewProfile={onViewProfile}
         listPost={detailListPost}
+        onOutfitBookChanged={onOutfitBookChanged}
       />
 
       {showFeedUploadButton ? (

@@ -6,6 +6,7 @@ import {
   fetchFeedComments,
   fetchFeedPost,
   toggleFeedLike,
+  toggleFeedSave,
   toggleFollow,
   updateFeedComment,
   updateFeedPost,
@@ -14,7 +15,7 @@ import AuthenticatedImage from '@/components/common/AuthenticatedImage'
 import FeedClothesImage from '@/components/feed/FeedClothesImage'
 import { Modal, ModalBody, ModalFooter, ModalHeader } from '@/components/common/Modal'
 import Spinner from '@/components/common/Spinner'
-import { Heart, MessageSquare, User, X } from '@/components/icons'
+import { Heart, LayoutGrid, MessageSquare, User, X } from '@/components/icons'
 import { useToast } from '@/components/Toast'
 import type { ClothesResponse } from '@/types/be'
 import { addExistingClothesToWishlist, createWishlistClothes, deleteClothes } from '@/api/wardrobe'
@@ -475,8 +476,9 @@ interface FeedPostDetailModalProps {
   onPostUpdated: (post: FeedPost) => void
   onPostDeleted: (postId: number) => void
   onViewProfile?: (userId: number) => void
-  /** 피드 목록과 상호작용 상태(좋아요·댓글 등) 동기화 */
+  /** 피드 목록과 상호작용 상태(좋아요·저장·댓글 등) 동기화 */
   listPost?: FeedPost | null
+  onOutfitBookChanged?: () => void
 }
 
 export default function FeedPostDetailModal({
@@ -490,6 +492,7 @@ export default function FeedPostDetailModal({
   onPostDeleted,
   onViewProfile,
   listPost = null,
+  onOutfitBookChanged,
 }: FeedPostDetailModalProps) {
   const { showToast, showConfirm } = useToast()
 
@@ -576,6 +579,7 @@ export default function FeedPostDetailModal({
       if (
         prev.likedByMe === listPost.likedByMe
         && prev.likeCount === listPost.likeCount
+        && prev.savedByMe === listPost.savedByMe
         && prev.commentCount === listPost.commentCount
       ) {
         return prev
@@ -584,6 +588,7 @@ export default function FeedPostDetailModal({
         ...prev,
         likedByMe: listPost.likedByMe,
         likeCount: listPost.likeCount,
+        savedByMe: listPost.savedByMe,
         commentCount: listPost.commentCount,
       }
     })
@@ -620,6 +625,36 @@ export default function FeedPostDetailModal({
     } catch (toggleError) {
       syncPost(prevPost) // 실패 시 원상 복구
       const message = extractApiErrorMessage(toggleError, '좋아요 처리에 실패했습니다.')
+      setError(message)
+      showToast('error', message)
+    } finally {
+      setInteractionSubmitting(false)
+    }
+  }
+
+  const handleToggleSave = async () => {
+    if (!post || interactionSubmitting) return
+    if (!post.outfit) {
+      showToast('error', '연결된 코디가 없어 저장할 수 없습니다.')
+      return
+    }
+
+    const prevPost = post
+    const nextSaved = !post.savedByMe
+    syncPost({ ...post, savedByMe: nextSaved })
+
+    setInteractionSubmitting(true)
+    try {
+      const result = await toggleFeedSave(post.feedPostId)
+      syncPost({ ...prevPost, savedByMe: result.active })
+      onOutfitBookChanged?.()
+      showToast(
+        'success',
+        result.active ? '코디북에 저장했어요.' : '코디북 저장을 취소했어요.',
+      )
+    } catch (toggleError) {
+      syncPost(prevPost)
+      const message = extractApiErrorMessage(toggleError, '저장 처리에 실패했습니다.')
       setError(message)
       showToast('error', message)
     } finally {
@@ -947,6 +982,23 @@ export default function FeedPostDetailModal({
                   <MessageSquare className="h-4 w-4" />
                   {post.commentCount}
                 </span>
+                {!post.mine ? (
+                  <button
+                    type="button"
+                    onClick={() => void handleToggleSave()}
+                    disabled={interactionSubmitting || !post.outfit}
+                    aria-pressed={post.savedByMe}
+                    aria-label="코디북에 저장"
+                    title={post.outfit ? '코디북에 저장' : '연결된 코디가 없습니다'}
+                    className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-black transition-colors cursor-pointer disabled:opacity-40 ${
+                      post.savedByMe
+                        ? 'border-[#1E3A8A]/20 bg-[#BBF7D0]/30 text-[#1E3A8A]'
+                        : 'border-slate-200 bg-white text-slate-600'
+                    }`}
+                  >
+                    <LayoutGrid className="h-4 w-4" />
+                  </button>
+                ) : null}
               </div>
 
               <div className="space-y-3 border-t border-slate-100 pt-4">

@@ -4,6 +4,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Heart,
+  LayoutGrid,
   MessageSquare,
   Send,
 } from '@/components/icons'
@@ -34,11 +35,13 @@ interface FeedPostCardProps {
   userId: number
   onOpen: () => void
   onToggleLike: () => void
+  onToggleSave: () => void
   onShare: () => void
   onCommentCountChange?: (commentCount: number) => void
   onCommentComposerActiveChange?: (active: boolean) => void
   onViewProfile?: (userId: number) => void
   likeSubmitting?: boolean
+  saveSubmitting?: boolean
   containerRef?: RefObject<HTMLElement>
   titleRef?: RefObject<HTMLDivElement>
   actionRef?: RefObject<HTMLDivElement>
@@ -49,11 +52,13 @@ export default function FeedPostCard({
   userId,
   onOpen,
   onToggleLike,
+  onToggleSave,
   onShare,
   onCommentCountChange,
   onCommentComposerActiveChange,
   onViewProfile,
   likeSubmitting = false,
+  saveSubmitting = false,
   containerRef,
   titleRef,
   actionRef,
@@ -357,6 +362,19 @@ export default function FeedPostCard({
             <Send className="h-6 w-6" />
           </button>
         </div>
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onToggleSave() }}
+          disabled={saveSubmitting}
+          aria-pressed={post.savedByMe}
+          aria-label="코디북에 저장"
+          title={post.outfit ? '코디북에 저장' : '연결된 코디가 없습니다'}
+          className={`cursor-pointer disabled:opacity-40 transition-colors active:scale-90 ${
+            post.savedByMe ? 'text-[#1E3A8A]' : 'text-slate-300'
+          }`}
+        >
+          <LayoutGrid className="h-6 w-6" />
+        </button>
       </div>
 
       {/* 본문 — 닉네임만 프로필, 나머지는 상세 */}
