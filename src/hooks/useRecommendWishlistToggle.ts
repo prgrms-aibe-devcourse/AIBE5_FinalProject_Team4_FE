@@ -26,12 +26,14 @@ interface UseRecommendWishlistToggleOptions {
   userId: number | null
   existingGarments: Garment[]
   onWishlistChanged?: () => void
+  onFeedbackChanged?: () => void
 }
 
 export function useRecommendWishlistToggle({
   userId,
   existingGarments,
   onWishlistChanged,
+  onFeedbackChanged,
 }: UseRecommendWishlistToggleOptions) {
   const { showToast } = useToast() || { showToast: () => {} }
   const [submittingClothesId, setSubmittingClothesId] = useState<number | null>(null)
@@ -139,7 +141,7 @@ export function useRecommendWishlistToggle({
           triggerToast('해당 상품을 추천에서 제외했습니다.')
         }
 
-        onWishlistChanged?.()
+        onFeedbackChanged?.()
       } catch (error) {
         triggerToast(
           extractApiErrorMessage(error, '피드백 처리에 실패했습니다.'),
@@ -149,7 +151,7 @@ export function useRecommendWishlistToggle({
         setFeedbackSubmittingId(null)
       }
     },
-    [userId, feedbackSubmittingId, triggerToast, onWishlistChanged],
+    [userId, feedbackSubmittingId, triggerToast, onFeedbackChanged],
   )
 
   const addPurchasedToCloset = useCallback(
