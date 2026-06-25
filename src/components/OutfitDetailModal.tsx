@@ -20,6 +20,8 @@ export interface OutfitModalItem {
   imageUrl?: string
   userImageUrl?: string
   category?: string
+  primaryColor?: string
+  styles?: any[]
 }
 
 interface OutfitDetailModalProps {

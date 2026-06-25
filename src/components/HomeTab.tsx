@@ -5,8 +5,9 @@ import AuthenticatedImage from "@/components/common/AuthenticatedImage";
 import GarmentPickerGridCard from "@/components/common/GarmentPickerGridCard";
 import {
   fetchClothesRecommendations,
-  fetchOotdRecommendations,
   fetchWardrobeRecommendations,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  fetchOotdRecommendations,
   DEFAULT_RECOMMENDATIONS_PER_CATEGORY,
 } from "@/api/recommendations";
 import { fetchWardrobeMeta } from '@/api/wardrobe'
@@ -236,6 +237,7 @@ type RecommendItem = {
   category: "Top" | "Bottom" | "Outer" | "Shoes";
   brand?: string;
   style: string;
+  styles?: string[];
   itemType?: string;
   color: string;
   colorHex?: string;
@@ -551,6 +553,9 @@ export default function HomeTab({
               return `오늘 ${Math.round(temp)}°C — 패딩·방한 필수`;
             }
 
+            // TODO: [발표용 임시 mock] OOTD API 호출을 고정 mock 데이터로 대체.
+            // BE OOTD 데이터 품질 이슈로 발표 후 fetchOotdRecommendations(wardrobeId, currentTemp)로 원복 예정.
+            // 원복 시 아래 res를 다시 API 호출로 변경할 것.
             const res = {
               combinations: [
                 {
@@ -646,7 +651,7 @@ export default function HomeTab({
               ],
               weatherLabel: getWeatherLabel(currentTemp ?? 20)
             };
-            const outfits = res?.combinations || res?.outfits || (Array.isArray(res) ? res : []);
+            const outfits = res?.combinations || (Array.isArray(res) ? res : []);
             const weatherLabel = res?.weatherLabel || "";
 
             if (cancelled) return;
