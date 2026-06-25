@@ -216,6 +216,7 @@ API를 호출하는 화면은 아래 상태를 구분합니다.
 | 이미지 | GET | `/api/v1/images/clothes/{userId}/{filename}` | 옷 이미지 표시 |
 | 이미지 | GET | `/api/v1/images/purchase-captures/{userId}/{filename}` | 구매내역 캡처 이미지 표시 |
 | 이미지 | GET | `/api/v1/images/feed/{userId}/{filename}` | 룩피드 게시물 이미지 표시 |
+| 이미지 프록시 | GET | `/api/v1/images/proxy?url={encodedUrl}` | 외부 이미지(네이버 pstatic 등) 우회 표시 |
 | 룩피드 목록 | GET | `/api/v1/feed/posts?page={p}&size={s}` | 피드 목록 페이지네이션 표시 (`FEED-002`). `FeedPage` 응답 |
 | 룩피드 사용자 게시물 | GET | `/api/v1/feed/users/{userId}/posts?page={p}&size={s}` | 룩피드 프로필 grid — 해당 사용자 게시물. `FeedPage` 응답. FE `fetchUserFeedPosts` |
 | 룩피드 사용자 프로필 | GET | `/api/v1/feed/users/{userId}/profile` | 룩피드 프로필 헤더(닉네임·소개·통계·`mine`·`followedByMe`). `FeedUserProfile` 응답. FE `loadFeedUserProfileSafe` |
@@ -231,6 +232,19 @@ API를 호출하는 화면은 아래 상태를 구분합니다.
 | 댓글 수정 | PUT | `/api/v1/feed/posts/{postId}/comments/{commentId}` | 내 댓글 수정 |
 | 댓글 삭제 | DELETE | `/api/v1/feed/posts/{postId}/comments/{commentId}` | 내 댓글 삭제 |
 | 팔로우 토글 | POST | `/api/v1/feed/users/{followeeId}/follows` | 팔로우/언팔로우 토글 (`FEED-007`). `FeedInteraction` 응답. 현재 팔로우 상태는 `FeedPost.author.followedByMe` 또는 `FeedUserProfile.followedByMe`로 초기화 |
+
+## 이미지 프록시 API 사용 기준
+
+- **사용 대상**: `pstatic.net` 등 허용된 외부 도메인의 이미지 URL. Canvas API 사용 시 CORS 제한(`Tainted Canvas`)을 피하기 위해 반드시 프록시를 경유해야 합니다.
+- **분기 처리**:
+  - **내부 BE 이미지**: `/api/v1/images/clothes/**` 등 내부 경로는 `fetchAuthenticatedImageObjectUrl`을 통해 인증된 Object URL을 생성하여 사용합니다.
+  - **외부 이미지**: URL에 `pstatic.net` 호스트가 포함된 경우 `/api/v1/images/proxy?url=...` 경로를 사용하여 BE 프록시를 경유합니다.
+- **오류 처리 및 상태 코드**:
+  - `403 Forbidden`: 프록시 허용 목록(allowlist)에 없는 외부 도메인 접근 시 발생합니다.
+  - `404 Not Found`: 원본 이미지 URL이 유효하지 않거나 이미지가 존재하지 않을 때 발생합니다.
+  - `413 Payload Too Large`: 원본 이미지 크기가 BE 제한을 초과할 때 발생합니다.
+  - `415 Unsupported Media Type`: 이미지 형식이 아닌 파일(HTML, JSON 등)을 요청했을 때 발생합니다.
+  - FE는 오류 발생 시 기본 placeholder 이미지를 표시하거나 대체 텍스트를 제공해야 합니다.
 
 ## 룩피드 API 동기화 기준
 

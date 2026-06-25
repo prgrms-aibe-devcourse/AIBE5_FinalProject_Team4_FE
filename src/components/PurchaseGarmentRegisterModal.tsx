@@ -50,6 +50,9 @@ export default function PurchaseGarmentRegisterModal({
 }: PurchaseGarmentRegisterModalProps) {
   const { showConfirm } = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const modalBodyRef = useRef<HTMLDivElement>(null)
+  const formFooterRef = useRef<HTMLDivElement>(null)
+  const [showFloatingSubmit, setShowFloatingSubmit] = useState(false)
   const [subCategoryOpen, setSubCategoryOpen] = useState(false)
   const [mainColorOpen, setMainColorOpen] = useState(false)
   const [secondaryColorOpen, setSecondaryColorOpen] = useState(false)
@@ -96,6 +99,27 @@ export default function PurchaseGarmentRegisterModal({
     setMainStyleOpen(false)
     setSecondaryStyleOpen(false)
   }, [step, draft.category, activeItemIndex])
+
+  useEffect(() => {
+    if (step !== 'form') {
+      setShowFloatingSubmit(false)
+      return
+    }
+
+    const footer = formFooterRef.current
+    const scrollRoot = modalBodyRef.current
+    if (!footer || !scrollRoot) return
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setShowFloatingSubmit(!entry.isIntersecting)
+      },
+      { root: scrollRoot, threshold: 0, rootMargin: '0px 0px 8px 0px' },
+    )
+
+    observer.observe(footer)
+    return () => observer.disconnect()
+  }, [step, activeItemIndex, hasMultipleItems, remainingPendingCount])
 
   if (!open) return null
 
@@ -169,6 +193,13 @@ export default function PurchaseGarmentRegisterModal({
     }
   }
 
+  const submitLabel =
+    step === 'saving'
+      ? '저장 중…'
+      : hasMultipleItems && remainingPendingCount > 1
+        ? '저장하고 다음 상품 →'
+        : '옷장에 저장하기'
+
   return (
     <Modal
       open={open}
@@ -183,7 +214,10 @@ export default function PurchaseGarmentRegisterModal({
         onClose={tryClose}
       />
 
-      <ModalBody className="px-7 py-4 space-y-4">
+      <ModalBody
+        ref={modalBodyRef}
+        className={`px-7 py-4 space-y-4 ${showFloatingSubmit ? 'pb-28' : ''}`}
+      >
           {globalError &&
             !isDuplicateRegisterError(globalError) &&
             !(aiFailed && (step === 'upload' || step === 'form' || step === 'saving')) &&
@@ -459,7 +493,12 @@ export default function PurchaseGarmentRegisterModal({
                 </div>
               )}
 
-              <form className="space-y-3" onSubmit={(e) => void handleSubmit(e)} noValidate>
+              <form
+                id="purchase-garment-register-form"
+                className="space-y-3"
+                onSubmit={(e) => void handleSubmit(e)}
+                noValidate
+              >
                 <div className="space-y-0.5">
                   <label className="text-xs font-bold text-slate-500">
                     의상명 <span className="text-red-500">*</span>
@@ -980,53 +1019,58 @@ export default function PurchaseGarmentRegisterModal({
                   )}
                 </div>
 
-                {duplicateError && (
-                  <p className="text-sm font-bold text-red-600 text-center py-1">
-                    {duplicateError}
-                  </p>
-                )}
+                <div ref={formFooterRef} className="space-y-3">
+                  {duplicateError && (
+                    <p className="text-sm font-bold text-red-600 text-center py-1">
+                      {duplicateError}
+                    </p>
+                  )}
 
-                <button
-                  type="submit"
-                  disabled={step === 'saving'}
-                  className="w-full h-11 bg-[#1E3A8A] text-[#BBF7D0] disabled:opacity-60 rounded-xl font-bold text-sm transition"
-                >
-                  {step === 'saving' ? '저장 중…' : '옷장에 저장하기'}
-                </button>
+                  {hasMultipleItems ? (
+                    <button
+                      type="button"
+                      onClick={backToItemSelect}
+                      className="w-full h-10 text-slate-500 hover:text-[#1E3A8A] hover:bg-slate-50 rounded-xl text-sm font-bold transition"
+                    >
+                      상품 목록으로
+                    </button>
+                  ) : (
+                    onBackToMethodSelect && (
+                      <button
+                        type="button"
+                        onClick={tryBackToMethodSelect}
+                        className="w-full h-10 text-slate-500 hover:text-[#1E3A8A] hover:bg-slate-50 rounded-xl text-sm font-bold transition"
+                      >
+                        뒤로가기 · 등록 방식 다시 선택
+                      </button>
+                    )
+                  )}
 
-                {hasMultipleItems && remainingPendingCount > 1 && (
                   <button
                     type="submit"
                     disabled={step === 'saving'}
-                    className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 h-12 px-8 bg-[#111827] text-[#BBF7D0] disabled:opacity-60 rounded-full font-black text-sm shadow-2xl shadow-black/30 transition hover:-translate-y-0.5 hover:shadow-black/40 active:scale-95 whitespace-nowrap"
+                    className="w-full h-11 bg-[#1E3A8A] text-[#BBF7D0] disabled:opacity-60 rounded-xl font-bold text-sm transition"
                   >
-                    저장하고 다음 상품 →
+                    {submitLabel}
                   </button>
-                )}
-
-                {hasMultipleItems ? (
-                  <button
-                    type="button"
-                    onClick={backToItemSelect}
-                    className="w-full h-10 text-slate-500 hover:text-[#1E3A8A] hover:bg-slate-50 rounded-xl text-sm font-bold transition"
-                  >
-                    상품 목록으로
-                  </button>
-                ) : (
-                  onBackToMethodSelect && (
-                    <button
-                      type="button"
-                      onClick={tryBackToMethodSelect}
-                      className="w-full h-10 text-slate-500 hover:text-[#1E3A8A] hover:bg-slate-50 rounded-xl text-sm font-bold transition"
-                    >
-                      뒤로가기 · 등록 방식 다시 선택
-                    </button>
-                  )
-                )}
+                </div>
               </form>
             </>
           )}
       </ModalBody>
+
+      {step === 'form' && showFloatingSubmit && (
+        <div className="absolute inset-x-0 bottom-0 z-10 px-7 pb-4 pt-10 bg-gradient-to-t from-white via-white/95 to-transparent pointer-events-none">
+          <button
+            type="submit"
+            form="purchase-garment-register-form"
+            disabled={isSubmitting}
+            className="pointer-events-auto w-full h-11 bg-[#1E3A8A] text-[#BBF7D0] disabled:opacity-60 rounded-xl font-bold text-sm shadow-lg shadow-[#1E3A8A]/20 transition"
+          >
+            {submitLabel}
+          </button>
+        </div>
+      )}
     </Modal>
   )
 }
