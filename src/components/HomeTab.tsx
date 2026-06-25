@@ -33,6 +33,7 @@ import OutfitDetailModal from '@/components/OutfitDetailModal';
 import {fetchMyOutfitBook} from "@/api/outfits.ts";
 import { getGarmentColorLabel, getGarmentColor } from '@/data/garmentColors';
 import GuideTour from "@/components/common/GuideTour"
+import { INITIAL_GARMENTS } from "@/data/initialGarments";
 
 function OotdCanvas({ top, bottom, outer, shoes }: {
   top?: string; bottom?: string; outer?: string; shoes?: string;
@@ -96,7 +97,7 @@ function OotdCanvas({ top, bottom, outer, shoes }: {
       img: HTMLImageElement,
       slotX: number, slotY: number,
       slotW: number, slotH: number,
-      scaleFactor = 0.85
+      scaleFactor = 0.92
     ) => {
       const crop = cropTransparent(img);
       const scale = Math.min(slotW / crop.w, slotH / crop.h) * scaleFactor;
@@ -110,39 +111,46 @@ function OotdCanvas({ top, bottom, outer, shoes }: {
     (async () => {
       try {
         const hasShoes = !!shoes;
-        const topH = hasShoes ? H * 0.35 : H * 0.42;
-        const bottomH = hasShoes ? H * 0.5 : H * 0.7;
-        const shoesH = hasShoes ? H * 0.14 : 0.14;
+        // 비율 조정: 상의 35%, 하의 50%, 신발 15% (신발 비중 축소)
+        const topH = hasShoes ? H * 0.35 : H * 0.45;
+        const bottomH = hasShoes ? H * 0.50 : H * 0.55;
+        const shoesH = hasShoes ? H * 0.15 : 0;
 
         if (outer) {
           const outerImg = await loadImage(outer);
-          drawCropped(outerImg, 0, 0, W, topH, 0.9);
+          // 아우터는 상의 영역보다 조금 더 길게(하의와 겹치게) 그림
+          drawCropped(outerImg, 0, 0, W, topH + bottomH * 0.15, 0.95);
 
           if (top) {
             const topImg = await loadImage(top);
             const crop = cropTransparent(topImg);
-            const overlayW = W * 0.32;
-            const overlayH = topH * 0.5;
-            const scale = Math.min(overlayW / crop.w, overlayH / crop.h) * 0.9;
+            // 아우터 안의 상의는 더 작게 중앙에 배치
+            const overlayW = W * 0.25;
+            const overlayH = topH * 0.4;
+            const scale = Math.min(overlayW / crop.w, overlayH / crop.h) * 0.95;
             const dw = crop.w * scale;
             const dh = crop.h * scale;
             const dx = (W - dw) / 2;
-            const dy = topH - dh * 0.4;
+            const dy = topH * 0.35; // 위치 조정
             ctx.drawImage(topImg, crop.x, crop.y, crop.w, crop.h, dx, dy, dw, dh);
           }
         } else if (top) {
           const topImg = await loadImage(top);
-          drawCropped(topImg, 0, 0, W, topH, 0.88);
+          // 상의 위치를 약간 아래로 내려서 하의와 자연스럽게 연결
+          drawCropped(topImg, 0, topH * 0.05, W, topH, 0.95);
         }
 
         if (bottom) {
           const bottomImg = await loadImage(bottom);
-          drawCropped(bottomImg, 0, topH, W, bottomH, 0.88);
+          // 하의를 상의 쪽으로 살짝 올려서(Overlap) 간격 제거
+          const overlap = topH * 0.08;
+          drawCropped(bottomImg, 0, topH - overlap, W, bottomH + overlap, 0.95);
         }
 
         if (shoes) {
           const shoesImg = await loadImage(shoes);
-          drawCropped(shoesImg, 0, topH + bottomH, W, shoesH, 0.82);
+          // 신발 크기를 대폭 줄이고(scaleFactor 0.65), 하의와 가깝게 배치
+          drawCropped(shoesImg, 0, topH + bottomH - topH * 0.05, W, shoesH, 0.65);
         }
 
       } catch (e) {
@@ -273,6 +281,41 @@ export default function HomeTab({
   const [selectedItem, setSelectedItem] = useState<RecommendItem | null>(null);
   const [selectedCombo, setSelectedCombo] = useState<any | null>(null);
   const [tourOpen, setTourOpen] = useState(!guideTourCompleted);
+
+  const ootdSliderRef = useRef<HTMLDivElement>(null)
+  const isDragging = useRef(false)
+  const startX = useRef(0)
+  const scrollLeft = useRef(0)
+  const moved = useRef(false) // 드래그 여부 확인용
+
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    isDragging.current = true
+    moved.current = false // 시작 시 초기화
+    startX.current = e.pageX - (e.currentTarget.offsetLeft)
+    scrollLeft.current = e.currentTarget.scrollLeft
+    e.currentTarget.style.cursor = 'grabbing'
+  }
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isDragging.current) return
+    e.preventDefault()
+    const x = e.pageX - (e.currentTarget.offsetLeft)
+    const walk = (x - startX.current) * 2
+    
+    // 일정 거리 이상 움직이면 드래그로 간주
+    if (Math.abs(x - (startX.current + e.currentTarget.offsetLeft)) > 5) {
+      moved.current = true
+    }
+    
+    e.currentTarget.scrollLeft = scrollLeft.current - walk
+  }
+  const handleMouseUp = (e: React.MouseEvent<HTMLDivElement>) => {
+    isDragging.current = false
+    e.currentTarget.style.cursor = 'grab'
+  }
+  const handleMouseLeave = (e: React.MouseEvent<HTMLDivElement>) => {
+    isDragging.current = false
+    e.currentTarget.style.cursor = 'grab'
+  }
 
   const labelSectionRef = useRef<HTMLElement | null>(null);
   const recommendationListRef = useRef<HTMLElement>(null);
@@ -474,32 +517,75 @@ export default function HomeTab({
               combinations: [
                 {
                   outfitId: 999991,
-                  title: "세련된 시티룩",
-                  reason: "맑은 날씨에 어울리는 세련된 조합입니다.",
-                  top: { clothesId: 1001, name: "화이트 셔츠", category: "TOP", imageUrl: "https://images.unsplash.com/photo-1598033129183-c4f50c7176c8?q=80&w=400" },
-                  bottom: { clothesId: 1002, name: "슬랙스", category: "BOTTOM", imageUrl: "https://images.unsplash.com/photo-1624373666563-54428a1c360a?q=80&w=400" },
-                  outer: { clothesId: 1003, name: "네이비 블레이저", category: "OUTER", imageUrl: "https://images.unsplash.com/photo-1594932224828-b4b05a833534?q=80&w=400" },
-                  shoes: { clothesId: 1004, name: "더비 슈즈", category: "SHOES", imageUrl: "https://images.unsplash.com/photo-1614252235316-8c857d38b5f4?q=80&w=400" },
-                  totalScore: 9.5,
+                  title: "흰 티에 청바지",
+                  reason: "언제나 사랑받는 깔끔하고 시원한 정석 코디입니다.",
+                  top: { 
+                    clothesId: 2086, 
+                    name: INITIAL_GARMENTS.find(g => g.id === "g2086")?.name || "흰 티셔츠", 
+                    category: "TOP", 
+                    imageUrl: INITIAL_GARMENTS.find(g => g.id === "g2086")?.thumbnailUrl 
+                  },
+                  bottom: { 
+                    clothesId: 398, 
+                    name: INITIAL_GARMENTS.find(g => g.id === "g398")?.name || "청바지", 
+                    category: "BOTTOM", 
+                    imageUrl: INITIAL_GARMENTS.find(g => g.id === "g398")?.thumbnailUrl 
+                  },
+                  shoes: { 
+                    clothesId: 330, 
+                    name: INITIAL_GARMENTS.find(g => g.id === "g330")?.name || "슈즈", 
+                    category: "SHOES", 
+                    imageUrl: INITIAL_GARMENTS.find(g => g.id === "g330")?.thumbnailUrl 
+                  },
+                  totalScore: 9.8,
                 },
                 {
                   outfitId: 999992,
-                  title: "캐주얼 데일리",
-                  reason: "편안하면서도 스타일리시한 데일리 룩입니다.",
-                  top: { clothesId: 1005, name: "그래픽 티셔츠", category: "TOP", imageUrl: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?q=80&w=400" },
-                  bottom: { clothesId: 1006, name: "데님 팬츠", category: "BOTTOM", imageUrl: "https://images.unsplash.com/photo-1542272604-787c3835535d?q=80&w=400" },
-                  shoes: { clothesId: 1007, name: "화이트 스니커즈", category: "SHOES", imageUrl: "https://images.unsplash.com/photo-1549298916-b41d501d3772?q=80&w=400" },
-                  totalScore: 8.8,
+                  title: "스트릿 고프코어 룩",
+                  reason: "트렌디한 카고 팬츠와 유니크한 컬러 니트로 완성한 힙한 스트릿 감성의 코디입니다.",
+                  top: { 
+                    clothesId: 569, 
+                    name: INITIAL_GARMENTS.find(g => g.id === "g569")?.name || "컬러 니트", 
+                    category: "TOP", 
+                    imageUrl: INITIAL_GARMENTS.find(g => g.id === "g569")?.thumbnailUrl 
+                  },
+                  bottom: { 
+                    clothesId: 2436, 
+                    name: INITIAL_GARMENTS.find(g => g.id === "g2436")?.name || "카고 팬츠", 
+                    category: "BOTTOM", 
+                    imageUrl: INITIAL_GARMENTS.find(g => g.id === "g2436")?.thumbnailUrl 
+                  },
+                  shoes: { 
+                    clothesId: 330, 
+                    name: INITIAL_GARMENTS.find(g => g.id === "g330")?.name || "블랙 슈즈", 
+                    category: "SHOES", 
+                    imageUrl: INITIAL_GARMENTS.find(g => g.id === "g330")?.thumbnailUrl 
+                  },
+                  totalScore: 9.7,
                 },
                 {
                   outfitId: 999993,
-                  title: "스포티 스트릿",
-                  reason: "활동적인 활동에 적합한 힙한 스트릿 룩입니다.",
-                  top: { clothesId: 1008, name: "후드 티셔츠", category: "TOP", imageUrl: "https://images.unsplash.com/photo-1556821840-3a63f95609a7?q=80&w=400" },
-                  bottom: { clothesId: 1009, name: "조거 팬츠", category: "BOTTOM", imageUrl: "https://images.unsplash.com/photo-1552902865-b72c031ac5ea?q=80&w=400" },
-                  outer: { clothesId: 1010, name: "바시티 자켓", category: "OUTER", imageUrl: "https://images.unsplash.com/photo-1617114919297-3c8ddb01f599?q=80&w=400" },
-                  shoes: { clothesId: 1011, name: "하이탑 스니커즈", category: "SHOES", imageUrl: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?q=80&w=400" },
-                  totalScore: 9.2,
+                  title: "프렌치 시크 룩",
+                  reason: "블랙 가디건과 연청 와이드 데님을 매치한 우아하고 편안한 데일리룩입니다.",
+                  top: { 
+                    clothesId: 384, 
+                    name: INITIAL_GARMENTS.find(g => g.id === "g384")?.name || "가디건", 
+                    category: "TOP", 
+                    imageUrl: INITIAL_GARMENTS.find(g => g.id === "g384")?.thumbnailUrl 
+                  },
+                  bottom: { 
+                    clothesId: 412, 
+                    name: INITIAL_GARMENTS.find(g => g.id === "g412")?.name || "와이드 데님", 
+                    category: "BOTTOM", 
+                    imageUrl: INITIAL_GARMENTS.find(g => g.id === "g412")?.thumbnailUrl 
+                  },
+                  shoes: { 
+                    clothesId: 330, 
+                    name: INITIAL_GARMENTS.find(g => g.id === "g330")?.name || "메리제인 슈즈", 
+                    category: "SHOES", 
+                    imageUrl: INITIAL_GARMENTS.find(g => g.id === "g330")?.thumbnailUrl 
+                  },
+                  totalScore: 9.5,
                 }
               ],
               weatherLabel: "맑음"
@@ -734,20 +820,27 @@ export default function HomeTab({
       <div className="space-y-6 animate-fade-in font-sans">
         <section ref={ootdRef} className="bg-white border border-slate-100 rounded-[28px] shadow-sm text-left">
           <div className="p-4 md:p-5">
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex items-center gap-2 mb-1.5">
               <span className="text-xl">✨</span>
               <h2 className="text-xl md:text-2xl font-black text-slate-950">오늘의 OOTD 추천</h2>
             </div>
             {userId && ootdItems[0]?.reason && (
-              <p className="text-xs text-slate-400 font-bold mb-3 -mt-2">{ootdItems[0].reason}</p>
+              <p className="text-xs text-slate-400 font-bold mb-1 -mt-1">{ootdItems[0].reason}</p>
             )}
             {!userId && (
-              <p className="text-xs text-slate-400 font-bold mb-3 -mt-2">로그인하면 오늘 날씨에 맞는 코디를 추천해드려요</p>
+              <p className="text-xs text-slate-400 font-bold mb-1 -mt-1">로그인하면 오늘 날씨에 맞는 코디를 추천해드려요</p>
             )}
           </div>
 
           {ootdLoading && ootdItems.length === 0 ? (
-            <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-none pb-2 px-4 gap-3">
+            <div 
+              className="flex overflow-x-auto snap-x snap-mandatory snap-always scroll-smooth scrollbar-none pb-2 px-4 gap-3 select-none"
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseLeave}
+              style={{ cursor: 'grab' }}
+            >
               {Array.from({ length: 3 }).map((_, idx) => (
                 <div key={idx} className="flex-none w-[85vw] sm:w-[400px] snap-center">
                   <div className="h-96 sm:h-[28rem] lg:h-[32rem] rounded-[24px] bg-slate-100 animate-pulse" />
@@ -772,7 +865,12 @@ export default function HomeTab({
           ) : (
             <>
             <div
-              className="flex overflow-x-auto snap-x snap-mandatory scrollbar-none pb-2 px-4 gap-3"
+              className="flex overflow-x-auto snap-x snap-mandatory snap-always scroll-smooth scrollbar-none pb-2 px-4 gap-3 select-none"
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseLeave}
+              style={{ cursor: 'grab' }}
               onScroll={(e) => {
                 const el = e.currentTarget
                 const idx = Math.round(el.scrollLeft / el.offsetWidth)
@@ -785,7 +883,13 @@ export default function HomeTab({
                   className="flex-none w-[85vw] sm:w-[400px] snap-center"
                 >
                   <article
-                    onClick={() => {
+                    onClick={(e) => {
+                      // 드래그 중이었다면 클릭 이벤트 무시
+                      if (moved.current) {
+                        e.stopPropagation();
+                        return;
+                      }
+                      
                       if (!userId) {
                         onLoginRequired?.();
                         return;
@@ -794,7 +898,7 @@ export default function HomeTab({
                       setSelectedCombo(combo);
                       setSelectedItem(null);
                     }}
-                    className="rounded-[24px] border border-slate-100 bg-slate-50 overflow-hidden transition-all duration-200 hover:shadow-xl active:scale-[0.99] cursor-pointer"
+                    className="rounded-[24px] border border-slate-100 bg-slate-50 overflow-hidden transition-all duration-200 active:scale-[0.99] cursor-pointer"
                   >
                     <div className="h-96 sm:h-[28rem] lg:h-[32rem] bg-slate-100 relative overflow-hidden">
                       {!userId && (
@@ -1051,7 +1155,7 @@ export default function HomeTab({
                             setSelectedItem(item);
                             setSelectedCombo(null);
                           }}
-                          className={`group relative rounded-[24px] border overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:rotate-[0.5deg] hover:shadow-xl active:scale-[0.99] cursor-pointer ${item.isAnchor ? "border-[#1E3A8A]/30 bg-indigo-50/40 ring-1 ring-[#1E3A8A]/20" : "border-slate-100 bg-slate-50"}`}
+                          className={`group relative rounded-[24px] border overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:rotate-[0.5deg] active:scale-[0.99] cursor-pointer ${item.isAnchor ? "border-[#1E3A8A]/30 bg-indigo-50/40 ring-1 ring-[#1E3A8A]/20" : "border-slate-100 bg-slate-50"}`}
                       >
                         <div className="h-44 sm:h-52 lg:h-72 bg-slate-100 relative overflow-hidden">
                           <button
