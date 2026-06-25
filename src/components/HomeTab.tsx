@@ -413,7 +413,12 @@ export default function HomeTab({
     return items.filter(item => {
       // OOTD 조합인 경우 구성 요소들의 ID 조합으로 중복 체크 가능
       if (item.top || item.bottom || item.outer || item.shoes) {
-        const comboKey = [item.top?.clothesId, item.bottom?.clothesId, item.outer?.clothesId, item.shoes?.clothesId].filter(Boolean).sort().join(',');
+        const comboKey = [
+          'top:' + (item.top?.clothesId ?? ''),
+          'bottom:' + (item.bottom?.clothesId ?? ''),
+          'outer:' + (item.outer?.clothesId ?? ''),
+          'shoes:' + (item.shoes?.clothesId ?? ''),
+        ].join(',');
         if (seen.has(comboKey)) return false;
         seen.add(comboKey);
         return true;
@@ -539,7 +544,14 @@ export default function HomeTab({
               console.error('[DEBUG] weather fetch failed:', e);
             }
 
-            const res = userId ? await fetchOotdRecommendations(wardrobeId, currentTemp ?? 20) : {
+            const getWeatherLabel = (temp: number) => {
+              if (temp >= 28) return `오늘 ${Math.round(temp)}°C — 반팔·반바지 추천`;
+              if (temp >= 20) return `오늘 ${Math.round(temp)}°C — 얇은 셔츠·면바지 추천`;
+              if (temp >= 12) return `오늘 ${Math.round(temp)}°C — 가디건·자켓 추천`;
+              return `오늘 ${Math.round(temp)}°C — 패딩·방한 필수`;
+            }
+
+            const res = {
               combinations: [
                 {
                   outfitId: 999991,
@@ -549,19 +561,25 @@ export default function HomeTab({
                     clothesId: 2086, 
                     name: INITIAL_GARMENTS.find(g => g.id === "g2086")?.name || "흰 티셔츠", 
                     category: "TOP", 
-                    imageUrl: INITIAL_GARMENTS.find(g => g.id === "g2086")?.thumbnailUrl 
+                    imageUrl: INITIAL_GARMENTS.find(g => g.id === "g2086")?.thumbnailUrl,
+                    primaryColor: "WHITE",
+                    styles: ["캐주얼"]
                   },
                   bottom: { 
                     clothesId: 398, 
                     name: INITIAL_GARMENTS.find(g => g.id === "g398")?.name || "청바지", 
                     category: "BOTTOM", 
-                    imageUrl: INITIAL_GARMENTS.find(g => g.id === "g398")?.thumbnailUrl 
+                    imageUrl: INITIAL_GARMENTS.find(g => g.id === "g398")?.thumbnailUrl,
+                    primaryColor: "NAVY",
+                    styles: ["캐주얼"]
                   },
                   shoes: { 
                     clothesId: 330, 
                     name: INITIAL_GARMENTS.find(g => g.id === "g330")?.name || "슈즈", 
                     category: "SHOES", 
-                    imageUrl: INITIAL_GARMENTS.find(g => g.id === "g330")?.thumbnailUrl 
+                    imageUrl: INITIAL_GARMENTS.find(g => g.id === "g330")?.thumbnailUrl,
+                    primaryColor: "WHITE",
+                    styles: ["캐주얼", "미니멀"]
                   },
                   totalScore: 9.8,
                 },
@@ -573,19 +591,25 @@ export default function HomeTab({
                     clothesId: 569, 
                     name: INITIAL_GARMENTS.find(g => g.id === "g569")?.name || "컬러 니트", 
                     category: "TOP", 
-                    imageUrl: INITIAL_GARMENTS.find(g => g.id === "g569")?.thumbnailUrl 
+                    imageUrl: INITIAL_GARMENTS.find(g => g.id === "g569")?.thumbnailUrl,
+                    primaryColor: "GREEN",
+                    styles: ["고프코어", "스포티"]
                   },
                   bottom: { 
                     clothesId: 2436, 
                     name: INITIAL_GARMENTS.find(g => g.id === "g2436")?.name || "카고 팬츠", 
                     category: "BOTTOM", 
-                    imageUrl: INITIAL_GARMENTS.find(g => g.id === "g2436")?.thumbnailUrl 
+                    imageUrl: INITIAL_GARMENTS.find(g => g.id === "g2436")?.thumbnailUrl,
+                    primaryColor: "BLACK",
+                    styles: ["스트릿", "캐주얼"]
                   },
                   shoes: { 
                     clothesId: 330, 
                     name: INITIAL_GARMENTS.find(g => g.id === "g330")?.name || "블랙 슈즈", 
                     category: "SHOES", 
-                    imageUrl: INITIAL_GARMENTS.find(g => g.id === "g330")?.thumbnailUrl 
+                    imageUrl: INITIAL_GARMENTS.find(g => g.id === "g330")?.thumbnailUrl,
+                    primaryColor: "BLACK",
+                    styles: ["캐주얼", "미니멀"]
                   },
                   totalScore: 9.7,
                 },
@@ -597,24 +621,30 @@ export default function HomeTab({
                     clothesId: 384, 
                     name: INITIAL_GARMENTS.find(g => g.id === "g384")?.name || "가디건", 
                     category: "TOP", 
-                    imageUrl: INITIAL_GARMENTS.find(g => g.id === "g384")?.thumbnailUrl 
+                    imageUrl: INITIAL_GARMENTS.find(g => g.id === "g384")?.thumbnailUrl,
+                    primaryColor: "BLACK",
+                    styles: ["캐주얼", "시크"]
                   },
                   bottom: { 
                     clothesId: 412, 
                     name: INITIAL_GARMENTS.find(g => g.id === "g412")?.name || "와이드 데님", 
                     category: "BOTTOM", 
-                    imageUrl: INITIAL_GARMENTS.find(g => g.id === "g412")?.thumbnailUrl 
+                    imageUrl: INITIAL_GARMENTS.find(g => g.id === "g412")?.thumbnailUrl,
+                    primaryColor: "LIGHT_BLUE",
+                    styles: ["캐주얼"]
                   },
                   shoes: { 
                     clothesId: 330, 
                     name: INITIAL_GARMENTS.find(g => g.id === "g330")?.name || "메리제인 슈즈", 
                     category: "SHOES", 
-                    imageUrl: INITIAL_GARMENTS.find(g => g.id === "g330")?.thumbnailUrl 
+                    imageUrl: INITIAL_GARMENTS.find(g => g.id === "g330")?.thumbnailUrl,
+                    primaryColor: "BLACK",
+                    styles: ["캐주얼", "미니멀"]
                   },
                   totalScore: 9.5,
                 }
               ],
-              weatherLabel: "맑음"
+              weatherLabel: getWeatherLabel(currentTemp ?? 20)
             };
             const outfits = res?.combinations || res?.outfits || (Array.isArray(res) ? res : []);
             const weatherLabel = res?.weatherLabel || "";
@@ -639,7 +669,7 @@ export default function HomeTab({
                 shoes: item.shoes ?? null,
                 totalScore: item.totalScore ?? null,
                 weatherLabel: weatherLabel || item.weatherLabel,
-                outfitId: item.outfitId ?? null,
+                outfitId: (item.outfitId && item.outfitId < 999990) ? item.outfitId : null,
                 bookId: currentBookId || null,
               };
             });
@@ -648,22 +678,25 @@ export default function HomeTab({
               const id = generateOotdId(item, idx);
               const mainItem = item.top || item.outer || item.bottom || item;
               const title = [item.top?.name, item.bottom?.name].filter(Boolean).join(' + ') || (item.name ?? item.title ?? `추천 코디 ${idx + 1}`);
+              
+              const topColor = item.top?.primaryColor ?? item.primaryColor ?? '';
               return {
                 id,
                 title,
                 category: mainItem.category ? (mainItem.category === 'TOP' ? 'Top' : mainItem.category === 'BOTTOM' ? 'Bottom' : mainItem.category === 'OUTER' ? 'Outer' : 'Shoes') : 'Outer',
-                style: STYLE_LABELS[(item.styleCodes && item.styleCodes[0]) || item.style] ?? (item.style || '—'),
+                style: STYLE_LABELS[(item.styleCodes && item.styleCodes[0]) || item.style] ?? (item.top?.styles?.[0] || '—'),
+                color: getGarmentColorLabel(topColor),
+                colorHex: getGarmentColor(topColor)?.hex ?? '',
+                styles: item.top?.styles ?? [],
                 itemType: mainItem.itemType || '',
-                color: getGarmentColorLabel(item.primaryColor ?? ''),
-                colorHex: getGarmentColor(item.primaryColor ?? '')?.hex ?? '',
                 price: '',
                 matchRate: Math.round((item.totalScore || 0) * 10),
                 imageUrl: (mainItem.imageUrl ?? mainItem.userImageUrl ?? item.imageUrl) || fallbackImages.Top,
-                reason: weatherLabel || item.reason || '',
+                reason: getWeatherLabel(currentTemp ?? 20),
                 brand: mainItem.brandName ?? '',
                 isAnchor: false,
                 clothesId: mainItem.clothesId ?? null,
-                outfitId: item.outfitId ?? null,
+                outfitId: (item.outfitId && item.outfitId < 999990) ? item.outfitId : null,
                 bookId: currentBookId || null,
                 top: item.top,
                 bottom: item.bottom,
@@ -694,6 +727,7 @@ export default function HomeTab({
               title: item.title,
               category: item.category ? (item.category === 'TOP' ? 'Top' : item.category === 'BOTTOM' ? 'Bottom' : item.category === 'OUTER' ? 'Outer' : 'Shoes') : 'Top',
               style: STYLE_LABELS[item.primaryStyle] ?? (item.primaryStyle ?? '—'),
+              styles: item.primaryStyle ? [STYLE_LABELS[item.primaryStyle] ?? item.primaryStyle] : [],
               itemType: item.itemType || '',
               color: item.primaryColorDisplay?.name ?? getGarmentColorLabel(item.primaryColor ?? ''),
               colorHex: item.primaryColorDisplay?.hex ?? getGarmentColor(item.primaryColor ?? '')?.hex ?? '',
@@ -822,7 +856,7 @@ export default function HomeTab({
       itemTypeCode: item.itemType || '',
       itemTypeLabel: item.itemType ? getItemTypeLabel(item.category, item.itemType) : '',
       style: item.style,
-      styles: [item.style].filter(Boolean),
+      styles: item.styles && item.styles.length > 0 ? item.styles : [item.style].filter(Boolean),
       color: item.color,
       colorHex: item.colorHex,
       secondaryColors: [],

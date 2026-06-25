@@ -320,14 +320,14 @@ export default function OutfitDetailModal({
       categoryLabel: { Top: '상의', Bottom: '하의', Outer: '아우터', Shoes: '신발' }[uiCategory as 'Top' | 'Bottom' | 'Outer' | 'Shoes'] || uiCategory,
       itemTypeCode: be?.itemTypeCode || '',
       itemTypeLabel: getItemTypeLabel(uiCategory, be?.itemTypeCode || ''),
-      style: be?.styleCodes?.[0] || '',
-      styles: be?.styleCodes || [],
-      color: be?.primaryColorCode ? getGarmentColorLabel(be.primaryColorCode) : '',
-      colorHex: be?.primaryColorCode ? getGarmentColor(be.primaryColorCode)?.hex : undefined,
-      secondaryColors: be?.secondaryColorCodes ? be.secondaryColorCodes.map((code: string) => {
+      style: (be?.styleCodes || item.styles?.map((s: any) => typeof s === 'string' ? s : s.name) || [])[0] || '',
+      styles: be?.styleCodes || item.styles?.map((s: any) => typeof s === 'string' ? s : s.name) || [],
+      color: (be?.primaryColorCode || item.primaryColor) ? getGarmentColorLabel(be?.primaryColorCode || item.primaryColor || '') : '',
+      colorHex: (be?.primaryColorCode || item.primaryColor) ? getGarmentColor(be?.primaryColorCode || item.primaryColor || '')?.hex : undefined,
+      secondaryColors: (be?.secondaryColorCodes || []).map((code: string) => {
         const gc = getGarmentColor(code)
         return { label: gc?.name || code, hex: gc?.hex }
-      }) : [],
+      }),
       matchRate: 0,
       imageUrl: item.imageUrl || item.userImageUrl || be?.imageUrl || matched?.thumbnailUrl || '',
       reason: '',

@@ -22,6 +22,8 @@ function toOutfitModalItem(clothes: ClothesResponse | undefined): OutfitModalIte
     imageUrl: clothes.imageUrl ?? undefined,
     userImageUrl: clothes.userImageUrl ?? undefined,
     category: clothes.category,
+    primaryColor: clothes.primaryColor ?? undefined,
+    styles: clothes.styles ?? [],
   }
 }
 
