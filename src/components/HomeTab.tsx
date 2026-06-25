@@ -54,7 +54,6 @@ function OotdCanvas({ top, bottom, outer, shoes }: {
 
     const loadImage = async (src: string): Promise<HTMLImageElement> => {
       let url = src;
-      
       // pstatic.net이 포함되면 프록시 경유
       if (src.includes('pstatic.net')) {
         url = `/api/v1/images/proxy?url=${encodeURIComponent(src)}`;
@@ -67,7 +66,6 @@ function OotdCanvas({ top, bottom, outer, shoes }: {
           url = src; // 실패하면 원본 URL 그대로 사용
         }
       }
-      
       return new Promise((resolve, reject) => {
         const img = new Image();
         img.crossOrigin = 'anonymous';
@@ -83,15 +81,12 @@ function OotdCanvas({ top, bottom, outer, shoes }: {
       offscreen.height = img.height;
       const offCtx = offscreen.getContext('2d')!;
       offCtx.drawImage(img, 0, 0);
-      
       const imageData = offCtx.getImageData(0, 0, img.width, img.height);
       const data = imageData.data;
-      
       for (let i = 0; i < data.length; i += 4) {
         const r = data[i];
         const g = data[i + 1];
         const b = data[i + 2];
-        
         if (r >= 230 && g >= 230 && b >= 230) {
           data[i + 3] = 0;
         } else if (r >= 200 && g >= 200 && b >= 200) {
@@ -99,7 +94,6 @@ function OotdCanvas({ top, bottom, outer, shoes }: {
           data[i + 3] = Math.round(data[i + 3] * factor);
         }
       }
-      
       offCtx.putImageData(imageData, 0, 0);
       return offscreen;
     };
