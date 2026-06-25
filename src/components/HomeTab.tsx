@@ -1116,7 +1116,7 @@ export default function HomeTab({
               <p className="text-xs text-slate-400 font-bold mt-2">다른 옷을 선택하거나 옷장에 아이템을 더 등록해 보세요.</p>
             </div>
         ) : activeLabel === "match" && matchEligibleClothes.length > 0 ? (
-            <MatchRecommendationByCategory groups={matchRecommendationGroups} userId={userId} existingGarments={clothes} onWishlistAdded={handleRefreshAll} />
+            <MatchRecommendationByCategory groups={matchRecommendationGroups} userId={userId} existingGarments={clothes} onWishlistAdded={handleRefreshWardrobeOnly} />
         ) : activeLabel === "similar" ? (
             <SimilarProductRecommendations
                 userId={userId}
