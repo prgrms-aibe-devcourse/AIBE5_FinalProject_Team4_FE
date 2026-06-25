@@ -81,6 +81,15 @@ function mapStyleLabels(styleCodes: string[]): string[] {
     .filter((label) => label.trim().length > 0)
 }
 
+function resolveRecommendationMatchRate(item: RecommendedClothesItem): number {
+  if (typeof item.compatibilityScore === 'number') {
+    return item.compatibilityScore
+  }
+
+  const score = Number.parseFloat(String(item.score ?? '0'))
+  return Number.isFinite(score) ? Math.round(score * 100) : 0
+}
+
 function toUiCategory(
   categoryCode: string,
 ): RecommendCardItem['category'] {
@@ -124,7 +133,7 @@ function mapRecommendedItemToCard(
     color: primaryColor.label,
     colorHex: primaryColor.hex,
     secondaryColors: item.secondaryColors.map((code) => mapColorChip(code)),
-    matchRate: item.compatibilityScore,
+    matchRate: resolveRecommendationMatchRate(item),
     imageUrl: resolveClothesDisplayImageUrl(item) ?? '',
     reason: `"${anchorName}"와 ${categoryLabel} 조합`,
     purchaseUrl: resolveNaverShoppingPurchaseUrl(item.name, item.externalProductUrl),

@@ -1,7 +1,7 @@
 ---
 doc_type: fe_common_loading_error
 source_of_truth: AIBE5_FinalProject_Team4_FE
-last_updated: 2026-06-03
+last_updated: 2026-06-25
 ---
 
 # 공통 로딩, 에러, 빈 상태 기준
@@ -58,7 +58,7 @@ last_updated: 2026-06-03
 
 404는 BE 기준 리소스 없음 오류입니다. 목록 API가 성공 응답으로 빈 배열을 반환한 경우에만 empty 상태로 처리합니다.
 
-502는 BE 기준 외부 API 호출 실패입니다. 500 서버 내부 오류와 같은 원인으로 표시하지 않습니다.
+502는 BE 기준 외부 API 호출 실패입니다. 공통 API client에서는 5xx 범위로 `/error/server` 이동을 기본값으로 두며, 화면 단위에서 복구 가능한 외부 서비스 오류를 직접 처리하는 경우에만 별도 안내 메시지를 표시합니다.
 
 ## 기능별 기준
 

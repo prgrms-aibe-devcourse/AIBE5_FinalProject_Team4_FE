@@ -4,7 +4,7 @@ export interface FeedAuthor {
   userId: number
   nickname: string
   profileImageUrl: string | null
-  followedByMe?: boolean
+  followedByMe: boolean | null
 }
 
 export interface FeedImage {
@@ -43,7 +43,6 @@ export interface FeedPost {
   likeCount: number
   commentCount: number
   likedByMe: boolean
-  savedByMe: boolean
   hidden: boolean
   mine: boolean
   createdAt: string

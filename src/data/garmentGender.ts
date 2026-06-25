@@ -1,4 +1,4 @@
-/** CLOTHES.target_gender ENUM */
+/** CLOTHES.gender ENUM */
 export type ClothesGender = 'MALE' | 'FEMALE' | 'UNISEX'
 
 export const CLOTHES_GENDER_OPTIONS = [

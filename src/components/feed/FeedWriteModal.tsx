@@ -309,7 +309,6 @@ export default function FeedWriteModal({
       preventClose={submitting || uploading}
     >
       <ModalHeader
-        eyebrow="FEED-001"
         title="코디 업로드"
         titleId="feed-write-title"
         onClose={onClose}

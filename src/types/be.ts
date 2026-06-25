@@ -30,7 +30,7 @@ export type OwnershipStatus = 'OWNED' | 'WISHLIST'
 /** CLOTHES.clothes_info_source ENUM */
 export type ClothesInfoSource = 'PHOTO' | 'PURCHASE_HISTORY' | 'EXTERNAL_SHOPPING'
 
-/** CLOTHES.target_gender ENUM */
+/** CLOTHES.gender ENUM */
 export type ClothesGender = 'MALE' | 'FEMALE' | 'UNISEX'
 
 export interface ClothesResponse {

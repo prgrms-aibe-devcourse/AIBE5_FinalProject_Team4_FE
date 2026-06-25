@@ -397,7 +397,7 @@ export default function ClosetTab({
                 <span className="text-lg md:text-xl font-black text-[#1E3A8A] block tabular-nums">{ownedList.length}벌</span>
               </div>
               <div className="bg-white/85 p-3 rounded-2xl border border-white/40 text-left space-y-0.5">
-                <span className="text-[10px] md:text-[11px] text-slate-500 font-extrabold block leading-none">미보유 옷</span>
+                <span className="text-[10px] md:text-[11px] text-slate-500 font-extrabold block leading-none">위시리스트</span>
                 <span className="text-lg md:text-xl font-black text-orange-600 block tabular-nums">{wishlistList.length}벌</span>
               </div>
               <div className="bg-white/85 p-3 rounded-2xl border border-white/40 text-left space-y-0.5">
@@ -524,7 +524,7 @@ export default function ClosetTab({
                     subtitle={item.be?.brandName || item.category}
                     selected={isSelected}
                     owned={!item.isWishlist}
-                    showOwnershipBadge={false}
+                    showOwnershipBadge={closetTab === "favorites"}
                     size="md"
                     onClick={() => selectGarment(item)}
                     favorite={{
@@ -637,7 +637,7 @@ export default function ClosetTab({
         {tourOpen && (
             <GuideTour
                 steps={[
-                  { targetRef: tabRef, message: "보유·미보유·즐겨찾기로 내 옷을 분류해서 볼 수 있어요" },
+                  { targetRef: tabRef, message: "보유·위시리스트·즐겨찾기로 내 옷을 분류해서 볼 수 있어요" },
                   { targetRef: filterRef, message: "카테고리 필터로 원하는 종류의 옷만 빠르게 찾을 수 있어요" },
                   { targetRef: gridRef, message: "옷을 즐겨찾기하면 AI 코디 매칭에 우선 반영돼요" },
                 ]}

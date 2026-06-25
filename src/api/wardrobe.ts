@@ -140,7 +140,6 @@ export async function updateClothes(
     secondaryColors?: string[]
     styles?: string[]
     size?: string
-    season?: string
     imageUrl?: string
   },
 ): Promise<Garment> {

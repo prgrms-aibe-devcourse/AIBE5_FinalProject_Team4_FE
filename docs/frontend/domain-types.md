@@ -2,7 +2,7 @@
 doc_type: fe_domain_types
 source_of_truth: AIBE5_FinalProject_Team4_FE
 be_domain_source_of_truth: AIBE5_FinalProject_Team4_BE/docs/domain
-last_updated: 2026-06-22
+last_updated: 2026-06-25
 ---
 
 # FE 도메인 타입 기준
@@ -29,9 +29,9 @@ FE 화면에서 `Top`, `Bottom`, `Outer`, `Shoes` 같은 PascalCase 표시값을
 | Code | 화면 표시 | 설명 |
 | --- | --- | --- |
 | `OWNED` | 보유 | 사용자가 실제로 보유한 옷 |
-| `WISHLIST` | 미보유 | 아직 보유하지 않았지만 관심 상품으로 저장한 옷 |
+| `WISHLIST` | 위시리스트 | 아직 보유하지 않았지만 관심 상품으로 저장한 옷 |
 
-보유/미보유 상태는 `WARDROBE_CLOTHES.ownership_status` 기준입니다. FE 내부의 `isWishlist` boolean은 mock 또는 변환 전 UI 상태로만 사용할 수 있으며, 실제 API 연동 기준을 대체하지 않습니다.
+보유/위시리스트 상태는 `WARDROBE_CLOTHES.ownership_status` 기준입니다. FE 내부의 `isWishlist` boolean은 mock 또는 변환 전 UI 상태로만 사용할 수 있으며, 실제 API 연동 기준을 대체하지 않습니다.
 
 ### ClothesInfoSource
 
@@ -51,13 +51,14 @@ FE 화면에서 `Top`, `Bottom`, `Outer`, `Shoes` 같은 PascalCase 표시값을
 | `FEMALE` | 여성 대상 옷 |
 | `UNISEX` | 남녀 공용 또는 대상 성별을 특정하기 어려운 옷 |
 
-`ClothesGender`는 `CLOTHES.gender`의 code입니다. 사용자 프로필 성별(`USERS.gender`)과 다른 값이며, FE 화면에 표시하거나 사용자가 직접 수정하는 값으로 취급하지 않습니다.
+`ClothesGender`는 `CLOTHES.gender`의 code입니다. 사용자 프로필 성별(`USERS.gender`)과 다른 값이며, 옷 등록/수정 또는 등록 초안 확인 화면에서 사용자가 선택·확정할 수 있습니다.
 
 FE는 이 값을 아래 목적으로만 사용합니다.
 
 - 옷 등록/수정 저장 요청 payload에 포함
-- 사진·구매내역 draft/analyze 응답의 내부 상태 유지
+- 사진·구매내역 draft/analyze 응답의 기본값 또는 사용자 확정값으로 유지
 - 추천 응답에서 내부 필터 또는 제외 기준으로 사용
+- 목록/추천 카드의 일반 표시명이나 필터 UI로는 사용하지 않음
 
 ### ClothesSeason
 
@@ -159,7 +160,9 @@ type RecommendedClothesItem = {
   primaryColor: string;
   secondaryColors: string[];
   styleCodes: string[];
-  compatibilityScore: number;
+  score: string | number;
+  reason?: string | null;
+  compatibilityScore?: number;
   externalProductUrl?: string | null;
 };
 
@@ -196,7 +199,7 @@ type FeedAuthor = {
   userId: number;
   nickname: string;
   profileImageUrl: string | null;
-  followedByMe?: boolean;  // 현재 로그인 사용자가 작성자를 팔로우 중인지 여부. undefined이면 팔로우 버튼 미표시. BE FeedAuthorResponse에 필드 추가 후 필수로 전환 예정
+  followedByMe: boolean | null;  // 조회자가 작성자를 팔로우 중이면 true, 아니면 false. 본인 게시물 또는 비로그인 조회처럼 팔로우 상태를 계산하지 않는 경우 null
 };
 
 type FeedPost = {
@@ -208,7 +211,6 @@ type FeedPost = {
   likeCount: number;
   commentCount: number;
   likedByMe: boolean;
-  savedByMe: boolean;
   hidden: boolean;
   mine: boolean;           // true이면 현재 사용자의 게시물 — 팔로우 버튼 미표시
   createdAt: string;
@@ -216,8 +218,8 @@ type FeedPost = {
 };
 
 type FeedInteraction = {
-  active: boolean;   // 좋아요/저장/팔로우 현재 활성 상태
-  count: number;     // 좋아요/저장/팔로우 총 수
+  active: boolean;   // 좋아요/팔로우 현재 활성 상태
+  count: number;     // 좋아요/팔로우 총 수
 };
 
 type FeedPage = {
@@ -238,7 +240,7 @@ type FeedUserProfile = {
   postCount: number;
   followerCount: number;
   followingCount: number;
-  followedByMe: boolean;   // 타인 프로필에서 현재 사용자의 팔로우 여부
+  followedByMe: boolean;  // 타인 프로필에서 현재 사용자의 팔로우 여부. 본인 프로필, 비로그인 조회, 조회자가 팔로우하지 않는 경우 false
   mine: boolean;           // true이면 조회 대상이 로그인 사용자 본인 — 팔로우 버튼 미표시, liked-posts 탭 허용
 };
 
@@ -278,7 +280,7 @@ API 응답 타입은 BE DTO 필드명과 code를 유지합니다. 화면 컴포�
 | 카테고리 | `Top`, `Bottom`, `Outer`, `Shoes` | `TOP`, `BOTTOM`, `OUTER`, `SHOES` |
 | 보유 상태 | `isWishlist: boolean` | `ownershipStatus: OWNED/WISHLIST` |
 | 스타일 | legacy label 또는 static/mock 문자열 | BE catalog의 `StyleCode` |
-| 옷 대상 성별 | 등록/수정 화면에서 `MALE`, `FEMALE`, `UNISEX` 직접 선택 UI | 화면 비노출, 내부 저장 요청/추천 분류 code |
+| 옷 대상 성별 | 등록/수정 또는 초안 확인 화면에서 `MALE`, `FEMALE`, `UNISEX` 선택·확정 | 저장 요청/추천 분류 code. 목록/추천 카드의 일반 표시명이나 필터 UI로는 사용하지 않음 |
 | 옷 계절 | 생성 후 수정 화면에서 변경 가능한 값처럼 취급 | `CLOTHES.season`, 등록 시 확정하고 생성 후 변경하지 않음 |
 | 응답 타입 | `{ data, message, status }` | `{ success, data, message }` |
 | 사용자 ID | `/users/1` 또는 고정 ID | 인증 사용자 ID |

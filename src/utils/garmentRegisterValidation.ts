@@ -12,7 +12,7 @@ export const GARMENT_NAME_MAX_LENGTH = 80
 export const BRAND_NAME_MAX_LENGTH = 100
 /** BE `WARDROBE_CLOTHES.size` VARCHAR(50) */
 export const GARMENT_SIZE_MAX_LENGTH = 50
-/** BE `WARDROBE_CLOTHES.season` VARCHAR(50) */
+/** BE `CLOTHES.season` ENUM */
 export const GARMENT_SEASON_MAX_LENGTH = 50
 
 export const GARMENT_SEASON_OPTIONS = [

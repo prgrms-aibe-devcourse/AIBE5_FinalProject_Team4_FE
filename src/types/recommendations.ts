@@ -34,7 +34,9 @@ export interface RecommendedClothesItem {
   styleCodes: string[]
   season: string | null
   gender?: ClothesGender
-  compatibilityScore: number
+  score: string | number
+  reason?: string | null
+  compatibilityScore?: number
   externalProductUrl?: string | null
 }
 

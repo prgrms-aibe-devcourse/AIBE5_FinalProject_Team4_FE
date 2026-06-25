@@ -68,7 +68,6 @@ export interface ClothesUpdatePayload {
   secondaryColors: string[]
   styles: string[]
   size: string
-  season?: string
   isVerified: boolean
 }
 
@@ -95,7 +94,6 @@ export function buildClothesUpdatePayload(
     secondaryColors?: string[]
     styles?: string[]
     size?: string
-    season?: string
     imageUrl?: string
   },
 ): ClothesUpdatePayload {
@@ -125,7 +123,6 @@ export function buildClothesUpdatePayload(
     secondaryColors,
     styles,
     size: edits.size ?? garment.size ?? 'FREE',
-    season: edits.season ?? garment.season,
     isVerified: be.isVerified,
   }
 }

@@ -1,7 +1,7 @@
 ---
 doc_type: fe_feature_home_recommendation
 source_of_truth: AIBE5_FinalProject_Team4_FE
-last_updated: 2026-06-22
+last_updated: 2026-06-25
 ---
 
 # 홈 추천 화면 기준
@@ -25,13 +25,13 @@ last_updated: 2026-06-22
 | --- | --- | --- |
 | `HOME-001` | 추천 목록 노출 | 홈을 추천 중심 화면으로 사용하고 로그인/옷장 데이터 상태에 따라 화면 상태를 반영합니다. |
 | `HOME-002` | 라벨 선택 | 상단 라벨로 추천 유형을 전환하고 현재 선택한 추천 유형을 표시합니다. |
-| `RECO-001` | OOTD 코디 | 날씨, 계절, 체감온도 보조 조건을 반영한 코디 추천 결과를 표시합니다. |
+| `RECO-001` | OOTD 코디 | 날씨와 계절 보조 조건을 반영한 코디 추천 결과를 표시합니다. |
 | `RECO-002` | 취향 분석/스타일 기반 추천 | 사용자 스타일 점수와 추천 보조 정보를 기반으로 상품 추천 결과를 표시합니다. |
 | `RECO-003` | 유사 상품 추천 | 선택한 옷과 유사한 상품 추천 결과를 표시합니다. |
 | `RECO-004` | 어울리는 옷 추천 | 옷장에 등록한 옷(`OWNED`/`WISHLIST`)과 어울리는 상품 추천 결과를 표시합니다. |
 | `RECO-005` | AI MD 추천 | AI MD가 제안하는 추천 이유와 스타일링 설명을 표시합니다. |
 | `RECO-012`~`RECO-013` | 추천 피드백/제외 | 추천 결과에 대한 저장, 싫어요, 추천 제외 액션으로 사용합니다. |
-| `EXT-004`~`EXT-006` | 날씨 보조 정보 | 독립 추천 기능이 아니라 OOTD, 취향 기반 추천의 보조 조건으로 사용합니다. |
+| `EXT-003`~`EXT-004` | 날씨 보조 정보 | 독립 추천 기능이 아니라 OOTD, 취향 기반 추천의 보조 조건으로 사용합니다. |
 
 ## 화면 구성
 
@@ -58,14 +58,14 @@ last_updated: 2026-06-22
 - BE API 계약에 없는 임시 추천 경로는 실제 추천 연동 완료 상태로 보지 않습니다.
 - 추천 상품 카드에서 `brandName`, `season`, `externalProductUrl`을 사용하는 경우 BE 응답 필드명을 그대로 기준으로 삼습니다.
 - `season`은 `CLOTHES.season` code이며 사용자별 옷장 정보로 해석하지 않습니다.
-- 옷 대상 성별(`gender`)은 내부 분류/추천 제외 기준으로만 사용하고, 사용자 화면에 표시하거나 필터로 노출하지 않습니다.
+- 옷 대상 성별(`gender`)은 추천 카드의 일반 표시명이나 필터 UI로 노출하지 않으며, 내부 분류/추천 제외 기준으로만 사용합니다.
 
 ## 유사 상품 추천 (`similar`, `RECO-003`)
 
 현재 FE는 `HomeTab` `similar` 라벨에서 아래 흐름을 사용합니다.
 
 - 기준 옷: 사용자 옷장에 등록된 `OWNED`, `WISHLIST` 항목
-- 기준 옷 선택: 전체/보유/미보유 필터로 구분 표시
+- 기준 옷 선택: 전체/보유/위시리스트 필터로 구분 표시
 - API: `GET /api/v1/users/{userId}/clothes/{clothesId}/similar-products`
 - FE 요청: 별도 `limit` query parameter 없이 BE 유사상품 기본 계약을 사용
 - UI 결과 안내: 최대 50개 결과
@@ -84,13 +84,13 @@ FE의 `similar` 탭은 유사상품 결과를 최대 50개까지 표시하는 �
 현재 FE는 `HomeTab` `match` 라벨에서 아래 흐름을 사용합니다.
 
 - 기준 옷: 사용자 옷장에 등록된 `OWNED`, `WISHLIST` 항목 중 BE `clothesId`가 있는 항목
-- 기준 옷 선택: 전체/보유/미보유 + 전체/상의/하의/아우터/신발 필터로 구분 표시 (`HomeTab` 기준 옷 선택 모달)
+- 기준 옷 선택: 전체/보유/위시리스트 + 전체/상의/하의/아우터/신발 필터로 구분 표시 (`HomeTab` 기준 옷 선택 모달)
 - API: `GET /api/v1/users/{userId}/clothes/{clothesId}/recommendations?limitPerCategory={n}`
 - FE 기본 요청: `limitPerCategory=50` (`src/api/recommendations.ts`, BE 허용 범위 `1`~`50`, BE 기본값 `5`)
 - UI: 카테고리(상의/하의/아우터/신발)별 섹션, 접기/더보기 그리드
 - 카드 액션: 상세 모달, 위시리스트 토글(`POST /api/users/{userId}/wishlist-clothes/{clothesId}`)
 
-FE의 `match` 탭은 `RECO-003`(`similar`)과 동일하게 기준 옷 후보에 `OWNED`와 `WISHLIST`를 모두 포함합니다. 사용자는 선택 모달에서 보유/미보유를 필터로 나눠 볼 수 있으며, 선택한 `clothesId`를 그대로 recommendations API에 전달합니다.
+FE의 `match` 탭은 `RECO-003`(`similar`)과 동일하게 기준 옷 후보에 `OWNED`와 `WISHLIST`를 모두 포함합니다. 사용자는 선택 모달에서 보유/위시리스트를 필터로 나눠 볼 수 있으며, 선택한 `clothesId`를 그대로 recommendations API에 전달합니다.
 
 BE 계약: path `clothesId`는 해당 사용자의 활성 옷장 항목이며 `WARDROBE_CLOTHES.ownership_status`가 `OWNED` 또는 `WISHLIST`이어야 합니다. ([api-contract-reco004-anchor.md](../api/api-contract-reco004-anchor.md))
 

@@ -205,7 +205,7 @@ type RecommendItem = {
   itemType?: string;
   color: string;
   colorHex?: string;
-  price: string;
+  price?: string;
   matchRate: number;
   imageUrl: string;
   reason: string;
@@ -222,7 +222,7 @@ type RecommendItem = {
 
 const labelConfig: Record<RecommendationLabel, { title: string; subtitle: string; icon: string }> = {
   style: { title: "스타일 기반 추천", subtitle: "사용자 취향 기반", icon: "\ud83c\udfaf" },
-  similar: { title: "유사 상품 추천", subtitle: "보유/미보유 옷과 유사", icon: "\ud83d\udecd️" },
+  similar: { title: "유사 상품 추천", subtitle: "보유 옷·위시리스트와 유사", icon: "\ud83d\udecd️" },
   match: { title: "어울리는 옷 추천", subtitle: "", icon: "\ud83d\udc55" },
   aimd: { title: "AI MD 추천", subtitle: "MD 코디 설명 제공", icon: "\ud83e\udd16" },
 };
@@ -355,14 +355,6 @@ export default function HomeTab({
     setRefreshSignal(prev => prev + 1);
   }, [onRefreshWardrobe]);
 
-  const handleRefreshExceptStyle = useCallback(() => {
-    onRefreshWardrobe?.()
-    setOotdItems([])
-    setOotdLoading(true)
-    setMatchRecommendationGroups([])
-    setMatchLoading(true)
-    setRefreshSignal(prev => prev + 1)
-  }, [onRefreshWardrobe])
 
   const handleRefreshWardrobeOnly = useCallback(() => {
     onRefreshWardrobe?.()
@@ -672,8 +664,8 @@ export default function HomeTab({
               color: item.primaryColorDisplay?.name ?? getGarmentColorLabel(item.primaryColor ?? ''),
               colorHex: item.primaryColorDisplay?.hex ?? getGarmentColor(item.primaryColor ?? '')?.hex ?? '',
               brand: item.brandName ?? '',
-              price: item.price && item.price !== '0' ? `${parseInt(item.price).toLocaleString()}원` : '',
-              matchRate: Math.round(parseFloat(item.score) * 100),
+              price: '',
+              matchRate: Math.round(Number.parseFloat(String(item.score ?? '0')) * 100),
               imageUrl: item.imageUrl || fallbackImages.Top,
               reason: item.reason ?? '',
               isAnchor: false,
@@ -901,11 +893,6 @@ export default function HomeTab({
                     className="rounded-[24px] border border-slate-100 bg-slate-50 overflow-hidden transition-all duration-200 active:scale-[0.99] cursor-pointer"
                   >
                     <div className="h-96 sm:h-[28rem] lg:h-[32rem] bg-slate-100 relative overflow-hidden">
-                      {!userId && (
-                        <div className="absolute top-3 left-3 z-10 bg-black/60 backdrop-blur-sm px-2.5 py-1 rounded-full border border-white/20">
-                          <span className="text-[10px] font-black text-white tracking-wider">코디 미리보기</span>
-                        </div>
-                      )}
                       {(() => {
                         const combo = ootdCombinations.find(c => c.id === item.id);
                         if (combo) {
@@ -1210,7 +1197,7 @@ export default function HomeTab({
             {([
               ['all', '전체'],
               ['owned', '보유'],
-              ['wishlist', '미보유'],
+              ['wishlist', '위시리스트'],
             ] as const).map(([value, label]) => {
               const active = matchOwnershipFilter === value;
               return (

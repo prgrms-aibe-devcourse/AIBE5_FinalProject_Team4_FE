@@ -850,7 +850,7 @@ export default function SimilarProductRecommendations({
                       </span>
                     )}
                     <span
-                      className={`absolute left-1.5 bottom-1.5 h-5 px-2 rounded-full text-[10px] font-black shadow-sm ${
+                      className={`absolute left-1.5 top-1.5 h-5 px-2 rounded-full text-[10px] font-black shadow-sm inline-flex items-center justify-center ${
                         owned
                           ? 'bg-emerald-500 text-white'
                           : 'bg-orange-500 text-white'

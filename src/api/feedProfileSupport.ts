@@ -5,7 +5,7 @@ import {
 } from '@/api/feed'
 import type { FeedPage, FeedPost, FeedUserProfile } from '@/types/feed'
 
-/** BE PR #156 — profile / liked-posts endpoint 가용 여부 (develop 미반영 시 false) */
+/** profile / liked-posts endpoint 가용 여부. 404 응답 시 fallback으로 전환합니다. */
 export type FeedProfileApiCapabilities = {
   userProfile: boolean
   likedPosts: boolean
@@ -87,7 +87,7 @@ export function buildFallbackFeedUserProfile(
     postCount: options.postsPage?.totalElements ?? options.postsPage?.content.length ?? 0,
     followerCount: 0,
     followingCount: 0,
-    followedByMe: false,
+    followedByMe: mine || viewerUserId == null ? false : (author?.followedByMe ?? false),
     mine,
   }
 }

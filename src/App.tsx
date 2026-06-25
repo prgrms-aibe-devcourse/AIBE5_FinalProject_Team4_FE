@@ -7,7 +7,6 @@ import api from "@/api/index";
 import { useState, useEffect, useCallback, useRef, type ChangeEvent } from "react";
 import {
   Home,
-  X,
   ChevronLeft,
   ChevronRight,
   Plus,
@@ -31,7 +30,6 @@ import {
 import LoginPage from "@/pages/LoginPage";
 import OnboardingPage from "@/pages/OnboardingPage";
 import IntroPage from "@/pages/IntroPage";
-import { useChat } from "@/hooks/useChat";
 import { useCloset } from "@/hooks/useCloset";
 import { useWardrobeLoader } from "@/hooks/useWardrobeLoader";
 import {
@@ -47,7 +45,7 @@ import {
   loadFeedUserProfileSafe,
   loadUserLikedFeedPostsSafe,
 } from "@/api/feedProfileSupport";
-import type { FeedPost, FeedUserProfile } from "@/types/feed";
+import type { FeedPage, FeedPost, FeedUserProfile } from "@/types/feed";
 import FeedWriteModal from "./components/feed/FeedWriteModal";
 import FeedPostDetailModal from "./components/feed/FeedPostDetailModal";
 import AuthenticatedImage from "@/components/common/AuthenticatedImage";
@@ -130,6 +128,8 @@ type CatalogStyle = {
   label: string;
   description?: string;
 };
+
+const LOOKFEED_PROFILE_PAGE_SIZE = 20;
 
 const EMPTY_PROFILE: UserProfile = {
   email: "",
@@ -298,8 +298,6 @@ export default function App() {
   const [catalogStylesLoading, setCatalogStylesLoading] = useState(true);
   const [catalogStylesError, setCatalogStylesError] = useState(false);
 
-  const { gamyagiChatOpen, setGamyagiChatOpen, chatMessages, pendingMsg, setPendingMsg, chatSending, handleSendChatToMD } = useChat();
-
   // 옷장
   const {
     clothes, setClothes,
@@ -325,19 +323,20 @@ export default function App() {
   const [lookfeedTargetUserId, setLookfeedTargetUserId] = useState<number | null>(null);
   const [lookfeedTargetProfile, setLookfeedTargetProfile] = useState<FeedUserProfile | null>(null);
   const [lookfeedTargetPosts, setLookfeedTargetPosts] = useState<FeedPost[]>([]);
+  const [lookfeedTargetPostsPage, setLookfeedTargetPostsPage] = useState<FeedPage | null>(null);
   const [lookfeedTargetLoading, setLookfeedTargetLoading] = useState(false);
   const [lookfeedFollowSubmitting, setLookfeedFollowSubmitting] = useState(false);
   const [lookfeedMyProfile, setLookfeedMyProfile] = useState<FeedUserProfile | null>(null);
   const [lookfeedMyPosts, setLookfeedMyPosts] = useState<FeedPost[]>([]);
+  const [lookfeedMyPostsPage, setLookfeedMyPostsPage] = useState<FeedPage | null>(null);
   const [lookfeedMyLikedPosts, setLookfeedMyLikedPosts] = useState<FeedPost[]>([]);
+  const [lookfeedMyLikedPostsPage, setLookfeedMyLikedPostsPage] = useState<FeedPage | null>(null);
   const [lookfeedMyLoading, setLookfeedMyLoading] = useState(false);
+  const [lookfeedProfileLoadingMore, setLookfeedProfileLoadingMore] = useState(false);
   const [isLookfeedWriteOpen, setIsLookfeedWriteOpen] = useState(false);
   const [lookfeedDetailPostId, setLookfeedDetailPostId] = useState<number | null>(null);
   const [homeResetSignal, setHomeResetSignal] = useState<number>(0);
-  const [outfitBookRefreshSignal, setOutfitBookRefreshSignal] = useState(0);
-  const bumpOutfitBookRefresh = useCallback(() => {
-    setOutfitBookRefreshSignal((prev) => prev + 1);
-  }, []);
+  const outfitBookRefreshSignal = 0;
   const [isPhotoRegisterOpen, setIsPhotoRegisterOpen] = useState(false);
   const [isPurchaseRegisterOpen, setIsPurchaseRegisterOpen] = useState(false);
   const regionLabel = REGIONS.find((region) => region.code === profile.region)?.label ?? "서울특별시";
@@ -512,7 +511,7 @@ export default function App() {
     setProfile(EMPTY_PROFILE);
     setProfileMarketingAgreed(null);
     setCurrentTab("home");
-    setAuthReady(false);
+    setAuthReady(true);
     setShowIntro(true);
     setHomeResetSignal((signal) => signal + 1);
   };
@@ -842,7 +841,7 @@ export default function App() {
   const loadMyLookfeedShared = useCallback(async (userId: number) => {
     setLookfeedMyLoading(true);
     try {
-      const postsPage = await fetchUserFeedPosts(userId, 0, 20);
+      const postsPage = await fetchUserFeedPosts(userId, 0, LOOKFEED_PROFILE_PAGE_SIZE);
       const profileData = await loadFeedUserProfileSafe(userId, userId, {
         nickname: profile.nickname,
         profileImageUrl: profile.profileImageUrl ?? null,
@@ -852,9 +851,11 @@ export default function App() {
       });
       setLookfeedMyProfile(profileData);
       setLookfeedMyPosts(postsPage.content);
+      setLookfeedMyPostsPage(postsPage);
     } catch {
       setLookfeedMyProfile(null);
       setLookfeedMyPosts([]);
+      setLookfeedMyPostsPage(null);
     } finally {
       setLookfeedMyLoading(false);
     }
@@ -863,17 +864,69 @@ export default function App() {
   const loadMyLookfeedLiked = useCallback(async (userId: number) => {
     setLookfeedMyLoading(true);
     try {
-      const postsPage = await loadUserLikedFeedPostsSafe(userId, 0, 20);
+      const postsPage = await loadUserLikedFeedPostsSafe(userId, 0, LOOKFEED_PROFILE_PAGE_SIZE);
       setLookfeedMyLikedPosts(postsPage.content);
+      setLookfeedMyLikedPostsPage(postsPage);
       if (!isFeedLikedPostsApiAvailable()) {
         setLookfeedProfileView("shared");
       }
     } catch {
       setLookfeedMyLikedPosts([]);
+      setLookfeedMyLikedPostsPage(null);
     } finally {
       setLookfeedMyLoading(false);
     }
   }, []);
+
+  const loadMoreLookfeedProfilePosts = async () => {
+    if (lookfeedProfileLoadingMore || authUserId == null) return;
+
+    const viewingOtherUser =
+      lookfeedTargetUserId != null && lookfeedTargetUserId !== authUserId;
+    const currentPage = viewingOtherUser
+      ? lookfeedTargetPostsPage
+      : lookfeedProfileView === "liked"
+        ? lookfeedMyLikedPostsPage
+        : lookfeedMyPostsPage;
+
+    if (!currentPage?.hasNext) return;
+
+    const nextPage = currentPage.page + 1;
+    setLookfeedProfileLoadingMore(true);
+    try {
+      if (viewingOtherUser && lookfeedTargetUserId != null) {
+        const postsPage = await fetchUserFeedPosts(
+          lookfeedTargetUserId,
+          nextPage,
+          LOOKFEED_PROFILE_PAGE_SIZE,
+        );
+        setLookfeedTargetPosts((prev) => [...prev, ...postsPage.content]);
+        setLookfeedTargetPostsPage(postsPage);
+        return;
+      }
+
+      if (lookfeedProfileView === "liked") {
+        const postsPage = await loadUserLikedFeedPostsSafe(
+          authUserId,
+          nextPage,
+          LOOKFEED_PROFILE_PAGE_SIZE,
+        );
+        setLookfeedMyLikedPosts((prev) => [...prev, ...postsPage.content]);
+        setLookfeedMyLikedPostsPage(postsPage);
+        return;
+      }
+
+      const postsPage = await fetchUserFeedPosts(
+        authUserId,
+        nextPage,
+        LOOKFEED_PROFILE_PAGE_SIZE,
+      );
+      setLookfeedMyPosts((prev) => [...prev, ...postsPage.content]);
+      setLookfeedMyPostsPage(postsPage);
+    } finally {
+      setLookfeedProfileLoadingMore(false);
+    }
+  };
 
   useEffect(() => {
     if (currentTab !== "lookfeed-profile" || authUserId == null) return;
@@ -924,6 +977,8 @@ export default function App() {
     setIsProfileMenuOpen(false);
     setLookfeedTargetUserId(null);
     setLookfeedTargetProfile(null);
+    setLookfeedTargetPosts([]);
+    setLookfeedTargetPostsPage(null);
     setLookfeedProfileView("shared");
     setCurrentTab("lookfeed-profile");
     window.setTimeout(scrollAppToTop, 0);
@@ -941,13 +996,14 @@ export default function App() {
     setLookfeedTargetUserId(targetUserId);
     setLookfeedTargetProfile(null);
     setLookfeedTargetPosts([]);
+    setLookfeedTargetPostsPage(null);
     setCurrentTab("lookfeed-profile");
     window.setTimeout(scrollAppToTop, 0);
 
     setLookfeedTargetLoading(true);
     void (async () => {
       try {
-        const postsPage = await fetchUserFeedPosts(targetUserId, 0, 20);
+        const postsPage = await fetchUserFeedPosts(targetUserId, 0, LOOKFEED_PROFILE_PAGE_SIZE);
         const profileData = await loadFeedUserProfileSafe(targetUserId, authUserId, {
           postsPage,
           samplePost: postsPage.content[0],
@@ -956,16 +1012,20 @@ export default function App() {
           setLookfeedTargetUserId(null);
           setLookfeedTargetProfile(null);
           setLookfeedTargetPosts([]);
+          setLookfeedTargetPostsPage(null);
           setLookfeedMyProfile(profileData);
           setLookfeedMyPosts(postsPage.content);
+          setLookfeedMyPostsPage(postsPage);
           setLookfeedProfileView("shared");
           return;
         }
         setLookfeedTargetProfile(profileData);
         setLookfeedTargetPosts(postsPage.content);
+        setLookfeedTargetPostsPage(postsPage);
       } catch {
         setLookfeedTargetProfile(null);
         setLookfeedTargetPosts([]);
+        setLookfeedTargetPostsPage(null);
       } finally {
         setLookfeedTargetLoading(false);
       }
@@ -1293,7 +1353,7 @@ export default function App() {
             >
 
               {/* ========================================================= */}
-              {/* TAB 1: HOME (Curation Dashboard & Gamyagi) */}
+              {/* TAB 1: HOME (Recommendation Dashboard) */}
               {/* ========================================================= */}
               {currentTab === "home" && (
                 <HomeTab
@@ -1373,7 +1433,6 @@ export default function App() {
                       userId={authUserId}
                       wardrobeGarments={clothes}
                       onWishlistChanged={() => void refreshWardrobe()}
-                      onOutfitBookChanged={bumpOutfitBookRefresh}
                       guideTourCompleted={profile.guideTourCompletedFeed ?? false}
                       onGuideTourComplete={() => { void handleGuideTourComplete("feed")}}
                       onViewProfile={handleViewFeedProfile}
@@ -1416,6 +1475,11 @@ export default function App() {
                   : lookfeedProfileView === "shared"
                     ? lookfeedMyPosts
                     : lookfeedMyLikedPosts;
+                const activePage = isOtherUser
+                  ? lookfeedTargetPostsPage
+                  : lookfeedProfileView === "shared"
+                    ? lookfeedMyPostsPage
+                    : lookfeedMyLikedPostsPage;
                 const activeLoading = isOtherUser ? lookfeedTargetLoading : lookfeedMyLoading;
                 const emptyMessage = isOtherUser || lookfeedProfileView === "shared"
                   ? "게시한 피드가 없습니다."
@@ -1437,26 +1501,40 @@ export default function App() {
                     );
                   }
                   return (
-                    <div className="grid grid-cols-2 gap-px bg-slate-200">
-                      {activePosts.map((fp) => (
-                        <button
-                          key={fp.feedPostId}
-                          type="button"
-                          onClick={() => setLookfeedDetailPostId(fp.feedPostId)}
-                          className="aspect-square bg-slate-50 overflow-hidden cursor-pointer"
-                        >
-                          {fp.images[0] ? (
-                            <AuthenticatedImage
-                              src={fp.images[0].imageUrl}
-                              alt={fp.caption ?? "피드"}
-                              className="h-full w-full object-cover"
-                            />
-                          ) : (
-                            <div className="h-full w-full bg-slate-100" />
-                          )}
-                        </button>
-                      ))}
-                    </div>
+                    <>
+                      <div className="grid grid-cols-2 gap-px bg-slate-200">
+                        {activePosts.map((fp) => (
+                          <button
+                            key={fp.feedPostId}
+                            type="button"
+                            onClick={() => setLookfeedDetailPostId(fp.feedPostId)}
+                            className="aspect-square bg-slate-50 overflow-hidden cursor-pointer"
+                          >
+                            {fp.images[0] ? (
+                              <AuthenticatedImage
+                                src={fp.images[0].imageUrl}
+                                alt={fp.caption ?? "피드"}
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <div className="h-full w-full bg-slate-100" />
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                      {activePage?.hasNext && (
+                        <div className="border-t border-slate-100 px-5 py-4">
+                          <button
+                            type="button"
+                            onClick={() => { void loadMoreLookfeedProfilePosts(); }}
+                            disabled={lookfeedProfileLoadingMore}
+                            className="h-11 w-full rounded-xl border border-slate-200 bg-white text-sm font-black text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
+                          >
+                            {lookfeedProfileLoadingMore ? "불러오는 중..." : "더 보기"}
+                          </button>
+                        </div>
+                      )}
+                    </>
                   );
                 };
 
@@ -1698,88 +1776,6 @@ export default function App() {
         {/* MODAL & DIALOG PIPELINE CONTROLS */}
         {/* ========================================================= */}
 
-        {/* 1. Gamyagi Chat Advisor Sliding Panel */}
-        {gamyagiChatOpen && (
-          <div id="panel-gamyagi-chat" className="absolute inset-0 bg-slate-900/45 backdrop-blur-xs flex flex-col justify-end z-[30] animate-fade-in">
-            <div className="bg-white rounded-t-[32px] h-[550px] flex flex-col overflow-hidden shadow-2xl relative">
-
-              {/* Chat head */}
-              <div className="bg-[#1E3A8A] text-white p-5 flex items-center justify-between pb-4">
-                <div className="flex items-center space-x-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center text-xl">
-                    🤖
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold">감각이 와의 1:1 스타일 조화 톡</h3>
-                    <p className="text-[10px] text-emerald-300 font-mono">Active Chat Consultant</p>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => setGamyagiChatOpen(false)}
-                  className="p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* Chat Messages scroll pane */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-3.5 bg-slate-50">
-                {chatMessages.map((m, idx) => (
-                  <div
-                    key={idx}
-                    className={`flex items-start space-x-2 ${m.sender === "user" ? "flex-row-reverse space-x-reverse" : ""}`}
-                  >
-                    {m.sender === "gamyagi" && (
-                      <span className="text-lg p-1 bg-white border rounded-lg">🤖</span>
-                    )}
-                    <div className={`text-xs p-3 rounded-2xl max-w-[75%] leading-relaxed ${
-                      m.sender === "user"
-                        ? "bg-[#1E3A8A] text-white rounded-tr-none"
-                        : "bg-white text-slate-700 rounded-tl-none border border-slate-100 shadow-3xs"
-                    }`}>
-                      {m.text}
-                    </div>
-                  </div>
-                ))}
-                {chatSending && (
-                  <div className="flex items-start space-x-2">
-                    <span className="text-lg p-1 bg-white border rounded-lg">🤖</span>
-                    <div className="text-xs p-3 rounded-2xl rounded-tl-none bg-white text-[#1E3A8A] font-semibold flex items-center space-x-2 border border-slate-100">
-                      <span className="animate-bounce">●</span>
-                      <span className="animate-bounce [animation-delay:0.2s]">●</span>
-                      <span className="animate-bounce [animation-delay:0.4s]">●</span>
-                      <span>감각이가 타이핑하고 있어요...</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Input section */}
-              <div className="p-3 bg-white border-t border-slate-100 flex items-center space-x-2">
-                <input
-                  type="text"
-                  placeholder="예: 내 어깨골격 70에 아노락 핏이 어울릴지 물어보기"
-                  value={pendingMsg}
-                  onChange={(e) => setPendingMsg(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleSendChatToMD();
-                  }}
-                  className="flex-1 h-11 px-3.5 bg-slate-50 hover:bg-slate-100/70 border border-slate-100 focus:border-[#1E3A8A] focus:bg-white text-xs rounded-xl outline-hidden transition"
-                />
-                <button
-                  onClick={handleSendChatToMD}
-                  disabled={!pendingMsg.trim() || chatSending}
-                  className="h-11 px-4 rounded-xl bg-[#BBF7D0] hover:bg-[#aef1c6] disabled:bg-slate-100 disabled:text-slate-400 text-[#1E3A8A] font-bold text-xs transition cursor-pointer"
-                >
-                  전송
-                </button>
-              </div>
-
-            </div>
-          </div>
-        )}
-
         <GarmentRegisterMethodModal
           open={isMethodSelectOpen}
           onClose={() => {
@@ -1940,7 +1936,6 @@ export default function App() {
               onPostUpdated={handleLookfeedPostUpdated}
               onPostDeleted={handleLookfeedPostDeleted}
               onViewProfile={handleViewFeedProfile}
-              onOutfitBookChanged={bumpOutfitBookRefresh}
               listPost={
                 lookfeedDetailPostId == null
                   ? null

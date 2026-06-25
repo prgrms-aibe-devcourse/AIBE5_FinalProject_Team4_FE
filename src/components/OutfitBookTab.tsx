@@ -234,7 +234,7 @@ export default function OutfitBookTab({
                         <p className="text-[10px] text-slate-400 font-bold">
                           {wishlistCount === 0
                               ? `아이템 ${outfit.items.length}개`
-                              : `보유 ${ownedCount} · 미보유 ${wishlistCount}`}
+                              : `보유 ${ownedCount} · 위시리스트 ${wishlistCount}`}
                         </p>
                       </div>
                     </div>
