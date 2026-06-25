@@ -43,7 +43,6 @@ export interface FeedPost {
   likeCount: number
   commentCount: number
   likedByMe: boolean
-  savedByMe: boolean
   hidden: boolean
   mine: boolean
   createdAt: string

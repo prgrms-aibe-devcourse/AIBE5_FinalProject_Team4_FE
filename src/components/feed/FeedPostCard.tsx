@@ -35,13 +35,14 @@ interface FeedPostCardProps {
   userId: number
   onOpen: () => void
   onToggleLike: () => void
-  onToggleSave: () => void
+  onSaveOutfit?: () => void
   onShare: () => void
   onCommentCountChange?: (commentCount: number) => void
   onCommentComposerActiveChange?: (active: boolean) => void
   onViewProfile?: (userId: number) => void
   likeSubmitting?: boolean
-  saveSubmitting?: boolean
+  outfitSaved?: boolean
+  outfitSaveSubmitting?: boolean
   containerRef?: RefObject<HTMLElement>
   titleRef?: RefObject<HTMLDivElement>
   actionRef?: RefObject<HTMLDivElement>
@@ -52,13 +53,14 @@ export default function FeedPostCard({
   userId,
   onOpen,
   onToggleLike,
-  onToggleSave,
+  onSaveOutfit,
   onShare,
   onCommentCountChange,
   onCommentComposerActiveChange,
   onViewProfile,
   likeSubmitting = false,
-  saveSubmitting = false,
+  outfitSaved = false,
+  outfitSaveSubmitting = false,
   containerRef,
   titleRef,
   actionRef,
@@ -256,6 +258,8 @@ export default function FeedPostCard({
     )
   }
 
+  const showOutfitSave = !post.mine && post.outfit != null && post.outfit.items.length > 0 && onSaveOutfit != null
+
   return (
     <article ref={containerRef} className="border-b border-slate-100 bg-white">
       {/* 헤더 — 프로필·닉네임만 프로필, 나머지 영역은 상세 */}
@@ -329,7 +333,7 @@ export default function FeedPostCard({
         ) : null}
       </div>
 
-      {/* 액션 */}
+      {/* 액션 — 좋아요(피드 저장) · 댓글 · 공유 | 코디북(코디 저장) */}
       <div ref={actionRef} className="flex items-center justify-between px-3 py-2.5">
         <div className="flex items-center gap-4">
           <button
@@ -362,19 +366,21 @@ export default function FeedPostCard({
             <Send className="h-6 w-6" />
           </button>
         </div>
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); onToggleSave() }}
-          disabled={saveSubmitting}
-          aria-pressed={post.savedByMe}
-          aria-label="코디북에 저장"
-          title={post.outfit ? '코디북에 저장' : '연결된 코디가 없습니다'}
-          className={`cursor-pointer disabled:opacity-40 transition-colors active:scale-90 ${
-            post.savedByMe ? 'text-[#1E3A8A]' : 'text-slate-300'
-          }`}
-        >
-          <LayoutGrid className="h-6 w-6" />
-        </button>
+        {showOutfitSave ? (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onSaveOutfit() }}
+            disabled={outfitSaveSubmitting}
+            aria-pressed={outfitSaved}
+            aria-label="코디북에 저장"
+            title={outfitSaved ? '코디북에 저장됨' : '코디북에 저장'}
+            className={`cursor-pointer disabled:opacity-40 transition-colors active:scale-90 ${
+              outfitSaved ? 'text-[#1E3A8A]' : 'text-slate-300'
+            }`}
+          >
+            <LayoutGrid className="h-6 w-6" />
+          </button>
+        ) : null}
       </div>
 
       {/* 본문 — 닉네임만 프로필, 나머지는 상세 */}
