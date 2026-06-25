@@ -72,6 +72,10 @@ export default function ClosetGarmentDetail({
   onToast,
 }: ClosetGarmentDetailProps) {
   const { showConfirm, showToast } = useToast()
+  const onToastRef = useRef(onToast)
+  useEffect(() => {
+    onToastRef.current = onToast
+  }, [onToast])
   const [detail, setDetail] = useState<Garment | null>(garment)
   const [loading, setLoading] = useState(false)
   const [editModalOpen, setEditModalOpen] = useState(false)
@@ -112,7 +116,7 @@ export default function ClosetGarmentDetail({
       .catch(() => {
         if (!cancelled) {
           setDetail(garment)
-          onToast('상세 정보를 불러오지 못했습니다.')
+          onToastRef.current('상세 정보를 불러오지 못했습니다.')
         }
       })
       .finally(() => {
@@ -122,8 +126,9 @@ export default function ClosetGarmentDetail({
     return () => {
       cancelled = true
     }
+  // garment.id가 바뀔 때만 재조회 — onToast/onGarmentChange 참조 변경으로 인한 폴링 방지
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [garment?.id, onToast])
+  }, [garment?.id])
 
   const resetImageEditState = useCallback(
     (g: Garment) => {
