@@ -1,4 +1,4 @@
-﻿import { Heart } from '@/components/icons'
+﻿﻿import { Heart } from '@/components/icons'
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { fetchAuthenticatedImageObjectUrl } from '@/utils/authenticatedImageUrl';
 import AuthenticatedImage from "@/components/common/AuthenticatedImage";
@@ -138,23 +138,41 @@ function OotdCanvas({ top, bottom, outer, shoes }: {
       ctx.drawImage(img, crop.x, crop.y, crop.w, crop.h, dx, dy, dw, dh);
     };
 
+    const shouldRemoveBg = (url: string) => !url.includes('/mock-clothes/');
+
     (async () => {
       try {
         const hasShoes = !!shoes;
         // 비율 조정: 상의 38%, 하의 47%, 신발 15% (overlap 증가)
-        const topH = hasShoes ? H * 0.38 : H * 0.48;
-        const bottomH = hasShoes ? H * 0.47 : H * 0.52;
+        const topH = hasShoes ? H * 0.48 : H * 0.4;
+        const bottomH = hasShoes ? H * 0.44 : H * 0.52;
         const shoesH = hasShoes ? H * 0.15 : 0;
 
         if (outer) {
+          if (bottom) {
+            const bottomImg = await loadImage(bottom);
+            const bottomImgClean = shouldRemoveBg(bottom) ? removeWhiteBackground(bottomImg) : bottomImg;
+            // 하의를 상의 쪽으로 살짝 올려서(Overlap) 간격 제거
+            const overlap = topH * 0.22;
+            // 아우터가 있을 때는 하의를 약간 아래로 내려 더 자연스럽게 맞춤
+            const bottomYOffset = topH * 0.15;
+            drawCropped(
+              bottomImgClean,
+              -W * 0.05,
+              topH - overlap + bottomYOffset,
+              W,
+              bottomH + overlap,
+              0.8,
+            );
+          }
           const outerImg = await loadImage(outer);
-          const outerImgClean = removeWhiteBackground(outerImg);
+          const outerImgClean = shouldRemoveBg(outer) ? removeWhiteBackground(outerImg) : outerImg;
           // 아우터는 상의 영역보다 조금 더 길게(하의와 겹치게) 그림
-          drawCropped(outerImgClean, 0, 0, W, topH + bottomH * 0.15, 0.95);
+          drawCropped(outerImgClean, -W * 0.05, topH * 0.02, W, topH * 1.1, 0.85);
 
           if (top) {
             const topImg = await loadImage(top);
-            const topImgClean = removeWhiteBackground(topImg);
+            const topImgClean = shouldRemoveBg(top) ? removeWhiteBackground(topImg) : topImg;
             const crop = cropTransparent(topImgClean);
             // 아우터 안의 상의는 더 작게 중앙에 배치
             const overlayW = W * 0.25;
@@ -162,30 +180,39 @@ function OotdCanvas({ top, bottom, outer, shoes }: {
             const scale = Math.min(overlayW / crop.w, overlayH / crop.h) * 0.95;
             const dw = crop.w * scale;
             const dh = crop.h * scale;
-            const dx = (W - dw) / 2;
+            const dx = -W * 0.05 + (W - dw) / 2;
             const dy = topH * 0.35; // 위치 조정
             ctx.drawImage(topImgClean, crop.x, crop.y, crop.w, crop.h, dx, dy, dw, dh);
           }
-        } else if (top) {
-          const topImg = await loadImage(top);
-          const topImgClean = removeWhiteBackground(topImg);
-          // 상의 위치를 약간 아래로 내려서 하의와 자연스럽게 연결
-          drawCropped(topImgClean, 0, topH * 0.05, W, topH, 0.95);
-        }
-
-        if (bottom) {
-          const bottomImg = await loadImage(bottom);
-          const bottomImgClean = removeWhiteBackground(bottomImg);
-          // 하의를 상의 쪽으로 살짝 올려서(Overlap) 간격 제거
-          const overlap = topH * 0.18;
-          drawCropped(bottomImgClean, 0, topH - overlap, W, bottomH + overlap, 0.95);
+        } else {
+          // outer 없는 경우: bottom 먼저 -> top 나중 (top이 bottom 위에 겹치도록)
+          if (bottom) {
+            const bottomImg = await loadImage(bottom);
+            const bottomImgClean = shouldRemoveBg(bottom) ? removeWhiteBackground(bottomImg) : bottomImg;
+            // 하의를 상의 쪽으로 살짝 올려서(Overlap) 간격 제거
+            const overlap = topH * 0.15;
+            drawCropped(bottomImgClean, -W * 0.1, topH - overlap, W * 1, bottomH + overlap, 0.93);
+          }
+          if (top) {
+            const topImg = await loadImage(top);
+            const topImgClean = shouldRemoveBg(top) ? removeWhiteBackground(topImg) : topImg;
+            // 상의 위치를 약간 아래로 내려서 하의와 자연스럽게 연결
+            drawCropped(topImgClean, -W * 0.1, topH * 0.015, W, topH, 0.7);
+          }
         }
 
         if (shoes) {
           const shoesImg = await loadImage(shoes);
-          const shoesImgClean = removeWhiteBackground(shoesImg);
+          const shoesImgClean = shouldRemoveBg(shoes) ? removeWhiteBackground(shoesImg) : shoesImg;
           // 신발 크기를 조금 키우고(scaleFactor 0.78), 하의와 가깝게 배치
-          drawCropped(shoesImgClean, 0, topH + bottomH - topH * 0.05, W, shoesH, 0.78);
+          const shoesW = W * 0.35;
+          const shoesX = W * 0.62;
+          const shoesY = topH + bottomH * 0.5;
+          const shoesCrop = cropTransparent(shoesImgClean);
+          const shoesScale = Math.min(shoesW / shoesCrop.w, shoesH / shoesCrop.h) * 0.78;
+          const shoesDw = shoesCrop.w * shoesScale;
+          const shoesDh = shoesCrop.h * shoesScale;
+          ctx.drawImage(shoesImgClean, shoesCrop.x, shoesCrop.y, shoesCrop.w, shoesCrop.h, shoesX + (shoesW - shoesDw) / 2, shoesY + (shoesH - shoesDh) / 2, shoesDw, shoesDh);
         }
 
       } catch (e) {
@@ -565,29 +592,59 @@ export default function HomeTab({
             const res = {
               combinations: [
                 {
+                  outfitId: 999993,
+                  title: "스투시 후드티 룩",
+                  reason: "블랙 후드티와 와이드 스웨트 팬츠로 완성한 스트릿 감성 코디입니다.",
+                  outer: {
+                    clothesId: 9829,
+                    name: "스투시 베이직 긴팔 후드티",
+                    category: "OUTER",
+                    imageUrl: "https://shopping-phinf.pstatic.net/main_4961087/49610877491.20250218031251.jpg",
+                    primaryColor: "BLACK",
+                    styles: ["스트릿", "캐주얼"]
+                  },
+                  bottom: {
+                    clothesId: 9256,
+                    name: "빠니깔레 라이트워시 와이드핏 데님 팬츠 S-RJEAN08",
+                    category: "BOTTOM",
+                    imageUrl: "https://shopping-phinf.pstatic.net/main_6023261/60232614620.20260530190041.jpg",
+                    primaryColor: "LIGHT_BLUE",
+                    styles: ["스트릿", "캐주얼"]
+                  },
+                  shoes: {
+                    clothesId: 9724,
+                    name: "아디다스 슈퍼스타 82 IE4195 오프 화이트 & 코어 블랙 & 클라우드 화이트",
+                    category: "SHOES",
+                    imageUrl: "https://shopping-phinf.pstatic.net/main_5464829/54648293611.20250508153744.jpg",
+                    primaryColor: "WHITE",
+                    styles: ["캐주얼", "스트릿"]
+                  },
+                  totalScore: 9.5,
+                },
+                {
                   outfitId: 999991,
                   title: "흰 티에 청바지",
                   reason: "언제나 사랑받는 깔끔하고 시원한 정석 코디입니다.",
-                  top: { 
-                    clothesId: 2086, 
-                    name: INITIAL_GARMENTS.find(g => g.id === "g2086")?.name || "흰 티셔츠", 
-                    category: "TOP", 
+                  top: {
+                    clothesId: 2086,
+                    name: INITIAL_GARMENTS.find(g => g.id === "g2086")?.name || "흰 티셔츠",
+                    category: "TOP",
                     imageUrl: INITIAL_GARMENTS.find(g => g.id === "g2086")?.thumbnailUrl,
                     primaryColor: "WHITE",
                     styles: ["캐주얼"]
                   },
-                  bottom: { 
-                    clothesId: 398, 
-                    name: INITIAL_GARMENTS.find(g => g.id === "g398")?.name || "청바지", 
-                    category: "BOTTOM", 
+                  bottom: {
+                    clothesId: 398,
+                    name: INITIAL_GARMENTS.find(g => g.id === "g398")?.name || "청바지",
+                    category: "BOTTOM",
                     imageUrl: INITIAL_GARMENTS.find(g => g.id === "g398")?.thumbnailUrl,
                     primaryColor: "NAVY",
                     styles: ["캐주얼"]
                   },
-                  shoes: { 
-                    clothesId: 330, 
-                    name: INITIAL_GARMENTS.find(g => g.id === "g330")?.name || "슈즈", 
-                    category: "SHOES", 
+                  shoes: {
+                    clothesId: 330,
+                    name: INITIAL_GARMENTS.find(g => g.id === "g330")?.name || "슈즈",
+                    category: "SHOES",
                     imageUrl: INITIAL_GARMENTS.find(g => g.id === "g330")?.thumbnailUrl,
                     primaryColor: "WHITE",
                     styles: ["캐주얼", "미니멀"]
@@ -596,63 +653,33 @@ export default function HomeTab({
                 },
                 {
                   outfitId: 999992,
-                  title: "스트릿 고프코어 룩",
-                  reason: "트렌디한 카고 팬츠와 유니크한 컬러 니트로 완성한 힙한 스트릿 감성의 코디입니다.",
-                  top: { 
-                    clothesId: 569, 
-                    name: INITIAL_GARMENTS.find(g => g.id === "g569")?.name || "컬러 니트", 
-                    category: "TOP", 
-                    imageUrl: INITIAL_GARMENTS.find(g => g.id === "g569")?.thumbnailUrl,
-                    primaryColor: "GREEN",
-                    styles: ["고프코어", "스포티"]
+                  title: "르꼬끄 트랙 재킷 룩",
+                  reason: "스포티한 트랙 재킷과 와이드 데님의 캐주얼 코디입니다.",
+                  top: {
+                    clothesId: 10272,
+                    name: "더바이닐하우스 WOOL VARSITY JACKET",
+                    category: "TOP",
+                    imageUrl: "https://shopping-phinf.pstatic.net/main_5837788/58377888371.20260104032814.jpg",
+                    primaryColor: "WHITE",
+                    styles: ["스포티", "캐주얼"]
                   },
-                  bottom: { 
-                    clothesId: 2436, 
-                    name: INITIAL_GARMENTS.find(g => g.id === "g2436")?.name || "카고 팬츠", 
-                    category: "BOTTOM", 
-                    imageUrl: INITIAL_GARMENTS.find(g => g.id === "g2436")?.thumbnailUrl,
-                    primaryColor: "BLACK",
-                    styles: ["스트릿", "캐주얼"]
-                  },
-                  shoes: { 
-                    clothesId: 330, 
-                    name: INITIAL_GARMENTS.find(g => g.id === "g330")?.name || "블랙 슈즈", 
-                    category: "SHOES", 
-                    imageUrl: INITIAL_GARMENTS.find(g => g.id === "g330")?.thumbnailUrl,
-                    primaryColor: "BLACK",
-                    styles: ["캐주얼", "미니멀"]
-                  },
-                  totalScore: 9.7,
-                },
-                {
-                  outfitId: 999993,
-                  title: "프렌치 시크 룩",
-                  reason: "블랙 가디건과 연청 와이드 데님을 매치한 우아하고 편안한 데일리룩입니다.",
-                  top: { 
-                    clothesId: 384, 
-                    name: INITIAL_GARMENTS.find(g => g.id === "g384")?.name || "가디건", 
-                    category: "TOP", 
-                    imageUrl: INITIAL_GARMENTS.find(g => g.id === "g384")?.thumbnailUrl,
-                    primaryColor: "BLACK",
-                    styles: ["캐주얼", "시크"]
-                  },
-                  bottom: { 
-                    clothesId: 412, 
-                    name: INITIAL_GARMENTS.find(g => g.id === "g412")?.name || "와이드 데님", 
-                    category: "BOTTOM", 
-                    imageUrl: INITIAL_GARMENTS.find(g => g.id === "g412")?.thumbnailUrl,
+                  bottom: {
+                    clothesId: 1525,
+                    name: "LEE 릴랙스드핏 셀비지 데님 팬츠",
+                    category: "BOTTOM",
+                    imageUrl: "https://shopping-phinf.pstatic.net/main_5795798/57957984306.20251129184842.jpg",
                     primaryColor: "LIGHT_BLUE",
                     styles: ["캐주얼"]
                   },
-                  shoes: { 
-                    clothesId: 330, 
-                    name: INITIAL_GARMENTS.find(g => g.id === "g330")?.name || "메리제인 슈즈", 
-                    category: "SHOES", 
-                    imageUrl: INITIAL_GARMENTS.find(g => g.id === "g330")?.thumbnailUrl,
-                    primaryColor: "BLACK",
-                    styles: ["캐주얼", "미니멀"]
+                  shoes: {
+                    clothesId: 9723,
+                    name: "아디다스 VL 코트 베이스 ID3714 화이트",
+                    category: "SHOES",
+                    imageUrl: "https://shopping-phinf.pstatic.net/main_4543568/45435683619.20250605173146.jpg",
+                    primaryColor: "WHITE",
+                    styles: ["캐주얼", "스포티"]
                   },
-                  totalScore: 9.5,
+                  totalScore: 9.7,
                 }
               ],
               weatherLabel: getWeatherLabel(currentTemp ?? 20)
