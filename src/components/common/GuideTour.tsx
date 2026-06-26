@@ -1,8 +1,13 @@
 import { useState, useEffect, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
 
-// 하단 nav bar 높이 — h-16 = 64px
-const NAV_HEIGHT = 64
+// 고정 레이아웃 상수 (App.tsx pt-24 / nav h-16 기준)
+const HEADER_HEIGHT = 96  // fixed top header 아래 안전선 (pt-24 = 96px)
+const NAV_HEIGHT    = 64  // fixed bottom nav 높이 (h-16 = 64px)
+
+// 스포트라이트가 너무 큰 요소를 통째로 감싸지 않도록 높이 상한
+// (예: recommendationListRef, gridRef 등 화면을 가득 채우는 섹션 대응)
+const MAX_SPOTLIGHT_HEIGHT = 280
 
 interface GuideTourStep {
     targetRef: RefObject<HTMLElement>
@@ -19,24 +24,25 @@ export default function GuideTour({ steps, onComplete }: GuideTourProps) {
     const [targetRect, setTargetRect] = useState<DOMRect | null>(null)
     const [visible, setVisible] = useState(false)
 
-    // 스텝 변경 시 해당 요소로 스크롤 후 rect 캡처
     useEffect(() => {
         const el = steps[currentStep].targetRef.current
         if (!el) return
 
-        // 'nearest': 이미 화면에 보이면 스크롤 안 함, 벗어났을 때만 최소한으로 스크롤
         el.scrollIntoView({ behavior: 'instant', block: 'nearest' })
 
         const id = requestAnimationFrame(() => {
             const rect = el.getBoundingClientRect()
-            const safeBottom = window.innerHeight - NAV_HEIGHT
+            const viewport = document.getElementById('app-viewport')
 
-            // scrollIntoView가 nav bar를 인식하지 못해 요소가 nav 뒤에 가려진 경우 추가 보정
-            if (rect.bottom > safeBottom) {
-                const viewport = document.getElementById('app-viewport')
-                if (viewport) {
-                    viewport.scrollTop += rect.bottom - safeBottom + 12
-                }
+            // ① 요소 하단이 nav bar 뒤에 가려진 경우 → 위로 스크롤
+            const safeBottom = window.innerHeight - NAV_HEIGHT
+            if (rect.bottom > safeBottom && viewport) {
+                viewport.scrollTop += rect.bottom - safeBottom + 12
+            }
+
+            // ② 요소 상단이 header 뒤에 가려진 경우 → 아래로 스크롤
+            if (rect.top < HEADER_HEIGHT && viewport) {
+                viewport.scrollTop -= HEADER_HEIGHT - rect.top + 12
             }
 
             setTargetRect(el.getBoundingClientRect())
@@ -44,37 +50,44 @@ export default function GuideTour({ steps, onComplete }: GuideTourProps) {
         return () => cancelAnimationFrame(id)
     }, [currentStep, steps])
 
-    // 마운트 후 fade-in
     useEffect(() => {
         const id = requestAnimationFrame(() => setVisible(true))
         return () => cancelAnimationFrame(id)
     }, [])
 
-    // 스포트라이트 영역 계산 — nav bar 아래로 삐져나가지 않도록 클리핑
+    // ── 스포트라이트 영역 계산 ────────────────────────────────────────
+    const safeTop    = HEADER_HEIGHT
     const safeBottom = window.innerHeight - NAV_HEIGHT
-    const spotTop    = targetRect ? targetRect.top  - 6 : 0
-    const spotBottom = targetRect ? Math.min(targetRect.bottom + 6, safeBottom) : 0
-    const spotLeft   = targetRect ? targetRect.left - 6 : 0
-    const spotWidth  = targetRect ? targetRect.width + 12 : 0
-    const spotHeight = Math.max(0, spotBottom - spotTop)
 
-    // 말풍선 위치 계산 — nav bar 위 안전 영역 기준
+    // 상하 안전선 안으로 클리핑
+    const rawTop    = targetRect ? targetRect.top    - 6 : 0
+    const rawBottom = targetRect ? targetRect.bottom + 6 : 0
+    const spotTop    = Math.max(rawTop, safeTop)
+    const spotBottom = Math.min(rawBottom, safeBottom)
+
+    // 높이 상한 적용 (아래쪽을 잘라냄 — 위가 더 중요한 영역)
+    const rawHeight  = Math.max(0, spotBottom - spotTop)
+    const spotHeight = Math.min(rawHeight, MAX_SPOTLIGHT_HEIGHT)
+
+    const spotLeft  = targetRect ? targetRect.left - 6 : 0
+    const spotWidth = targetRect ? targetRect.width + 12 : 0
+
+    // ── 말풍선 위치 계산 ─────────────────────────────────────────────
     const CARD_HEIGHT = 160
+    const spotEffectiveBottom = spotTop + spotHeight   // 실제 스포트라이트 하단
+    const spaceBelow = safeBottom - spotEffectiveBottom
     const cardTop = targetRect
-        ? (safeBottom - spotBottom >= CARD_HEIGHT + 18
-            ? spotBottom + 18                                   // 요소 아래 공간 충분 → 아래 표시
-            : Math.max(8, spotTop - CARD_HEIGHT - 18))          // 공간 부족 → 요소 위 표시
+        ? (spaceBelow >= CARD_HEIGHT + 18
+            ? spotEffectiveBottom + 18                          // 아래 공간 충분 → 아래 표시
+            : Math.max(safeTop + 8, spotTop - CARD_HEIGHT - 18)) // 공간 부족 → 위 표시
         : 0
 
     return createPortal(
         <div
             className="fixed inset-0 z-[150]"
-            style={{
-                opacity: visible ? 1 : 0,
-                transition: 'opacity 0.3s ease',
-            }}
+            style={{ opacity: visible ? 1 : 0, transition: 'opacity 0.3s ease' }}
         >
-            {/* 스포트라이트 — nav bar까지만 클리핑 */}
+            {/* 스포트라이트 */}
             {targetRect && (
                 <div
                     style={{
