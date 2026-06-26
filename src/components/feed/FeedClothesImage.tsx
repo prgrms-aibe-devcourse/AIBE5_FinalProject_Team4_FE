@@ -10,7 +10,7 @@ interface FeedClothesImageProps {
   fallback?: ReactNode
 }
 
-/** 피드 코디 구성 옷 — BE `/api/v1/images/clothes/**`는 인증 fetch + blob URL로 표시 */
+/** 피드 코디 구성 옷 — BE clothes·purchase-captures 이미지는 인증 fetch + blob URL로 표시 */
 export default function FeedClothesImage({
   clothes,
   alt,
